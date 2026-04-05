@@ -1,0 +1,72 @@
+# .github/workflows/ci.yml — Continuous Integration pipeline
+#
+# Runs on every push to main and on every pull request targeting main.
+# Both jobs (frontend and backend) must pass before a merge is allowed.
+# Target runtime: under 5 minutes total.
+
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+
+  # ── Frontend ────────────────────────────────────────────────────────────────
+  # Installs Node dependencies, runs ESLint, then type-checks with tsc.
+  frontend:
+    name: Frontend (lint + typecheck)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          # Cache npm dependencies keyed on the lockfile so installs are fast.
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: cd frontend && npm ci
+
+      - name: Lint
+        run: cd frontend && npm run lint
+
+      - name: Type check
+        run: cd frontend && npx tsc --noEmit
+
+  # ── Backend ─────────────────────────────────────────────────────────────────
+  # Installs Python dependencies, then does a basic syntax check on the app
+  # entry point. Linting (flake8) and type checking (mypy) will be added once
+  # those packages are included in requirements.txt.
+  backend:
+    name: Backend (install + syntax check)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          # Cache pip packages keyed on requirements.txt so installs are fast.
+          cache: "pip"
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install dependencies
+        run: cd backend && pip install -r requirements.txt
+
+      - name: Syntax check
+        # Compiles app/main.py to catch import-level syntax errors without
+        # needing a running database. Replace with pytest once tests exist.
+        run: cd backend && python -m py_compile app/main.py
