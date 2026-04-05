@@ -13,7 +13,12 @@ class Settings(BaseSettings):
     ANTHROPIC_API_KEY: str = ""
     VOYAGE_API_KEY: str = ""
     JWT_SECRET: str = "dev-secret-change-in-production"
-    CORS_ORIGINS: list[str] = ["http://localhost:3000"]
+    CORS_ORIGINS: list[str] = [
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:3001",
+    ]
 
 
 settings = Settings()
