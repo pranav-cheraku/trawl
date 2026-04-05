@@ -1,0 +1,77 @@
+# docker-compose.yml — Local development environment for Trawl
+# Starts four services: PostgreSQL (with pgvector), Redis, FastAPI, and Celery worker.
+# Usage: docker-compose up
+#        docker-compose down -v   (tear down including volumes)
+
+services:
+
+  # ── PostgreSQL 16 with pgvector ─────────────────────────────────────────────
+  # pgvector/pgvector:pg16 ships the pgvector extension pre-installed, which
+  # the backend needs for 1024-dim embedding similarity search.
+  db:
+    image: pgvector/pgvector:pg16
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: trawl
+      POSTGRES_PASSWORD: trawl
+      POSTGRES_DB: trawl
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U trawl"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ── Redis 7 ─────────────────────────────────────────────────────────────────
+  # Used as the Celery broker and result backend.
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ── FastAPI ─────────────────────────────────────────────────────────────────
+  # Built from backend/Dockerfile. The ./backend volume mount enables hot-reload
+  # so code changes are reflected without rebuilding the image.
+  api:
+    build:
+      context: ./backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+    # --reload watches for file changes inside the container (requires the volume mount above)
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  # ── Celery Worker ───────────────────────────────────────────────────────────
+  # Same image as api; different entrypoint to run the background task worker.
+  worker:
+    build:
+      context: ./backend
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+    command: celery -A app.celery_app worker --loglevel=info
+
+# ── Named Volumes ──────────────────────────────────────────────────────────────
+volumes:
+  pgdata:
