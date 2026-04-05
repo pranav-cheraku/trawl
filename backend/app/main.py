@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.database import engine
+from app.routers import build_next, connectors, feedback, projects, query, specs
 
 
 @asynccontextmanager
@@ -25,6 +26,14 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Routers — all scoped under /api
+app.include_router(projects.router, prefix="/api")
+app.include_router(feedback.router, prefix="/api")
+app.include_router(connectors.router, prefix="/api")
+app.include_router(query.router, prefix="/api")
+app.include_router(specs.router, prefix="/api")
+app.include_router(build_next.router, prefix="/api")
 
 
 @app.get("/health")
