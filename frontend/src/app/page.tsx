@@ -1,4 +1,5 @@
 import Link from "next/link";
+import SignInButton from "@/components/sign-in-button";
 
 export default function LandingPage() {
   return (
@@ -18,13 +19,9 @@ export default function LandingPage() {
           </Link>
 
           {/* Nav right */}
-          <a
-            href="/api/auth/signin"
-            className="border border-ink px-4 py-1.5 text-sm font-medium text-ink transition-colors hover:bg-ink hover:text-cream"
-            aria-label="Sign in to your account"
-          >
+          <SignInButton className="border border-ink px-4 py-1.5 text-sm font-medium text-ink transition-colors hover:bg-ink hover:text-cream">
             Sign In
-          </a>
+          </SignInButton>
         </nav>
       </header>
 
@@ -62,11 +59,7 @@ export default function LandingPage() {
 
           {/* CTA */}
           <div className="mt-12 flex flex-col items-center gap-3">
-            <a
-              href="/api/auth/signin"
-              className="group inline-flex items-center gap-2 bg-ink px-8 py-3.5 text-sm font-medium text-cream transition-colors hover:bg-ink-light"
-              aria-label="Get started with Trawl"
-            >
+            <SignInButton className="group inline-flex items-center gap-2 bg-ink px-8 py-3.5 text-sm font-medium text-cream transition-colors hover:bg-ink-light">
               Get Started
               <svg
                 className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5"
@@ -78,7 +71,7 @@ export default function LandingPage() {
               >
                 <path d="M1 7h12M8 2l5 5-5 5" />
               </svg>
-            </a>
+            </SignInButton>
             <p className="text-sm text-ink-faint">Free while in beta</p>
           </div>
         </div>
@@ -317,11 +310,7 @@ export default function LandingPage() {
           </p>
 
           <div className="mt-10 flex flex-col items-center gap-3">
-            <a
-              href="/api/auth/signin"
-              className="group inline-flex items-center gap-2 bg-ink px-8 py-3.5 text-sm font-medium text-cream transition-colors hover:bg-ink-light"
-              aria-label="Get started with Trawl"
-            >
+            <SignInButton className="group inline-flex items-center gap-2 bg-ink px-8 py-3.5 text-sm font-medium text-cream transition-colors hover:bg-ink-light">
               Get Started
               <svg
                 className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5"
@@ -333,7 +322,7 @@ export default function LandingPage() {
               >
                 <path d="M1 7h12M8 2l5 5-5 5" />
               </svg>
-            </a>
+            </SignInButton>
             <p className="text-sm text-ink-faint">Free while in beta</p>
           </div>
         </div>

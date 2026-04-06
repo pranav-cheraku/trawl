@@ -9,7 +9,11 @@ const secret = new TextEncoder().encode(
 const API_BASE =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
+const secretString =
+  process.env.NEXTAUTH_SECRET || "dev-secret-change-in-production";
+
 export const { handlers, signIn, signOut, auth } = NextAuth({
+  secret: secretString,
   providers: [
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID!,
@@ -78,6 +82,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (token.name) session.user.name = token.name as string;
       if (token.picture) session.user.image = token.picture as string;
       return session;
+    },
+    authorized({ auth: session, request: { nextUrl } }) {
+      const isLoggedIn = !!session?.user;
+      const isProtected =
+        nextUrl.pathname.startsWith("/dashboard") ||
+        nextUrl.pathname.startsWith("/project");
+      if (isProtected && !isLoggedIn) {
+        return Response.redirect(new URL("/", nextUrl));
+      }
+      return true;
     },
   },
   pages: {
