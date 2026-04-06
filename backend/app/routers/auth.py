@@ -1,0 +1,103 @@
+from __future__ import annotations
+
+import uuid
+
+from fastapi import APIRouter, Depends, Header, HTTPException, status
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.config import settings
+from app.dependencies import get_current_user, get_db
+from app.models.user import User
+from app.schemas.user import UserResponse, UserSync
+
+router = APIRouter(tags=["auth"])
+
+
+@router.post(
+    "/auth/sync",
+    response_model=UserResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Upsert a user on login (called by NextAuth jwt callback)",
+)
+async def sync_user(
+    body: UserSync,
+    db: AsyncSession = Depends(get_db),
+    x_auth_secret: str | None = Header(default=None),
+) -> User:
+    """Create or update a user record from NextAuth identity data.
+
+    Protected by the X-Auth-Secret header which must match ``settings.JWT_SECRET``.
+    This endpoint is intentionally NOT behind JWT auth — it is called by the
+    NextAuth server-side jwt callback before the client JWT exists.
+
+    Args:
+        body: Sync payload containing email, optional name and avatar_url.
+        db: Async database session.
+        x_auth_secret: Value of the ``X-Auth-Secret`` request header.
+
+    Returns:
+        The created or updated :class:`User` ORM instance.
+
+    Raises:
+        HTTPException: 403 if the X-Auth-Secret header is missing or incorrect.
+    """
+    if x_auth_secret != settings.JWT_SECRET:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid or missing X-Auth-Secret header",
+        )
+
+    result = await db.execute(select(User).where(User.email == body.email))
+    user: User | None = result.scalar_one_or_none()
+
+    if user is None:
+        user = User(
+            email=body.email,
+            name=body.name,
+            avatar_url=body.avatar_url,
+        )
+        db.add(user)
+    else:
+        if body.name is not None:
+            user.name = body.name
+        if body.avatar_url is not None:
+            user.avatar_url = body.avatar_url
+
+    await db.flush()
+    await db.refresh(user)
+    return user
+
+
+@router.get(
+    "/auth/me",
+    response_model=UserResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Return the currently authenticated user",
+)
+async def get_me(
+    db: AsyncSession = Depends(get_db),
+    user_id: uuid.UUID = Depends(get_current_user),
+) -> User:
+    """Fetch the authenticated user's profile from the database.
+
+    Args:
+        db: Async database session.
+        user_id: UUID extracted from the validated JWT by ``get_current_user``.
+
+    Returns:
+        The :class:`User` ORM instance for the authenticated user.
+
+    Raises:
+        HTTPException: 404 if no user row exists for the given ID.
+    """
+    result = await db.execute(select(User).where(User.id == user_id))
+    user: User | None = result.scalar_one_or_none()
+
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found.",
+        )
+
+    return user

@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.database import engine
-from app.routers import build_next, connectors, feedback, projects, query, specs
+from app.routers import auth, build_next, connectors, feedback, projects, query, specs
 
 
 @asynccontextmanager
@@ -28,6 +28,7 @@ app.add_middleware(
 )
 
 # Routers — all scoped under /api
+app.include_router(auth.router, prefix="/api")
 app.include_router(projects.router, prefix="/api")
 app.include_router(feedback.router, prefix="/api")
 app.include_router(connectors.router, prefix="/api")
