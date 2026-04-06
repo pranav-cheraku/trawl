@@ -3,16 +3,10 @@ from __future__ import annotations
 import uuid
 
 from app.database import get_db  # noqa: F401  re-exported for router convenience
+from app.middleware.auth import get_user_id_from_token
 
-# Placeholder user ID for development (auth comes Day 4).
-# A matching row MUST exist in the users table for FK constraints.
+# Keep for reference in seed scripts and tests
 DEV_USER_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
 
-
-async def get_current_user() -> uuid.UUID:
-    """Return the authenticated user's ID.
-
-    Placeholder: returns a fixed UUID until NextAuth JWT integration is wired
-    up in backend/app/middleware/auth.py on Day 4.
-    """
-    return DEV_USER_ID
+# Drop-in replacement — all routers already use Depends(get_current_user)
+get_current_user = get_user_id_from_token
