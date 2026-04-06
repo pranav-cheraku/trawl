@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSession, signOut } from "next-auth/react";
 
 const navLinks = [
   {
@@ -17,6 +18,7 @@ const navLinks = [
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { data: session, status } = useSession();
 
   return (
     <div className="flex min-h-screen">
@@ -63,22 +65,55 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         {/* User section */}
         <div className="mx-5 h-px bg-border" />
         <div className="px-4 py-4">
-          <div className="flex items-center gap-2.5">
-            <div
-              className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-teal text-xs font-medium text-white"
-              aria-label="User avatar"
-            >
-              P
+          {status === "loading" ? (
+            <div className="flex items-center gap-2.5">
+              <div className="h-7 w-7 flex-shrink-0 animate-pulse rounded-full bg-border" />
+              <div className="min-w-0 flex-1 space-y-1.5">
+                <div className="h-2.5 w-20 animate-pulse bg-border" />
+                <div className="h-2 w-28 animate-pulse bg-border" />
+              </div>
             </div>
-            <div className="min-w-0">
-              <p className="truncate text-[13px] font-medium text-ink">
-                Pranav
-              </p>
-              <p className="truncate text-[11px] text-ink-faint">
-                pranav@trawl.dev
-              </p>
-            </div>
-          </div>
+          ) : status === "authenticated" && session?.user ? (
+            <>
+              <div className="flex items-center gap-2.5">
+                <div
+                  className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-teal text-xs font-medium text-white"
+                  aria-label="User avatar"
+                >
+                  {session.user.name ? session.user.name.charAt(0).toUpperCase() : "?"}
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate text-[13px] font-medium text-ink">
+                    {session.user.name ?? ""}
+                  </p>
+                  <p className="truncate text-[11px] text-ink-faint">
+                    {session.user.email ?? ""}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => signOut({ callbackUrl: "/" })}
+                className="mt-2.5 flex items-center gap-1.5 text-[11px] text-ink-faint transition-colors hover:text-ink"
+                aria-label="Sign out"
+              >
+                <svg
+                  className="h-3.5 w-3.5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={1.5}
+                  aria-hidden="true"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9"
+                  />
+                </svg>
+                Sign out
+              </button>
+            </>
+          ) : null}
         </div>
       </aside>
 
