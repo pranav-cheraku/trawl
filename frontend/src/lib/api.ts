@@ -48,7 +48,7 @@ export async function apiFetch<T>(
     if (response.status === 401) {
       cachedToken = null;
       if (typeof window !== "undefined") {
-        window.location.href = "/api/auth/signin";
+        window.location.href = "/";
       }
       throw new Error("Unauthorized");
     }

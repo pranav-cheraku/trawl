@@ -16,15 +16,6 @@ class ProjectCreate(BaseModel):
     description: str | None = None
 
 
-class ProjectUpdate(BaseModel):
-    """Request body for updating an existing project."""
-
-    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
-
-    name: str | None = Field(default=None, min_length=1, max_length=255)
-    description: str | None = None
-
-
 class ProjectResponse(BaseModel):
     """Response shape for a single project."""
 

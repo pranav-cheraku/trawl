@@ -4,14 +4,16 @@ import { SignJWT, jwtVerify } from "jose";
 import type { JWT } from "@auth/core/jwt";
 import type { UserSyncResponse } from "@/types";
 
+const FALLBACK_SECRET = "dev-secret-change-in-production";
+
 const secret = new TextEncoder().encode(
-  process.env.NEXTAUTH_SECRET || "dev-secret-change-in-production"
+  process.env.NEXTAUTH_SECRET || FALLBACK_SECRET
 );
 const API_BASE =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 const secretString =
-  process.env.NEXTAUTH_SECRET || "dev-secret-change-in-production";
+  process.env.NEXTAUTH_SECRET || FALLBACK_SECRET;
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   secret: secretString,
@@ -55,8 +57,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             headers: {
               "Content-Type": "application/json",
               "X-Auth-Secret":
-                process.env.NEXTAUTH_SECRET ||
-                "dev-secret-change-in-production",
+                process.env.NEXTAUTH_SECRET || FALLBACK_SECRET,
             },
             body: JSON.stringify({
               email: user.email,

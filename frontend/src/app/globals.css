@@ -20,12 +20,6 @@
   }
 }
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
-}
-
 /* Page transitions */
 html {
   transition: opacity 0.25s ease;
