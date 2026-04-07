@@ -1,12 +1,21 @@
 from __future__ import annotations
 
 import uuid
+from typing import TYPE_CHECKING
 from datetime import datetime
 
 import sqlalchemy as sa
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
+
+if TYPE_CHECKING:
+    from app.models.build_next import BuildNextAnalysis
+    from app.models.chunk import FeedbackChunk
+    from app.models.conversation import Conversation
+    from app.models.feedback import FeedbackItem, FeedbackSource
+    from app.models.spec import Spec
+    from app.models.user import User
 
 
 class Project(Base):
