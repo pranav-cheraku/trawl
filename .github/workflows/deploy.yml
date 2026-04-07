@@ -1,0 +1,38 @@
+# .github/workflows/deploy.yml — Deployment pipeline
+#
+# Triggers on push to main (i.e., merged PRs). Handles deployment of both
+# frontend and backend services.
+#
+# - Frontend: Vercel auto-deploys via GitHub integration (no action needed).
+# - Backend: Railway deployment (placeholder until Week 5).
+
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+
+  # ── Frontend (Vercel) ──────────────────────────────────────────────────────
+  # Vercel is connected directly to the GitHub repo and auto-deploys on push
+  # to main. This job exists only for visibility in the Actions tab.
+  frontend:
+    name: Frontend → Vercel
+    runs-on: ubuntu-latest
+    steps:
+      - name: Vercel auto-deploy
+        run: echo "Frontend deploys automatically via Vercel GitHub integration."
+
+  # ── Backend (Railway) ──────────────────────────────────────────────────────
+  # TODO (Week 5): Replace this placeholder with Railway deployment.
+  # Options:
+  #   1. Railway GitHub integration (auto-deploy on push to main)
+  #   2. Railway CLI: railway up --service backend with RAILWAY_TOKEN secret
+  backend:
+    name: Backend → Railway
+    runs-on: ubuntu-latest
+    steps:
+      - name: Placeholder
+        run: echo "Backend deployment to Railway will be configured in Week 5."
