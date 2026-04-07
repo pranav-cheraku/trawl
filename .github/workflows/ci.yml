@@ -44,11 +44,9 @@ jobs:
         run: cd frontend && npx tsc --noEmit
 
   # ── Backend ─────────────────────────────────────────────────────────────────
-  # Installs Python dependencies, then does a basic syntax check on the app
-  # entry point. Linting (flake8) and type checking (mypy) will be added once
-  # those packages are included in requirements.txt.
+  # Installs Python dependencies, runs flake8 linting and mypy type checking.
   backend:
-    name: Backend (install + syntax check)
+    name: Backend (lint + typecheck)
     runs-on: ubuntu-latest
 
     steps:
@@ -59,14 +57,14 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-          # Cache pip packages keyed on requirements.txt so installs are fast.
           cache: "pip"
           cache-dependency-path: backend/requirements.txt
 
       - name: Install dependencies
         run: cd backend && pip install -r requirements.txt
 
-      - name: Syntax check
-        # Compiles app/main.py to catch import-level syntax errors without
-        # needing a running database. Replace with pytest once tests exist.
-        run: cd backend && python -m py_compile app/main.py
+      - name: Lint (flake8)
+        run: cd backend && flake8 app/
+
+      - name: Type check (mypy)
+        run: cd backend && mypy app/
