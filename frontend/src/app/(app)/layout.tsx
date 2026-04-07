@@ -21,105 +21,101 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { data: session, status } = useSession();
 
   return (
-    <div className="flex min-h-screen">
-      {/* Sidebar */}
-      <aside className="fixed left-0 top-0 flex h-screen w-60 flex-shrink-0 flex-col border-r border-border bg-cream">
-        {/* Logo */}
-        <div className="flex items-center px-6 py-6">
-          <Link href="/dashboard" className="flex items-center gap-2.5">
-            <div className="flex h-7 w-7 items-center justify-center bg-ink">
-              <span className="font-serif text-sm text-cream">T</span>
-            </div>
-            <span className="font-serif text-xl tracking-tight text-ink">
-              Trawl
-            </span>
-          </Link>
-        </div>
-
-        {/* Divider */}
-        <div className="mx-5 h-px bg-border" />
-
-        {/* Navigation */}
-        <nav className="flex-1 px-3 py-4 space-y-0.5" aria-label="Main navigation">
-          {navLinks.map((link) => {
-            const isActive =
-              pathname === link.href || pathname.startsWith(link.href + "/");
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={`flex items-center gap-2.5 rounded-md px-3 py-2 text-[13px] font-medium transition-colors ${
-                  isActive
-                    ? "bg-white text-ink shadow-sm"
-                    : "text-ink-muted hover:bg-white/60 hover:text-ink"
-                }`}
-                aria-current={isActive ? "page" : undefined}
-              >
-                {link.icon}
-                {link.label}
-              </Link>
-            );
-          })}
-        </nav>
-
-        {/* User section */}
-        <div className="mx-5 h-px bg-border" />
-        <div className="px-4 py-4">
-          {status === "loading" ? (
-            <div className="flex items-center gap-2.5">
-              <div className="h-7 w-7 flex-shrink-0 animate-pulse rounded-full bg-border" />
-              <div className="min-w-0 flex-1 space-y-1.5">
-                <div className="h-2.5 w-20 animate-pulse bg-border" />
-                <div className="h-2 w-28 animate-pulse bg-border" />
+    <div className="min-h-screen bg-surface">
+      {/* Top workspace bar */}
+      <header className="bg-surface-container-lowest">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
+          {/* Left: Logo + breadcrumb nav */}
+          <div className="flex items-center gap-6">
+            {/* Logo */}
+            <Link href="/dashboard" className="flex items-center gap-2.5">
+              <div className="flex h-7 w-7 items-center justify-center rounded-[4px] bg-on-surface">
+                <span className="font-mono text-sm font-bold text-surface-container-lowest">T</span>
               </div>
-            </div>
-          ) : status === "authenticated" && session?.user ? (
-            <>
+              <span className="text-xl font-bold tracking-tight text-on-surface">
+                Trawl
+              </span>
+            </Link>
+
+            {/* Breadcrumb separator */}
+            <span className="text-on-surface-variant/40">/</span>
+
+            {/* Nav links as breadcrumb items */}
+            <nav className="flex items-center gap-1" aria-label="Main navigation">
+              {navLinks.map((link) => {
+                const isActive =
+                  pathname === link.href || pathname.startsWith(link.href + "/");
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className={`flex items-center gap-2 rounded-[4px] px-3 py-1.5 text-[13px] font-medium transition-colors ${
+                      isActive
+                        ? "bg-surface-container-low text-on-surface"
+                        : "text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface"
+                    }`}
+                    aria-current={isActive ? "page" : undefined}
+                  >
+                    {link.icon}
+                    {link.label}
+                  </Link>
+                );
+              })}
+            </nav>
+          </div>
+
+          {/* Right: User section */}
+          <div className="flex items-center gap-3">
+            {status === "loading" ? (
               <div className="flex items-center gap-2.5">
-                <div
-                  className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-teal text-xs font-medium text-white"
-                  aria-label="User avatar"
-                >
-                  {session.user.name ? session.user.name.charAt(0).toUpperCase() : "?"}
-                </div>
-                <div className="min-w-0">
-                  <p className="truncate text-[13px] font-medium text-ink">
-                    {session.user.name ?? ""}
-                  </p>
-                  <p className="truncate text-[11px] text-ink-faint">
-                    {session.user.email ?? ""}
-                  </p>
-                </div>
+                <div className="h-7 w-7 flex-shrink-0 animate-pulse rounded-full bg-surface-container" />
+                <div className="h-2.5 w-20 animate-pulse rounded-[2px] bg-surface-container" />
               </div>
-              <button
-                onClick={() => signOut({ callbackUrl: "/" })}
-                className="mt-2.5 flex items-center gap-1.5 text-[11px] text-ink-faint transition-colors hover:text-ink"
-                aria-label="Sign out"
-              >
-                <svg
-                  className="h-3.5 w-3.5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={1.5}
-                  aria-hidden="true"
+            ) : status === "authenticated" && session?.user ? (
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2.5">
+                  <div
+                    className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-medium text-white"
+                    aria-label="User avatar"
+                  >
+                    {session.user.name ? session.user.name.charAt(0).toUpperCase() : "?"}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-[13px] font-medium text-on-surface">
+                      {session.user.name ?? ""}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => signOut({ callbackUrl: "/" })}
+                  className="flex items-center gap-1.5 rounded-[4px] px-2 py-1 text-[11px] text-on-surface-variant transition-colors hover:bg-surface-container-low hover:text-on-surface"
+                  aria-label="Sign out"
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9"
-                  />
-                </svg>
-                Sign out
-              </button>
-            </>
-          ) : null}
+                  <svg
+                    className="h-3.5 w-3.5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={1.5}
+                    aria-hidden="true"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9"
+                    />
+                  </svg>
+                  Sign out
+                </button>
+              </div>
+            ) : null}
+          </div>
         </div>
-      </aside>
+      </header>
 
       {/* Main content */}
-      <main className="ml-60 flex-1 bg-paper">
-        <div className="mx-auto max-w-5xl px-8 py-10">{children}</div>
+      <main className="bg-surface">
+        <div className="mx-auto max-w-6xl px-6 py-10">{children}</div>
       </main>
     </div>
   );

@@ -56,7 +56,7 @@ export default function ProjectLayout({
       {/* Back link */}
       <Link
         href="/dashboard"
-        className="inline-flex items-center gap-1.5 text-xs font-medium text-ink-faint transition-colors hover:text-ink"
+        className="inline-flex items-center gap-1.5 text-xs font-medium text-on-surface-variant transition-colors hover:text-on-surface"
       >
         <svg className="h-3 w-3" fill="none" viewBox="0 0 14 14" stroke="currentColor" strokeWidth={1.5}>
           <path d="M13 7H1M6 2L1 7l5 5" />
@@ -66,10 +66,10 @@ export default function ProjectLayout({
 
       {/* Project header */}
       <div className="mt-4">
-        <h1 className="font-serif text-2xl text-ink">Project</h1>
+        <h1 className="text-2xl font-bold text-on-surface">Project</h1>
       </div>
 
-      {/* Tab navigation */}
+      {/* Workspace tabs — active tab gets 2px secondary top-border */}
       <nav className="mt-6 flex gap-1" aria-label="Project tabs">
         {tabs.map((tab) => {
           const href = `/project/${projectId}/${tab.segment}`;
@@ -78,10 +78,10 @@ export default function ProjectLayout({
             <Link
               key={tab.segment}
               href={href}
-              className={`inline-flex items-center gap-1.5 border-b-2 px-4 py-2.5 text-[13px] font-medium transition-colors ${
+              className={`inline-flex items-center gap-1.5 rounded-[4px] px-4 py-2.5 text-[13px] font-medium transition-colors ${
                 isActive
-                  ? "border-teal text-teal"
-                  : "border-transparent text-ink-muted hover:border-border hover:text-ink-light"
+                  ? "border-t-2 border-secondary bg-surface-container-lowest text-on-surface"
+                  : "bg-surface-container-low text-on-surface-variant hover:bg-surface-container-lowest hover:text-on-surface"
               }`}
               aria-current={isActive ? "page" : undefined}
             >
@@ -91,9 +91,6 @@ export default function ProjectLayout({
           );
         })}
       </nav>
-
-      {/* Divider */}
-      <div className="h-px bg-border" />
 
       {/* Tab content */}
       <div className="mt-8">{children}</div>

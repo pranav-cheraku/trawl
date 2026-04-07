@@ -8,9 +8,16 @@ interface SignInButtonProps {
 }
 
 export default function SignInButton({ children, className }: SignInButtonProps) {
+  const handleClick = () => {
+    document.documentElement.classList.add("page-exit");
+    setTimeout(() => {
+      signIn("google", { callbackUrl: "/dashboard" });
+    }, 250);
+  };
+
   return (
     <button
-      onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
+      onClick={handleClick}
       className={className}
       aria-label="Sign in with Google"
     >

@@ -17,18 +17,17 @@ function formatDate(dateStr: string): string {
 // Skeleton card shown during loading
 function SkeletonCard() {
   return (
-    <div className="border border-border bg-white p-6 animate-pulse">
+    <div className="rounded-[4px] bg-surface-container-lowest p-6 animate-pulse">
       <div className="flex items-start justify-between gap-3">
-        <div className="h-5 w-3/5 bg-border" />
-        <div className="h-4 w-8 bg-border" />
+        <div className="h-5 w-3/5 rounded-[2px] bg-surface-container" />
+        <div className="h-4 w-8 rounded-[2px] bg-surface-container" />
       </div>
       <div className="mt-4 space-y-2">
-        <div className="h-3 w-full bg-border" />
-        <div className="h-3 w-4/5 bg-border" />
+        <div className="h-3 w-full rounded-[2px] bg-surface-container" />
+        <div className="h-3 w-4/5 rounded-[2px] bg-surface-container" />
       </div>
-      <div className="mt-6 flex items-center justify-between border-t border-border pt-4">
-        <div className="h-3 w-20 bg-border" />
-        <div className="h-3.5 w-3.5 bg-border" />
+      <div className="mt-6 pt-4">
+        <div className="h-3 w-20 rounded-[2px] bg-surface-container" />
       </div>
     </div>
   );
@@ -69,29 +68,29 @@ function ProjectCard({ project, onDelete }: ProjectCardProps) {
   }
 
   return (
-    <div className="group relative border border-border bg-white transition-all hover:border-ink-faint hover:shadow-sm">
+    <div className="group relative rounded-[4px] bg-surface-container-lowest transition-all hover:bg-surface-container-low">
       {/* Delete controls — always visible on hover */}
       <div className="absolute right-3 top-3 z-10 opacity-0 transition-opacity group-hover:opacity-100">
         {isConfirming ? (
           <div
-            className="flex items-center gap-1.5 border border-border bg-white px-2 py-1"
+            className="flex items-center gap-1.5 rounded-[4px] bg-surface-container-lowest px-2 py-1 shadow-[0_8px_24px_rgba(15,23,42,0.04)]"
             onClick={(e) => e.stopPropagation()}
           >
-            <span className="text-[11px] text-ink-muted">Delete?</span>
+            <span className="text-[11px] text-on-surface-variant">Delete?</span>
             <button
               type="button"
               onClick={handleConfirmDelete}
               disabled={isDeleting}
-              className="text-[11px] font-medium text-red-600 hover:text-red-700 disabled:opacity-50"
+              className="text-[11px] font-medium text-error hover:text-error/80 disabled:opacity-50"
               aria-label="Confirm delete"
             >
               {isDeleting ? "Deleting..." : "Yes"}
             </button>
-            <span className="text-ink-faint">/</span>
+            <span className="text-on-surface-variant/40">/</span>
             <button
               type="button"
               onClick={handleCancelDelete}
-              className="text-[11px] font-medium text-ink-muted hover:text-ink"
+              className="text-[11px] font-medium text-on-surface-variant hover:text-on-surface"
               aria-label="Cancel delete"
             >
               No
@@ -101,7 +100,7 @@ function ProjectCard({ project, onDelete }: ProjectCardProps) {
           <button
             type="button"
             onClick={handleDeleteClick}
-            className="flex h-6 w-6 items-center justify-center border border-border bg-white text-ink-faint transition-colors hover:border-red-200 hover:text-red-500"
+            className="flex h-6 w-6 items-center justify-center rounded-[4px] bg-surface-container-lowest text-on-surface-variant transition-colors hover:text-error shadow-[0_8px_24px_rgba(15,23,42,0.04)]"
             aria-label={`Delete project ${project.name}`}
           >
             <svg
@@ -129,29 +128,29 @@ function ProjectCard({ project, onDelete }: ProjectCardProps) {
       >
         {/* Top row: name */}
         <div className="flex items-start justify-between gap-3 pr-8">
-          <h2 className="font-serif text-lg text-ink transition-colors group-hover:text-teal">
+          <h2 className="text-lg font-bold text-on-surface transition-colors group-hover:text-secondary">
             {project.name}
           </h2>
         </div>
 
         {/* Description */}
         {project.description ? (
-          <p className="mt-3 text-[13px] leading-relaxed text-ink-muted line-clamp-2">
+          <p className="mt-3 text-[13px] leading-relaxed text-on-surface-variant line-clamp-2">
             {project.description}
           </p>
         ) : (
-          <p className="mt-3 text-[13px] leading-relaxed text-ink-faint italic">
+          <p className="mt-3 text-[13px] leading-relaxed text-on-surface-variant/50 italic">
             No description
           </p>
         )}
 
         {/* Footer */}
-        <div className="mt-5 flex items-center justify-between border-t border-border pt-4">
-          <p className="text-[11px] uppercase tracking-wider text-ink-faint">
+        <div className="mt-5 flex items-center justify-between pt-4">
+          <p className="font-mono text-[11px] uppercase tracking-wider text-on-surface-variant">
             {formatDate(project.createdAt)}
           </p>
           <svg
-            className="h-3.5 w-3.5 text-ink-faint transition-all group-hover:translate-x-0.5 group-hover:text-teal"
+            className="h-3.5 w-3.5 text-on-surface-variant transition-all group-hover:translate-x-0.5 group-hover:text-secondary"
             fill="none"
             viewBox="0 0 14 14"
             stroke="currentColor"
@@ -204,15 +203,15 @@ export default function DashboardPage() {
         {/* Header */}
         <div className="flex items-end justify-between">
           <div>
-            <p className="text-xs font-medium uppercase tracking-[0.2em] text-ink-faint">
+            <p className="font-mono text-xs font-medium uppercase tracking-[0.2em] text-on-surface-variant">
               Workspace
             </p>
-            <h1 className="mt-1 font-serif text-3xl text-ink">Projects</h1>
+            <h1 className="mt-1 text-3xl font-bold text-on-surface">Projects</h1>
           </div>
           <button
             type="button"
             onClick={() => setIsModalOpen(true)}
-            className="inline-flex items-center gap-2 bg-ink px-5 py-2.5 text-[13px] font-medium text-cream transition-colors hover:bg-ink-light"
+            className="inline-flex items-center gap-2 rounded-[4px] bg-on-surface px-5 py-2.5 text-[13px] font-medium text-white transition-colors hover:bg-secondary"
             aria-label="Create new project"
           >
             <svg
@@ -228,14 +227,11 @@ export default function DashboardPage() {
           </button>
         </div>
 
-        {/* Divider */}
-        <div className="mt-6 h-px bg-border" />
-
         {/* Content area */}
         <div className="mt-8">
           {/* Loading state — skeleton cards */}
           {isLoading && (
-            <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
               <SkeletonCard />
               <SkeletonCard />
               <SkeletonCard />
@@ -244,18 +240,18 @@ export default function DashboardPage() {
 
           {/* Error state */}
           {!isLoading && error && (
-            <div className="flex flex-col items-start gap-4 border border-border bg-white px-8 py-10">
-              <p className="text-xs font-medium uppercase tracking-[0.2em] text-ink-faint">
+            <div className="flex flex-col items-start gap-4 rounded-[4px] bg-surface-container-lowest px-8 py-10">
+              <p className="font-mono text-xs font-medium uppercase tracking-[0.2em] text-on-surface-variant">
                 Error
               </p>
-              <p className="font-serif text-xl text-ink">
+              <p className="text-xl font-bold text-on-surface">
                 Could not load projects
               </p>
-              <p className="text-[13px] text-ink-muted">{error}</p>
+              <p className="text-[13px] text-on-surface-variant">{error}</p>
               <button
                 type="button"
                 onClick={fetchProjects}
-                className="mt-2 border border-border px-5 py-2.5 text-[13px] font-medium text-ink transition-colors hover:bg-paper"
+                className="mt-2 rounded-[4px] border border-outline/30 px-5 py-2.5 text-[13px] font-medium text-on-surface transition-colors hover:bg-surface-container-low"
               >
                 Try again
               </button>
@@ -264,20 +260,20 @@ export default function DashboardPage() {
 
           {/* Empty state */}
           {!isLoading && !error && projects.length === 0 && (
-            <div className="flex flex-col items-start gap-4 border border-border bg-white px-8 py-12">
-              <p className="text-xs font-medium uppercase tracking-[0.2em] text-ink-faint">
+            <div className="flex flex-col items-start gap-4 rounded-[4px] bg-surface-container-lowest px-8 py-12">
+              <p className="font-mono text-xs font-medium uppercase tracking-[0.2em] text-on-surface-variant">
                 Getting started
               </p>
-              <h2 className="font-serif text-2xl text-ink">
+              <h2 className="text-2xl font-bold text-on-surface">
                 No projects yet
               </h2>
-              <p className="max-w-sm text-[14px] leading-relaxed text-ink-muted">
+              <p className="max-w-sm text-[14px] leading-relaxed text-on-surface-variant">
                 Create your first project to start analyzing feedback and generating product specs.
               </p>
               <button
                 type="button"
                 onClick={() => setIsModalOpen(true)}
-                className="mt-2 inline-flex items-center gap-2 bg-ink px-5 py-2.5 text-[13px] font-medium text-cream transition-colors hover:bg-ink-light"
+                className="mt-2 inline-flex items-center gap-2 rounded-[4px] bg-on-surface px-5 py-2.5 text-[13px] font-medium text-white transition-colors hover:bg-secondary"
                 aria-label="Create first project"
               >
                 <svg
@@ -296,7 +292,7 @@ export default function DashboardPage() {
 
           {/* Project grid */}
           {!isLoading && !error && projects.length > 0 && (
-            <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
               {projects.map((project) => (
                 <ProjectCard
                   key={project.id}
