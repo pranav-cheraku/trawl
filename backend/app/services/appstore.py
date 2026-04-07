@@ -16,7 +16,7 @@ async def search_app(app_name: str, country: str = "us") -> dict:
     Returns dict with keys: app_id, app_name, bundle_id.
     Raises ValueError if no app is found.
     """
-    params = {
+    params: dict[str, str | int] = {
         "term": app_name,
         "country": country,
         "entity": "software",
@@ -85,5 +85,6 @@ def _get_next_page_url(feed: dict) -> str | None:
     links = feed.get("link", [])
     for link in links:
         if isinstance(link, dict) and link.get("attributes", {}).get("rel") == "next":
-            return link["attributes"].get("href")
+            href: str | None = link["attributes"].get("href")
+            return href
     return None

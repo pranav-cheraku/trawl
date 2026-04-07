@@ -58,7 +58,7 @@ def _split_long_text(text: str) -> list[str]:
     paragraphs = [p.strip() for p in text.split("\n\n") if p.strip()]
 
     if not paragraphs:
-        return [text]
+        return _split_by_token_count(text.split())
 
     # If paragraphs are small enough, merge into chunks up to MAX_CHUNK_TOKENS
     chunks: list[str] = []
@@ -118,11 +118,23 @@ def _split_by_sentences(text: str) -> list[str]:
                 overlap = current_tokens[-OVERLAP_TOKENS:] if len(current_tokens) > OVERLAP_TOKENS else []
                 current_tokens = overlap + sent_tokens
             else:
-                # Single sentence exceeds limit — just include it
-                chunks.append(" ".join(sent_tokens))
+                # Single sentence exceeds limit — split by token count
+                token_chunks = _split_by_token_count(sent_tokens)
+                chunks.extend(token_chunks)
                 current_tokens = []
 
     if current_tokens:
         chunks.append(" ".join(current_tokens))
 
-    return chunks if chunks else [text]
+    return chunks if chunks else _split_by_token_count(text.split())
+
+
+def _split_by_token_count(tokens: list[str]) -> list[str]:
+    """Last-resort split: divide tokens into fixed-size chunks with overlap."""
+    chunks: list[str] = []
+    start = 0
+    while start < len(tokens):
+        end = start + MAX_CHUNK_TOKENS
+        chunks.append(" ".join(tokens[start:end]))
+        start = end - OVERLAP_TOKENS if end < len(tokens) else end
+    return chunks
