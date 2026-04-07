@@ -29,9 +29,9 @@ def ingest_appstore_source(self: object, source_id: str) -> None:
             source.status = "scraping"
             session.commit()
 
-            reviews = asyncio.run(
-                appstore.fetch_reviews(source.app_store_id, source.app_store_country or "us")
-            )
+            app_id = source.app_store_id or ""
+            country = source.app_store_country or "us"
+            reviews = asyncio.run(appstore.fetch_reviews(app_id, country))
 
             items = []
             for review in reviews:
