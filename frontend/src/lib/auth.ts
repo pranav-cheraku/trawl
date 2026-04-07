@@ -2,6 +2,7 @@ import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
 import { SignJWT, jwtVerify } from "jose";
 import type { JWT } from "@auth/core/jwt";
+import type { UserSyncResponse } from "@/types";
 
 const secret = new TextEncoder().encode(
   process.env.NEXTAUTH_SECRET || "dev-secret-change-in-production"
@@ -64,7 +65,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             }),
           });
           if (res.ok) {
-            const data = (await res.json()) as { id: string };
+            const data: UserSyncResponse = await res.json();
             token.sub = data.id; // DB UUID replaces the Google-provided sub
           }
         } catch {

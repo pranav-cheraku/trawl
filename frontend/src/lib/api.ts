@@ -1,4 +1,4 @@
-import type { Project } from "@/types";
+import type { Project, TokenResponse } from "@/types";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -17,7 +17,7 @@ async function getAuthToken(): Promise<string | null> {
   try {
     const res = await fetch("/api/token");
     if (!res.ok) return null;
-    const data = (await res.json()) as { token: string | null };
+    const data: TokenResponse = await res.json();
     cachedToken = data.token;
     tokenFetchedAt = Date.now();
     return cachedToken;
