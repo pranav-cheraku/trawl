@@ -28,7 +28,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           {/* Left: Logo + breadcrumb nav */}
           <div className="flex items-center gap-6">
             {/* Logo */}
-            <Link href="/dashboard" className="flex items-center gap-2.5">
+            <Link href="/" className="flex items-center gap-2.5">
               <div className="flex h-7 w-7 items-center justify-center rounded-[4px] bg-on-surface">
                 <span className="font-mono text-sm font-bold text-surface-container-lowest">T</span>
               </div>
