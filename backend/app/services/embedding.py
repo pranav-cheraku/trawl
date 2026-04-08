@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 
 import httpx
@@ -9,8 +10,9 @@ from app.config import settings
 logger = logging.getLogger(__name__)
 
 VOYAGE_API_URL = "https://api.voyageai.com/v1/embeddings"
-VOYAGE_MODEL = "voyage-3"
-BATCH_SIZE = 128
+VOYAGE_MODEL = "voyage-4"
+BATCH_SIZE = 50
+MAX_RETRIES = 5
 
 
 async def embed_texts(
@@ -19,43 +21,68 @@ async def embed_texts(
 ) -> list[list[float]]:
     """Embed texts using the Voyage AI API.
 
-    Batches requests to stay within Voyage's limit of 128 texts per call.
+    Batches requests (50 per call) with rate-limit retry and backoff.
     Returns list of 1024-dim float vectors, one per input text.
-
-    Raises httpx.HTTPStatusError on API failure.
     """
     if not settings.VOYAGE_API_KEY:
         raise RuntimeError("VOYAGE_API_KEY is not configured")
 
     all_embeddings: list[list[float]] = []
+    total_batches = (len(texts) + BATCH_SIZE - 1) // BATCH_SIZE
     headers = {
         "Authorization": f"Bearer {settings.VOYAGE_API_KEY}",
         "Content-Type": "application/json",
     }
 
-    async with httpx.AsyncClient(timeout=60.0) as client:
+    async with httpx.AsyncClient(timeout=120.0) as client:
         for i in range(0, len(texts), BATCH_SIZE):
             batch = texts[i:i + BATCH_SIZE]
+            batch_num = i // BATCH_SIZE + 1
             payload = {
                 "input": batch,
                 "model": VOYAGE_MODEL,
                 "input_type": input_type,
             }
 
-            resp = await client.post(
-                VOYAGE_API_URL,
-                json=payload,
-                headers=headers,
+            batch_embeddings = await _post_with_retry(
+                client, payload, headers, batch_num, total_batches
             )
-            resp.raise_for_status()
-            data = resp.json()
-
-            batch_embeddings = [item["embedding"] for item in data["data"]]
             all_embeddings.extend(batch_embeddings)
 
-    logger.info(
-        "Embedded %d texts in %d batches",
-        len(texts),
-        (len(texts) + BATCH_SIZE - 1) // BATCH_SIZE,
-    )
+            # Pause between batches to stay under rate limits
+            if i + BATCH_SIZE < len(texts):
+                await asyncio.sleep(3.0)
+
+    logger.info("Embedded %d texts in %d batches", len(texts), total_batches)
     return all_embeddings
+
+
+async def _post_with_retry(
+    client: httpx.AsyncClient,
+    payload: dict,
+    headers: dict,
+    batch_num: int,
+    total_batches: int,
+) -> list[list[float]]:
+    """POST to Voyage API with exponential backoff on 429."""
+    for attempt in range(MAX_RETRIES):
+        resp = await client.post(
+            VOYAGE_API_URL, json=payload, headers=headers
+        )
+        if resp.status_code == 429:
+            wait = 2 ** (attempt + 1)  # 2, 4, 8, 16, 32 seconds
+            logger.warning(
+                "Rate limited on batch %d/%d, retrying in %ds (attempt %d/%d)",
+                batch_num, total_batches, wait, attempt + 1, MAX_RETRIES,
+            )
+            await asyncio.sleep(wait)
+            continue
+        resp.raise_for_status()
+        data = resp.json()
+        return [item["embedding"] for item in data["data"]]
+
+    # Final attempt — let it raise if still 429
+    resp = await client.post(VOYAGE_API_URL, json=payload, headers=headers)
+    resp.raise_for_status()
+    data = resp.json()
+    return [item["embedding"] for item in data["data"]]

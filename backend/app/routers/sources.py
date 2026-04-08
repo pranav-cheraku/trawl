@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import tempfile
 import uuid
 
@@ -102,9 +103,11 @@ async def upload_csv(
     """
     project = await _get_project_for_user(project_id, db, user_id)
 
-    # Save uploaded file to temp location for Celery worker
+    # Save uploaded file to shared volume (accessible by both API and Celery worker)
+    upload_dir = "/tmp/trawl_uploads"
+    os.makedirs(upload_dir, exist_ok=True)
     tmp = tempfile.NamedTemporaryFile(
-        delete=False, suffix=".csv", prefix="trawl_upload_"
+        delete=False, suffix=".csv", prefix="trawl_upload_", dir=upload_dir
     )
     content = await file.read()
     tmp.write(content)

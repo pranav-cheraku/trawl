@@ -53,6 +53,7 @@ services:
         condition: service_healthy
     volumes:
       - ./backend:/app
+      - uploads:/tmp/trawl_uploads
     # --reload watches for file changes inside the container (requires the volume mount above)
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
@@ -70,8 +71,10 @@ services:
         condition: service_healthy
     volumes:
       - ./backend:/app
+      - uploads:/tmp/trawl_uploads
     command: celery -A app.celery_app worker --loglevel=info
 
 # ── Named Volumes ──────────────────────────────────────────────────────────────
 volumes:
   pgdata:
+  uploads:

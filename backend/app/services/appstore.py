@@ -50,15 +50,26 @@ async def fetch_reviews(app_id: str, country: str = "us") -> list[dict]:
         f"{ITUNES_RSS_BASE}/{country}/rss/customerreviews"
         f"/id={app_id}/sortBy=mostRecent/json"
     )
+    max_pages = 10
+    seen_urls: set[str] = set()
 
     async with httpx.AsyncClient(timeout=30.0) as client:
-        while url:
+        page = 0
+        while url and page < max_pages:
+            if url in seen_urls:
+                break
+            seen_urls.add(url)
+            page += 1
+
             resp = await client.get(url)
             resp.raise_for_status()
             data = resp.json()
 
             feed = data.get("feed", {})
             entries = feed.get("entry", [])
+
+            if not entries:
+                break
 
             for entry in entries:
                 # Skip the app metadata entry (no "im:rating" key)
@@ -86,5 +97,8 @@ def _get_next_page_url(feed: dict) -> str | None:
     for link in links:
         if isinstance(link, dict) and link.get("attributes", {}).get("rel") == "next":
             href: str | None = link["attributes"].get("href")
+            if href is not None:
+                # Apple returns pagination URLs with /xml suffix — swap to /json
+                href = href.replace("/xml", "/json")
             return href
     return None
