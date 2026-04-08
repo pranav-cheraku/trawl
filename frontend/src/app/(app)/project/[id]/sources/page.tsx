@@ -1,18 +1,36 @@
+"use client";
+
+import { useState } from "react";
+import { useParams } from "next/navigation";
+import AppStoreConnector from "@/components/sources/app-store-connector";
+import CsvUpload from "@/components/sources/csv-upload";
+import SourceList from "@/components/sources/source-list";
+
 export default function SourcesPage() {
+  const params = useParams();
+  const projectId = params.id as string;
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  function handleSourceCreated() {
+    setRefreshKey((k) => k + 1);
+  }
+
   return (
-    <div className="flex flex-col items-center rounded-[4px] bg-surface-container-lowest px-8 py-16 text-center">
-      <div className="flex h-10 w-10 items-center justify-center rounded-[4px] bg-surface-container">
-        <svg className="h-5 w-5 text-on-surface-variant" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-          <path d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m3.75 9v6m3-3H9m1.5-12H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
-        </svg>
+    <div className="space-y-6">
+      {/* Connector section — two columns */}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <AppStoreConnector
+          projectId={projectId}
+          onSourceCreated={handleSourceCreated}
+        />
+        <CsvUpload
+          projectId={projectId}
+          onSourceCreated={handleSourceCreated}
+        />
       </div>
-      <h2 className="mt-5 text-lg font-bold text-on-surface">
-        Connect feedback sources
-      </h2>
-      <p className="mt-2 max-w-sm text-[13px] leading-relaxed text-on-surface-variant">
-        Upload CSV, PDF, or text files — or connect an App Store app to
-        automatically pull real user reviews.
-      </p>
+
+      {/* Source list with status polling */}
+      <SourceList projectId={projectId} refreshKey={refreshKey} />
     </div>
   );
 }
