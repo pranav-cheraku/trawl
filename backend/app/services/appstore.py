@@ -10,6 +10,38 @@ ITUNES_SEARCH_URL = "https://itunes.apple.com/search"
 ITUNES_RSS_BASE = "https://itunes.apple.com"
 
 
+async def search_apps(query: str, country: str = "us", limit: int = 8) -> list[dict]:
+    """Search the iTunes Store for apps matching a query.
+
+    Returns a list of dicts with keys: track_id, track_name, bundle_id,
+    artwork_url, average_rating, rating_count, genre.
+    """
+    params: dict[str, str | int] = {
+        "term": query,
+        "country": country,
+        "entity": "software",
+        "limit": limit,
+    }
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        resp = await client.get(ITUNES_SEARCH_URL, params=params)
+        resp.raise_for_status()
+        data = resp.json()
+
+    results = data.get("results", [])
+    return [
+        {
+            "track_id": str(app["trackId"]),
+            "track_name": app["trackName"],
+            "bundle_id": app.get("bundleId", ""),
+            "artwork_url": app.get("artworkUrl60", ""),
+            "average_rating": app.get("averageUserRating"),
+            "rating_count": app.get("userRatingCount", 0),
+            "genre": app.get("primaryGenreName", ""),
+        }
+        for app in results
+    ]
+
+
 async def search_app(app_name: str, country: str = "us") -> dict:
     """Resolve an app name to an App Store ID via the iTunes Search API.
 

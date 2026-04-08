@@ -7,6 +7,20 @@ from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
 
 
+class AppSearchResult(BaseModel):
+    """Response shape for an iTunes app search result."""
+
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    track_id: str
+    track_name: str
+    bundle_id: str
+    artwork_url: str
+    average_rating: float | None
+    rating_count: int
+    genre: str
+
+
 class AppStoreConnectRequest(BaseModel):
     """Request body for connecting an App Store source."""
 
