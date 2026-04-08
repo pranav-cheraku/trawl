@@ -1,4 +1,10 @@
-import type { Project, TokenResponse } from "@/types";
+import type {
+  AppSearchResult,
+  FeedbackItem,
+  Project,
+  Source,
+  TokenResponse,
+} from "@/types";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -61,6 +67,34 @@ export async function apiFetch<T>(
   return response.json() as Promise<T>;
 }
 
+async function apiUpload<T>(path: string, body: FormData): Promise<T> {
+  const token = await getAuthToken();
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method: "POST",
+    headers,
+    body,
+  });
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      cachedToken = null;
+      if (typeof window !== "undefined") {
+        window.location.href = "/";
+      }
+      throw new Error("Unauthorized");
+    }
+    throw new Error(`API error: ${response.status}`);
+  }
+  return response.json() as Promise<T>;
+}
+
+// ── Project endpoints ────────────────────────────────────────────────
+
 export async function createProject(data: {
   name: string;
   description?: string;
@@ -81,4 +115,74 @@ export async function getProject(id: string): Promise<Project> {
 
 export async function deleteProject(id: string): Promise<void> {
   await apiFetch<void>(`/api/projects/${id}`, { method: "DELETE" });
+}
+
+// ── App search endpoints ─────────────────────────────────────────────
+
+export async function searchApps(
+  query: string,
+  country?: string
+): Promise<AppSearchResult[]> {
+  const params = new URLSearchParams({ q: query });
+  if (country) params.set("country", country);
+  return apiFetch<AppSearchResult[]>(`/api/apps/search?${params}`);
+}
+
+// ── Source endpoints ─────────────────────────────────────────────────
+
+export async function connectAppStore(
+  projectId: string,
+  appName: string,
+  country?: string
+): Promise<Source> {
+  return apiFetch<Source>(`/api/projects/${projectId}/sources/appstore`, {
+    method: "POST",
+    body: JSON.stringify({ appName, country: country ?? "us" }),
+  });
+}
+
+export async function uploadCsv(
+  projectId: string,
+  file: File,
+  contentColumn: string
+): Promise<Source> {
+  const form = new FormData();
+  form.append("file", file);
+  form.append("content_column", contentColumn);
+  return apiUpload<Source>(`/api/projects/${projectId}/sources/csv`, form);
+}
+
+export async function listSources(projectId: string): Promise<Source[]> {
+  return apiFetch<Source[]>(`/api/projects/${projectId}/sources`);
+}
+
+export async function getSource(
+  projectId: string,
+  sourceId: string
+): Promise<Source> {
+  return apiFetch<Source>(`/api/projects/${projectId}/sources/${sourceId}`);
+}
+
+export async function deleteSource(
+  projectId: string,
+  sourceId: string
+): Promise<void> {
+  await apiFetch<void>(`/api/projects/${projectId}/sources/${sourceId}`, {
+    method: "DELETE",
+  });
+}
+
+export async function listFeedbackItems(
+  projectId: string,
+  sourceId: string,
+  limit: number = 50,
+  offset: number = 0
+): Promise<FeedbackItem[]> {
+  const params = new URLSearchParams({
+    limit: String(limit),
+    offset: String(offset),
+  });
+  return apiFetch<FeedbackItem[]>(
+    `/api/projects/${projectId}/sources/${sourceId}/items?${params}`
+  );
 }
