@@ -58,6 +58,7 @@ def ingest_appstore_source(self: object, source_id: str) -> None:
 
         except Exception:
             logger.exception("Failed to ingest App Store source %s", source_id)
+            session.rollback()
             source = session.get(FeedbackSource, uuid.UUID(source_id))
             if source is not None:
                 source.status = "error"
@@ -100,6 +101,7 @@ def ingest_csv_source(
 
         except Exception:
             logger.exception("Failed to ingest CSV source %s", source_id)
+            session.rollback()
             source = session.get(FeedbackSource, uuid.UUID(source_id))
             if source is not None:
                 source.status = "error"
@@ -152,6 +154,7 @@ def chunk_source(self: object, source_id: str) -> None:
 
         except Exception:
             logger.exception("Failed to chunk source %s", source_id)
+            session.rollback()
             source = session.get(FeedbackSource, uuid.UUID(source_id))
             if source is not None:
                 source.status = "error"
@@ -198,6 +201,7 @@ def embed_source(self: object, source_id: str) -> None:
 
         except Exception:
             logger.exception("Failed to embed source %s", source_id)
+            session.rollback()
             source = session.get(FeedbackSource, uuid.UUID(source_id))
             if source is not None:
                 source.status = "error"
