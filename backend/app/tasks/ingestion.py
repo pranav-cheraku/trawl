@@ -65,7 +65,9 @@ def ingest_appstore_source(self: object, source_id: str) -> None:
 
 
 @celery_app.task(bind=True, max_retries=2)  # type: ignore[misc]
-def ingest_csv_source(self: object, source_id: str, file_path: str) -> None:
+def ingest_csv_source(
+    self: object, source_id: str, file_path: str, content_column: str = "content"
+) -> None:
     """Parse CSV file and insert as FeedbackItems."""
     with SyncSessionLocal() as session:
         try:
@@ -77,7 +79,7 @@ def ingest_csv_source(self: object, source_id: str, file_path: str) -> None:
             with open(file_path, "rb") as f:
                 file_content = f.read()
 
-            parsed = parse_csv(file_content)
+            parsed = parse_csv(file_content, content_column=content_column)
 
             items = []
             for row in parsed:

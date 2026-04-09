@@ -73,10 +73,10 @@ async def connect_appstore(
         status="scraping",
     )
     db.add(source)
-    await db.flush()
+    await db.commit()
     await db.refresh(source)
 
-    # Kick off async ingestion pipeline
+    # Kick off async ingestion pipeline (must be after commit so worker can read the row)
     ingest_appstore_source.delay(str(source.id))
 
     return source
@@ -120,11 +120,11 @@ async def upload_csv(
         status="processing",
     )
     db.add(source)
-    await db.flush()
+    await db.commit()
     await db.refresh(source)
 
-    # Kick off async ingestion pipeline
-    ingest_csv_source.delay(str(source.id), tmp.name)
+    # Kick off async ingestion pipeline (must be after commit so worker can read the row)
+    ingest_csv_source.delay(str(source.id), tmp.name, content_column)
 
     return source
 
