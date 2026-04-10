@@ -91,7 +91,7 @@ async def connect_appstore(
 async def upload_csv(
     project_id: uuid.UUID,
     file: UploadFile = File(...),
-    content_column: str = Form(default="content"),
+    content_column: str = Form(default="content", min_length=1, max_length=100),
     db: AsyncSession = Depends(get_db),
     user_id: uuid.UUID = Depends(get_current_user),
 ) -> FeedbackSource:
@@ -102,6 +102,16 @@ async def upload_csv(
     Returns the new source immediately with status 'processing'.
     """
     project = await _get_project_for_user(project_id, db, user_id)
+
+    # Validate file size (10 MB limit)
+    max_size = 10 * 1024 * 1024
+    contents = await file.read()
+    if len(contents) > max_size:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail="File too large. Maximum size is 10 MB.",
+        )
+    await file.seek(0)
 
     # Save uploaded file to shared volume (accessible by both API and Celery worker)
     upload_dir = "/tmp/trawl_uploads"
@@ -209,6 +219,7 @@ async def delete_source(
             detail="Source not found.",
         )
     await db.delete(source)
+    await db.commit()
 
 
 @router.get(

@@ -84,11 +84,13 @@ export default function SourceList({ projectId, refreshKey }: Props) {
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const sourcesRef = useRef<Source[]>([]);
 
   const fetchSources = useCallback(async () => {
     try {
       const data = await listSources(projectId);
       setSources(data);
+      sourcesRef.current = data;
     } catch {
       // Fail silently on list fetch
     } finally {
@@ -102,40 +104,36 @@ export default function SourceList({ projectId, refreshKey }: Props) {
     fetchSources();
   }, [fetchSources, refreshKey]);
 
+  // Keep sourcesRef in sync
+  useEffect(() => {
+    sourcesRef.current = sources;
+  }, [sources]);
+
   // Poll for non-terminal sources
   useEffect(() => {
-    function startPolling() {
-      if (pollRef.current) clearInterval(pollRef.current);
+    if (pollRef.current) clearInterval(pollRef.current);
 
-      pollRef.current = setInterval(async () => {
-        const pendingSources = sources.filter(
-          (s) => !TERMINAL_STATUSES.has(s.status)
-        );
-        if (pendingSources.length === 0) {
-          if (pollRef.current) clearInterval(pollRef.current);
-          pollRef.current = null;
-          return;
-        }
+    pollRef.current = setInterval(async () => {
+      const pendingSources = sourcesRef.current.filter(
+        (s) => !TERMINAL_STATUSES.has(s.status)
+      );
+      if (pendingSources.length === 0) {
+        return;
+      }
 
-        const updates = await Promise.all(
-          pendingSources.map((s) =>
-            getSource(projectId, s.id).catch(() => null)
-          )
-        );
+      const updates = await Promise.all(
+        pendingSources.map((s) =>
+          getSource(projectId, s.id).catch(() => null)
+        )
+      );
 
-        setSources((prev) =>
-          prev.map((s) => {
-            const updated = updates.find((u) => u?.id === s.id);
-            return updated ?? s;
-          })
-        );
-      }, POLL_INTERVAL);
-    }
-
-    const hasPending = sources.some((s) => !TERMINAL_STATUSES.has(s.status));
-    if (hasPending) {
-      startPolling();
-    }
+      setSources((prev) =>
+        prev.map((s) => {
+          const updated = updates.find((u) => u?.id === s.id);
+          return updated ?? s;
+        })
+      );
+    }, POLL_INTERVAL);
 
     return () => {
       if (pollRef.current) {
@@ -143,7 +141,7 @@ export default function SourceList({ projectId, refreshKey }: Props) {
         pollRef.current = null;
       }
     };
-  }, [sources, projectId]);
+  }, [projectId, refreshKey]);
 
   const handleDelete = useCallback(
     async (sourceId: string) => {

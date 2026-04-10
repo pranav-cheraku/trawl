@@ -13,13 +13,39 @@ interface CsvPreview {
   rows: string[][];
 }
 
+function parseCsvLine(line: string): string[] {
+  const fields: string[] = [];
+  let current = "";
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (inQuotes) {
+      if (ch === '"' && line[i + 1] === '"') {
+        current += '"';
+        i++;
+      } else if (ch === '"') {
+        inQuotes = false;
+      } else {
+        current += ch;
+      }
+    } else if (ch === '"') {
+      inQuotes = true;
+    } else if (ch === ",") {
+      fields.push(current.trim());
+      current = "";
+    } else {
+      current += ch;
+    }
+  }
+  fields.push(current.trim());
+  return fields;
+}
+
 function parseCsvPreview(text: string): CsvPreview {
   const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
   if (lines.length === 0) return { columns: [], rows: [] };
-  const columns = lines[0].split(",").map((c) => c.trim());
-  const rows = lines.slice(1, 4).map((line) =>
-    line.split(",").map((c) => c.trim())
-  );
+  const columns = parseCsvLine(lines[0]);
+  const rows = lines.slice(1, 4).map((line) => parseCsvLine(line));
   return { columns, rows };
 }
 
