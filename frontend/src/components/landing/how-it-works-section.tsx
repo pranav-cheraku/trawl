@@ -1,6 +1,6 @@
 export default function HowItWorksSection() {
   return (
-    <section className="bg-surface-container-lowest py-20 md:py-28">
+    <section id="how-it-works" className="bg-surface-container-lowest py-20 md:py-28">
       <div className="mx-auto max-w-7xl px-8">
         <h2 className="text-center text-[2.5rem] font-extrabold leading-tight tracking-tight text-on-surface">
           How It Works

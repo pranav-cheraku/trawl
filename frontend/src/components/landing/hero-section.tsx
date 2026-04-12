@@ -17,7 +17,7 @@ export default function HeroSection() {
           maskImage: "radial-gradient(ellipse 80% 70% at 50% 50%, black 40%, transparent 100%)",
         }}
       />
-      <div className="relative mx-auto grid w-full max-w-[1400px] grid-cols-1 items-center gap-16 px-8 pb-40 pt-28 lg:grid-cols-[1.2fr_minmax(0,580px)]">
+      <div className="relative mx-auto grid w-full max-w-[1400px] grid-cols-1 items-center gap-16 px-8 pb-40 pt-40 lg:grid-cols-[1.2fr_minmax(0,580px)]">
         {/* Left — copy */}
         <div>
           <h1
@@ -55,7 +55,7 @@ export default function HeroSection() {
               </svg>
             </SignInButton>
             <Link
-              href="#features"
+              href="#how-it-works"
               className="inline-flex items-center gap-2 rounded-[4px] border border-outline/30 bg-white px-10 py-5 text-[15px] font-semibold uppercase tracking-[0.08em] text-on-surface transition-colors hover:bg-surface-container-low"
             >
               Learn More

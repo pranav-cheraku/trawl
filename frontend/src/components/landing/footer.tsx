@@ -1,13 +1,13 @@
 export default function Footer() {
   return (
-    <footer className="bg-[#1E293B]">
+    <footer className="bg-on-surface">
       <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-6 px-8 py-10 sm:flex-row sm:items-center">
         {/* Logo + copyright */}
         <div>
           <a href="#" className="flex items-center gap-2" aria-label="Trawl home">
             <span className="text-base font-bold text-white">Trawl</span>
           </a>
-          <p className="mt-2 font-mono text-[10px] uppercase tracking-wider text-white/30">
+          <p className="mt-2 font-mono text-[10px] uppercase tracking-wider text-white/40">
             &copy; 2026 Project Trawl. All rights reserved.
           </p>
         </div>
