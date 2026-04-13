@@ -57,6 +57,16 @@ async def embed_texts(
     return all_embeddings
 
 
+async def embed_query(text: str) -> list[float]:
+    """Embed a single search query using Voyage AI query mode.
+
+    Voyage recommends input_type="query" for retrieval queries (distinct from
+    "document" used when indexing chunks). Returns a single 1024-dim vector.
+    """
+    vectors = await embed_texts([text], input_type="query")
+    return vectors[0]
+
+
 async def _post_with_retry(
     client: httpx.AsyncClient,
     payload: dict,
