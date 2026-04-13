@@ -2,8 +2,8 @@ export default function LiveConnectorSection() {
   return (
     <section id="features" className="bg-surface py-20 md:py-28">
       <div className="mx-auto grid max-w-7xl grid-cols-1 items-center gap-16 px-8 lg:grid-cols-[minmax(0,440px)_1fr]">
-        {/* Left — mockup */}
-        <div className="rounded-[4px] bg-surface-container-lowest p-5">
+        {/* Left — mockup (rendered below copy on mobile, left of copy on lg+) */}
+        <div className="order-2 rounded-[4px] bg-surface-container-lowest p-5 lg:order-1">
           {/* Review items */}
           <div className="space-y-3">
             {[
@@ -53,8 +53,8 @@ export default function LiveConnectorSection() {
           </div>
         </div>
 
-        {/* Right — copy */}
-        <div>
+        {/* Right — copy (rendered above mockup on mobile, right of mockup on lg+) */}
+        <div className="order-1 lg:order-2">
           <h2 className="text-[2.5rem] font-extrabold leading-tight tracking-tight text-on-surface">
             Live Connector
           </h2>

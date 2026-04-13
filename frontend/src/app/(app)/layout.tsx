@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
+import { useEffect, useRef, useState } from "react";
 
 const navLinks = [
   {
@@ -19,6 +20,27 @@ const navLinks = [
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { data: session, status } = useSession();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Close the profile menu on outside click or Escape
+  useEffect(() => {
+    if (!isMenuOpen) return;
+    function handleClick(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setIsMenuOpen(false);
+      }
+    }
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setIsMenuOpen(false);
+    }
+    document.addEventListener("mousedown", handleClick);
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("mousedown", handleClick);
+      document.removeEventListener("keydown", handleKey);
+    };
+  }, [isMenuOpen]);
 
   return (
     <div className="min-h-screen bg-surface">
@@ -67,47 +89,133 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           {/* Right: User section */}
           <div className="flex items-center gap-3">
             {status === "loading" ? (
-              <div className="flex items-center gap-2.5">
-                <div className="h-7 w-7 flex-shrink-0 animate-pulse rounded-full bg-surface-container" />
-                <div className="h-2.5 w-20 animate-pulse rounded-[2px] bg-surface-container" />
-              </div>
-            ) : status === "authenticated" && session?.user ? (
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2.5">
-                  <div
-                    className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-medium text-white"
-                    aria-label="User avatar"
-                  >
-                    {session.user.name ? session.user.name.charAt(0).toUpperCase() : "?"}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="truncate text-[13px] font-medium text-on-surface">
-                      {session.user.name ?? ""}
-                    </p>
-                  </div>
+              <>
+                {/* Desktop skeleton */}
+                <div className="hidden items-center gap-2.5 sm:flex">
+                  <div className="h-7 w-7 flex-shrink-0 animate-pulse rounded-full bg-surface-container" />
+                  <div className="h-2.5 w-20 animate-pulse rounded-[2px] bg-surface-container" />
                 </div>
-                <button
-                  onClick={() => signOut({ callbackUrl: "/" })}
-                  className="flex items-center gap-1.5 rounded-[4px] px-2 py-1 text-[11px] text-on-surface-variant transition-colors hover:bg-surface-container-low hover:text-on-surface"
-                  aria-label="Sign out"
-                >
-                  <svg
-                    className="h-3.5 w-3.5"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={1.5}
-                    aria-hidden="true"
+                {/* Mobile skeleton */}
+                <div className="h-8 w-8 animate-pulse rounded-full bg-surface-container sm:hidden" />
+              </>
+            ) : status === "authenticated" && session?.user ? (
+              <>
+                {/* Desktop: inline avatar + name + sign out */}
+                <div className="hidden items-center gap-3 sm:flex">
+                  <div className="flex items-center gap-2.5">
+                    <div
+                      className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-medium text-white"
+                      aria-label="User avatar"
+                    >
+                      {session.user.name
+                        ? session.user.name.charAt(0).toUpperCase()
+                        : "?"}
+                    </div>
+                    <div className="min-w-0 leading-tight">
+                      <p className="truncate text-[13px] font-medium text-on-surface">
+                        {session.user.name ?? ""}
+                      </p>
+                      {session.user.email && (
+                        <p className="truncate font-mono text-[10px] text-on-surface-variant">
+                          {session.user.email}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => signOut({ callbackUrl: "/" })}
+                    className="flex items-center gap-1.5 rounded-[4px] px-2 py-1 text-[11px] text-on-surface-variant transition-colors hover:bg-surface-container-low hover:text-on-surface"
+                    aria-label="Sign out"
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9"
-                    />
-                  </svg>
-                  Sign out
-                </button>
-              </div>
+                    <svg
+                      className="h-3.5 w-3.5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={1.5}
+                      aria-hidden="true"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9"
+                      />
+                    </svg>
+                    Sign out
+                  </button>
+                </div>
+
+                {/* Mobile: avatar button → dropdown */}
+                <div className="relative sm:hidden" ref={menuRef}>
+                  <button
+                    type="button"
+                    onClick={() => setIsMenuOpen((v) => !v)}
+                    aria-haspopup="menu"
+                    aria-expanded={isMenuOpen}
+                    aria-label="Profile menu"
+                    className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary text-[13px] font-medium text-white transition-opacity hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-secondary/30"
+                  >
+                    {session.user.name
+                      ? session.user.name.charAt(0).toUpperCase()
+                      : "?"}
+                  </button>
+
+                  {isMenuOpen && (
+                    <div
+                      role="menu"
+                      className="absolute right-0 top-full z-50 mt-2 w-60 rounded-[4px] bg-surface-container-lowest/95 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-[12px]"
+                    >
+                      {/* Identity block */}
+                      <div className="flex items-center gap-3 px-4 pt-4 pb-3">
+                        <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-secondary text-sm font-medium text-white">
+                          {session.user.name
+                            ? session.user.name.charAt(0).toUpperCase()
+                            : "?"}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-[13px] font-medium text-on-surface">
+                            {session.user.name ?? ""}
+                          </p>
+                          {session.user.email && (
+                            <p className="truncate font-mono text-[11px] text-on-surface-variant">
+                              {session.user.email}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Sign out */}
+                      <div className="px-2 pb-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsMenuOpen(false);
+                            signOut({ callbackUrl: "/" });
+                          }}
+                          role="menuitem"
+                          className="flex w-full items-center gap-2 rounded-[4px] px-2 py-2 text-[13px] text-on-surface-variant transition-colors hover:bg-surface-container-low hover:text-on-surface"
+                        >
+                          <svg
+                            className="h-4 w-4"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            strokeWidth={1.5}
+                            aria-hidden="true"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9"
+                            />
+                          </svg>
+                          Sign out
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </>
             ) : null}
           </div>
         </div>
