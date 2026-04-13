@@ -5,6 +5,7 @@ import Link from "next/link";
 import { listProjects, deleteProject } from "@/lib/api";
 import type { Project } from "@/types";
 import NewProjectModal from "@/components/new-project-modal";
+import InlineConfirm from "@/components/ui/inline-confirm";
 
 function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString("en-US", {
@@ -48,15 +49,7 @@ function ProjectCard({ project, onDelete }: ProjectCardProps) {
     setIsConfirming(true);
   }
 
-  function handleCancelDelete(e: React.MouseEvent) {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsConfirming(false);
-  }
-
-  async function handleConfirmDelete(e: React.MouseEvent) {
-    e.preventDefault();
-    e.stopPropagation();
+  async function handleConfirmDelete() {
     setIsDeleting(true);
     try {
       await deleteProject(project.id);
@@ -69,32 +62,16 @@ function ProjectCard({ project, onDelete }: ProjectCardProps) {
 
   return (
     <div className="group relative rounded-[4px] bg-surface-container-lowest transition-all hover:bg-surface-container-low">
-      {/* Delete controls — always visible on hover */}
-      <div className="absolute right-3 top-3 z-10 opacity-0 transition-opacity group-hover:opacity-100">
+      {/* Delete controls — faint by default, full on hover */}
+      <div className="absolute right-3 top-3 z-10 opacity-40 transition-opacity group-hover:opacity-100">
         {isConfirming ? (
-          <div
-            className="flex items-center gap-1.5 rounded-[4px] bg-surface-container-lowest px-2 py-1 shadow-[0_8px_24px_rgba(15,23,42,0.04)]"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <span className="text-[11px] text-on-surface-variant">Delete?</span>
-            <button
-              type="button"
-              onClick={handleConfirmDelete}
-              disabled={isDeleting}
-              className="text-[11px] font-medium text-error hover:text-error/80 disabled:opacity-50"
-              aria-label="Confirm delete"
-            >
-              {isDeleting ? "Deleting..." : "Yes"}
-            </button>
-            <span className="text-on-surface-variant/40">/</span>
-            <button
-              type="button"
-              onClick={handleCancelDelete}
-              className="text-[11px] font-medium text-on-surface-variant hover:text-on-surface"
-              aria-label="Cancel delete"
-            >
-              No
-            </button>
+          <div className="rounded-[4px] bg-surface-container-lowest px-2 py-1 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+            <InlineConfirm
+              message="Delete?"
+              onConfirm={handleConfirmDelete}
+              onCancel={() => setIsConfirming(false)}
+              isSubmitting={isDeleting}
+            />
           </div>
         ) : (
           <button

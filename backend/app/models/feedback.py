@@ -28,6 +28,7 @@ class FeedbackSource(Base):
     source_type: Mapped[str] = mapped_column(sa.String(50), nullable=False)
     filename: Mapped[str | None] = mapped_column(sa.String(255), nullable=True)
     app_store_id: Mapped[str | None] = mapped_column(sa.String(255), nullable=True)
+    app_store_name: Mapped[str | None] = mapped_column(sa.String(255), nullable=True)
     app_store_country: Mapped[str | None] = mapped_column(sa.String(10), nullable=True)
     last_scraped_at: Mapped[datetime | None] = mapped_column(
         sa.DateTime, nullable=True

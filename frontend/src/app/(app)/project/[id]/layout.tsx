@@ -2,6 +2,9 @@
 
 import Link from "next/link";
 import { usePathname, useParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { getProject } from "@/lib/api";
+import type { Project } from "@/types";
 
 const tabs = [
   {
@@ -50,6 +53,21 @@ export default function ProjectLayout({
   const pathname = usePathname();
   const params = useParams();
   const projectId = params.id as string;
+  const [project, setProject] = useState<Project | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getProject(projectId)
+      .then((p) => {
+        if (!cancelled) setProject(p);
+      })
+      .catch(() => {
+        /* silent — header falls back to placeholder */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId]);
 
   return (
     <div>
@@ -66,7 +84,11 @@ export default function ProjectLayout({
 
       {/* Project header */}
       <div className="mt-4">
-        <h1 className="text-2xl font-bold text-on-surface">Project</h1>
+        {project ? (
+          <h1 className="text-2xl font-bold text-on-surface">{project.name}</h1>
+        ) : (
+          <div className="h-8 w-48 animate-pulse rounded-[4px] bg-surface-container" />
+        )}
       </div>
 
       {/* Workspace tabs — active tab gets 2px secondary top-border */}

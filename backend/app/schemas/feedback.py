@@ -41,6 +41,7 @@ class SourceResponse(BaseModel):
     source_type: str
     filename: str | None
     app_store_id: str | None
+    app_store_name: str | None
     app_store_country: str | None
     record_count: int
     status: str

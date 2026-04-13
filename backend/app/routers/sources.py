@@ -69,6 +69,7 @@ async def connect_appstore(
         project_id=project.id,
         source_type="app_store",
         app_store_id=app_info["app_id"],
+        app_store_name=app_info["app_name"],
         app_store_country=body.country,
         status="scraping",
     )

@@ -23,6 +23,7 @@ export interface Source {
   sourceType: string;
   filename: string | null;
   appStoreId: string | null;
+  appStoreName: string | null;
   appStoreCountry: string | null;
   recordCount: number;
   status: string;

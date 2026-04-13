@@ -110,16 +110,22 @@ export default function NewProjectModal({
           <div className="p-8 pt-4 space-y-6">
             {/* Name field */}
             <div className="space-y-2">
-              <label
-                htmlFor="project-name"
-                className="block text-xs font-medium uppercase tracking-[0.2em] text-on-surface-variant"
-              >
-                Project Name <span className="text-secondary">*</span>
-              </label>
+              <div className="flex items-center justify-between">
+                <label
+                  htmlFor="project-name"
+                  className="block text-xs font-medium uppercase tracking-[0.2em] text-on-surface-variant"
+                >
+                  Project Name <span className="text-secondary">*</span>
+                </label>
+                <span className="font-mono text-[10px] text-on-surface-variant/60">
+                  {name.length}/255
+                </span>
+              </div>
               <input
                 id="project-name"
                 type="text"
                 required
+                maxLength={255}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g. Notion Mobile Reviews"
