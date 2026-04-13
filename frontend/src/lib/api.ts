@@ -1,6 +1,9 @@
 import type {
   AppSearchResult,
+  Conversation,
+  ConversationDetail,
   FeedbackItem,
+  Message,
   Project,
   Source,
   TokenResponse,
@@ -184,5 +187,45 @@ export async function listFeedbackItems(
   });
   return apiFetch<FeedbackItem[]>(
     `/api/projects/${projectId}/sources/${sourceId}/items?${params}`
+  );
+}
+
+// ── Conversation endpoints ───────────────────────────────────────────
+
+export async function createConversation(
+  projectId: string
+): Promise<Conversation> {
+  return apiFetch<Conversation>(
+    `/api/projects/${projectId}/conversations`,
+    { method: "POST" }
+  );
+}
+
+export async function listConversations(
+  projectId: string
+): Promise<Conversation[]> {
+  return apiFetch<Conversation[]>(`/api/projects/${projectId}/conversations`);
+}
+
+export async function getConversation(
+  projectId: string,
+  conversationId: string
+): Promise<ConversationDetail> {
+  return apiFetch<ConversationDetail>(
+    `/api/projects/${projectId}/conversations/${conversationId}`
+  );
+}
+
+export async function sendMessage(
+  projectId: string,
+  conversationId: string,
+  content: string
+): Promise<Message> {
+  return apiFetch<Message>(
+    `/api/projects/${projectId}/conversations/${conversationId}/messages`,
+    {
+      method: "POST",
+      body: JSON.stringify({ content }),
+    }
   );
 }

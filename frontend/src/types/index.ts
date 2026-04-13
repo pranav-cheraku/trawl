@@ -48,3 +48,51 @@ export interface TokenResponse {
 export interface UserSyncResponse {
   id: string;
 }
+
+/** A single retrieved chunk as it appears in a message's transparency blob. */
+export interface TransparencyChunk {
+  chunkId: string;
+  feedbackItemId: string;
+  chunkTextPreview: string;
+  similarityScore: number;
+  retrievalRank: number;
+  sourceType: string;
+  sourceName: string;
+}
+
+/** Full RAG transparency payload stored on assistant messages. */
+export interface Transparency {
+  query: string;
+  retrievedChunks: TransparencyChunk[];
+  modelUsed: string | null;
+  topK: number;
+  threshold: number;
+  totalChunksSearched: number;
+  retrievalLatencyMs: number;
+  generationLatencyMs: number;
+  inputTokens: number;
+  outputTokens: number;
+}
+
+/** A single message in a conversation. */
+export interface Message {
+  id: string;
+  conversationId: string;
+  role: "user" | "assistant";
+  content: string;
+  sourceChunkIds: string[];
+  transparency: Transparency | null;
+  createdAt: string;
+}
+
+/** Basic conversation shape (no nested messages). */
+export interface Conversation {
+  id: string;
+  projectId: string;
+  createdAt: string;
+}
+
+/** Conversation detail with full message history. */
+export interface ConversationDetail extends Conversation {
+  messages: Message[];
+}
