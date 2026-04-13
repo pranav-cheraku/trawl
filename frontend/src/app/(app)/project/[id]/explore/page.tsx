@@ -5,6 +5,7 @@ import { useState } from "react";
 import { ChatInput } from "@/components/chat/chat-input";
 import { EmptyState } from "@/components/chat/empty-state";
 import { MessageList } from "@/components/chat/message-list";
+import { XrayPanel } from "@/components/rag-xray/xray-panel";
 import type { Message, Transparency } from "@/types";
 
 // ── Temporary mock data (removed in CP8 when real API is wired up) ──────────
@@ -97,6 +98,12 @@ export default function ExplorePage() {
   const [isPending, setIsPending] = useState(false);
   const [draft, setDraft] = useState("");
   const [showEmpty, setShowEmpty] = useState(false);
+  const [focusedChunkId, setFocusedChunkId] = useState<string | null>(null);
+  const [focusTick, setFocusTick] = useState(0);
+
+  // Show X-Ray for the most recent assistant message.
+  const lastAssistantMessage =
+    [...messages].reverse().find((m) => m.role === "assistant") ?? null;
 
   function handleSend(content: string) {
     // Mock: append user message, simulate 1.5s pending, append canned assistant reply
@@ -128,8 +135,8 @@ export default function ExplorePage() {
   }
 
   function handleCitationClick(chunkId: string) {
-    // eslint-disable-next-line no-console
-    console.log("Citation clicked:", chunkId);
+    setFocusedChunkId(chunkId);
+    setFocusTick((t) => t + 1);
   }
 
   return (
@@ -149,17 +156,26 @@ export default function ExplorePage() {
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto rounded-[4px] bg-surface-container-low p-6">
-        {messages.length === 0 && !isPending ? (
-          <EmptyState onExampleClick={(q) => setDraft(q)} />
-        ) : (
-          <MessageList
-            messages={messages}
-            isPending={isPending}
-            pendingChunkCount={8}
-            onCitationClick={handleCitationClick}
+      <div className="grid flex-1 gap-4 overflow-hidden lg:grid-cols-[2fr_1fr]">
+        <div className="overflow-y-auto rounded-[4px] bg-surface-container-low p-6">
+          {messages.length === 0 && !isPending ? (
+            <EmptyState onExampleClick={(q) => setDraft(q)} />
+          ) : (
+            <MessageList
+              messages={messages}
+              isPending={isPending}
+              pendingChunkCount={8}
+              onCitationClick={handleCitationClick}
+            />
+          )}
+        </div>
+        <div className="hidden overflow-hidden lg:block">
+          <XrayPanel
+            selectedMessage={lastAssistantMessage}
+            focusedChunkId={focusedChunkId}
+            focusTick={focusTick}
           />
-        )}
+        </div>
       </div>
 
       <ChatInput
