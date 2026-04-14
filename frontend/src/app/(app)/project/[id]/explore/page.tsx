@@ -1,173 +1,206 @@
 "use client";
 
-import { useState } from "react";
+import Link from "next/link";
+import { useParams } from "next/navigation";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ChatInput } from "@/components/chat/chat-input";
 import { EmptyState } from "@/components/chat/empty-state";
 import { MessageList } from "@/components/chat/message-list";
 import { XrayPanel } from "@/components/rag-xray/xray-panel";
-import type { Message, Transparency } from "@/types";
+import {
+  createConversation,
+  getConversation,
+  listSources,
+  sendMessage,
+} from "@/lib/api";
+import type { Message } from "@/types";
 
-// ── Temporary mock data (removed in CP8 when real API is wired up) ──────────
+function sessionStorageKey(projectId: string): string {
+  return `trawl:explore:${projectId}:conversationId`;
+}
 
-const MOCK_TRANSPARENCY: Transparency = {
-  query: "What do users complain about the most?",
-  retrievedChunks: [
-    {
-      chunkId: "11111111-1111-1111-1111-111111111111",
-      feedbackItemId: "aaaa0001-0000-0000-0000-000000000000",
-      chunkTextPreview:
-        "I can't log in after the latest update. The app just spins forever on the loading screen. Super frustrating.",
-      similarityScore: 0.87,
-      retrievalRank: 1,
-      sourceType: "app_store",
-      sourceName: "Duolingo",
-    },
-    {
-      chunkId: "22222222-2222-2222-2222-222222222222",
-      feedbackItemId: "aaaa0002-0000-0000-0000-000000000000",
-      chunkTextPreview:
-        "App crashes every time I try to open a lesson. Been like this for three days. Please fix.",
-      similarityScore: 0.81,
-      retrievalRank: 2,
-      sourceType: "app_store",
-      sourceName: "Duolingo",
-    },
-    {
-      chunkId: "33333333-3333-3333-3333-333333333333",
-      feedbackItemId: "aaaa0003-0000-0000-0000-000000000000",
-      chunkTextPreview:
-        "Why are there so many ads now? I'm paying for super and still seeing ads between lessons. Not okay.",
-      similarityScore: 0.76,
-      retrievalRank: 3,
-      sourceType: "app_store",
-      sourceName: "Duolingo",
-    },
-    {
-      chunkId: "44444444-4444-4444-4444-444444444444",
-      feedbackItemId: "aaaa0004-0000-0000-0000-000000000000",
-      chunkTextPreview:
-        "Customer support has been unreachable for a week. Opened a ticket, no response.",
-      similarityScore: 0.72,
-      retrievalRank: 4,
-      sourceType: "app_store",
-      sourceName: "Duolingo",
-    },
-  ],
-  modelUsed: "claude-sonnet-4-20250514",
-  topK: 8,
-  threshold: 0.3,
-  totalChunksSearched: 342,
-  retrievalLatencyMs: 118,
-  generationLatencyMs: 4240,
-  inputTokens: 1820,
-  outputTokens: 340,
-};
-
-const MOCK_MESSAGES: Message[] = [
-  {
-    id: "msg-user-1",
-    conversationId: "conv-1",
-    role: "user",
-    content: "What do users complain about the most?",
-    sourceChunkIds: [],
-    transparency: null,
-    createdAt: "2026-04-13T19:30:00Z",
-  },
-  {
-    id: "msg-assistant-1",
-    conversationId: "conv-1",
-    role: "assistant",
-    content:
-      "Users are most frustrated by login failures after recent updates [Feedback #1] and frequent app crashes when opening lessons [Feedback #2]. A separate but significant complaint is that paying subscribers are still seeing ads between lessons [Feedback #3]. Several users also mention unresponsive customer support [Feedback #4].",
-    sourceChunkIds: [
-      "11111111-1111-1111-1111-111111111111",
-      "22222222-2222-2222-2222-222222222222",
-      "33333333-3333-3333-3333-333333333333",
-      "44444444-4444-4444-4444-444444444444",
-    ],
-    transparency: MOCK_TRANSPARENCY,
-    createdAt: "2026-04-13T19:30:08Z",
-  },
-];
-
-// ─────────────────────────────────────────────────────────────────────
+type MountStatus = "loading" | "ready" | "no-sources";
 
 export default function ExplorePage() {
-  const [messages, setMessages] = useState<Message[]>(MOCK_MESSAGES);
+  const params = useParams<{ id: string }>();
+  const projectId = params.id;
+
+  const [mountStatus, setMountStatus] = useState<MountStatus>("loading");
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [isPending, setIsPending] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
-  const [showEmpty, setShowEmpty] = useState(false);
+
+  // X-Ray focus plumbing
   const [focusedChunkId, setFocusedChunkId] = useState<string | null>(null);
   const [focusTick, setFocusTick] = useState(0);
+  const [isMobileSheetOpen, setIsMobileSheetOpen] = useState(false);
 
-  // Show X-Ray for the most recent assistant message.
+  // Avoid double-initializing in React strict mode dev re-mounts.
+  const hasInitializedRef = useRef(false);
+
+  // Initial mount: try to restore a saved conversation, otherwise check sources.
+  useEffect(() => {
+    if (hasInitializedRef.current) return;
+    hasInitializedRef.current = true;
+
+    let cancelled = false;
+
+    async function initialize() {
+      const savedId =
+        typeof window !== "undefined"
+          ? window.sessionStorage.getItem(sessionStorageKey(projectId))
+          : null;
+
+      if (savedId) {
+        try {
+          const conversation = await getConversation(projectId, savedId);
+          if (cancelled) return;
+          setConversationId(conversation.id);
+          setMessages(conversation.messages);
+          setMountStatus("ready");
+          return;
+        } catch {
+          // Saved conversation is gone — clear and fall through.
+          if (typeof window !== "undefined") {
+            window.sessionStorage.removeItem(sessionStorageKey(projectId));
+          }
+        }
+      }
+
+      try {
+        const sources = await listSources(projectId);
+        if (cancelled) return;
+        const hasReady = sources.some((s) => s.status === "ready");
+        setMountStatus(hasReady ? "ready" : "no-sources");
+      } catch {
+        if (!cancelled) setMountStatus("ready");
+      }
+    }
+
+    initialize();
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId]);
+
+  const handleCitationClick = useCallback((chunkId: string) => {
+    setFocusedChunkId(chunkId);
+    setFocusTick((t) => t + 1);
+    setIsMobileSheetOpen(true);
+  }, []);
+
+  const handleSend = useCallback(
+    async (content: string) => {
+      if (isPending) return;
+      setErrorMessage(null);
+
+      // Lazy-create the conversation on first send.
+      let activeConversationId = conversationId;
+      if (!activeConversationId) {
+        try {
+          const newConversation = await createConversation(projectId);
+          activeConversationId = newConversation.id;
+          setConversationId(newConversation.id);
+          if (typeof window !== "undefined") {
+            window.sessionStorage.setItem(
+              sessionStorageKey(projectId),
+              newConversation.id,
+            );
+          }
+        } catch {
+          setErrorMessage(
+            "Couldn't start a conversation. Please try again.",
+          );
+          return;
+        }
+      }
+
+      // Optimistic user bubble
+      const optimisticId = `temp-user-${Date.now()}`;
+      const optimisticUser: Message = {
+        id: optimisticId,
+        conversationId: activeConversationId,
+        role: "user",
+        content,
+        sourceChunkIds: [],
+        transparency: null,
+        createdAt: new Date().toISOString(),
+      };
+      setMessages((prev) => [...prev, optimisticUser]);
+      setIsPending(true);
+
+      try {
+        const assistant = await sendMessage(
+          projectId,
+          activeConversationId,
+          content,
+        );
+        setMessages((prev) => [...prev, assistant]);
+      } catch (err) {
+        // Remove the optimistic bubble on failure so the user can retry.
+        setMessages((prev) => prev.filter((m) => m.id !== optimisticId));
+        const detail =
+          err instanceof Error && err.message.includes("400")
+            ? "Your feedback sources aren't ready yet. Check the Sources tab."
+            : "Something went wrong. Please try again.";
+        setErrorMessage(detail);
+      } finally {
+        setIsPending(false);
+      }
+    },
+    [conversationId, isPending, projectId],
+  );
+
+  // Panel always reflects the most recent assistant message.
   const lastAssistantMessage =
     [...messages].reverse().find((m) => m.role === "assistant") ?? null;
 
-  function handleSend(content: string) {
-    // Mock: append user message, simulate 1.5s pending, append canned assistant reply
-    const userMsg: Message = {
-      id: `mock-user-${Date.now()}`,
-      conversationId: "conv-1",
-      role: "user",
-      content,
-      sourceChunkIds: [],
-      transparency: null,
-      createdAt: new Date().toISOString(),
-    };
-    setMessages((prev) => [...prev, userMsg]);
-    setIsPending(true);
-
-    setTimeout(() => {
-      const replyMsg: Message = {
-        id: `mock-assistant-${Date.now()}`,
-        conversationId: "conv-1",
-        role: "assistant",
-        content: `Mock response for "${content}". Real RAG response wires in CP8. Example citation [Feedback #1] and [Feedback #2].`,
-        sourceChunkIds: MOCK_MESSAGES[1].sourceChunkIds.slice(0, 2),
-        transparency: MOCK_TRANSPARENCY,
-        createdAt: new Date().toISOString(),
-      };
-      setMessages((prev) => [...prev, replyMsg]);
-      setIsPending(false);
-    }, 1500);
+  if (mountStatus === "loading") {
+    return (
+      <div className="flex h-[calc(100vh-12rem)] items-center justify-center rounded-[4px] bg-surface-container-low">
+        <div className="font-mono text-[11px] uppercase tracking-[0.2em] text-on-surface-variant">
+          Loading conversation…
+        </div>
+      </div>
+    );
   }
 
-  function handleCitationClick(chunkId: string) {
-    setFocusedChunkId(chunkId);
-    setFocusTick((t) => t + 1);
+  if (mountStatus === "no-sources") {
+    return <NoSourcesState projectId={projectId} />;
   }
 
   return (
     <div className="flex h-[calc(100vh-12rem)] flex-col gap-4">
-      {/* Dev harness toggle — removed in CP8 */}
-      <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.2em] text-on-surface-variant">
-        <span>dev harness (cp6)</span>
-        <button
-          type="button"
-          onClick={() => {
-            setShowEmpty((v) => !v);
-            setMessages(showEmpty ? MOCK_MESSAGES : []);
-          }}
-          className="rounded-[4px] bg-surface-container-lowest px-2 py-1 hover:bg-surface-container-high"
-        >
-          {showEmpty ? "show mock messages" : "show empty state"}
-        </button>
-      </div>
+      {errorMessage && (
+        <div className="flex items-center justify-between rounded-[4px] bg-error/10 px-4 py-3 text-[13px] text-error">
+          <span>{errorMessage}</span>
+          <button
+            type="button"
+            onClick={() => setErrorMessage(null)}
+            className="font-mono text-[10px] uppercase tracking-[0.15em] text-error hover:opacity-70"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
 
       <div className="grid flex-1 gap-4 overflow-hidden lg:grid-cols-[2fr_1fr]">
-        <div className="overflow-y-auto rounded-[4px] bg-surface-container-low p-6">
-          {messages.length === 0 && !isPending ? (
-            <EmptyState onExampleClick={(q) => setDraft(q)} />
-          ) : (
-            <MessageList
-              messages={messages}
-              isPending={isPending}
-              pendingChunkCount={8}
-              onCitationClick={handleCitationClick}
-            />
-          )}
+        <div className="flex flex-col overflow-hidden rounded-[4px] bg-surface-container-low">
+          <div className="flex-1 overflow-y-auto p-6">
+            {messages.length === 0 && !isPending ? (
+              <EmptyState onExampleClick={(q) => setDraft(q)} />
+            ) : (
+              <MessageList
+                messages={messages}
+                isPending={isPending}
+                pendingChunkCount={8}
+                onCitationClick={handleCitationClick}
+              />
+            )}
+          </div>
         </div>
         <div className="hidden overflow-hidden lg:block">
           <XrayPanel
@@ -184,6 +217,79 @@ export default function ExplorePage() {
         draft={draft}
         onDraftChange={setDraft}
       />
+
+      {/* Mobile bottom sheet for X-Ray panel */}
+      {isMobileSheetOpen && (
+        <div className="fixed inset-0 z-40 lg:hidden">
+          <button
+            type="button"
+            aria-label="Close RAG X-Ray panel"
+            onClick={() => setIsMobileSheetOpen(false)}
+            className="absolute inset-0 bg-on-surface/40 backdrop-blur-[2px]"
+          />
+          <div className="absolute inset-x-0 bottom-0 max-h-[75vh] rounded-t-[4px] bg-surface-container-low">
+            <div className="flex items-center justify-between px-4 pt-3">
+              <div className="mx-auto h-1 w-10 rounded-full bg-surface-container-high" />
+            </div>
+            <div className="flex items-center justify-between px-4 pt-2 pb-1">
+              <div className="font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-on-surface-variant">
+                RAG X-Ray
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsMobileSheetOpen(false)}
+                className="font-mono text-[10px] uppercase tracking-[0.15em] text-on-surface-variant hover:text-on-surface"
+              >
+                Close
+              </button>
+            </div>
+            <div className="max-h-[65vh] overflow-y-auto">
+              <XrayPanel
+                selectedMessage={lastAssistantMessage}
+                focusedChunkId={focusedChunkId}
+                focusTick={focusTick}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function NoSourcesState({ projectId }: { projectId: string }) {
+  return (
+    <div className="flex h-[calc(100vh-12rem)] items-center justify-center rounded-[4px] bg-surface-container-low">
+      <div className="flex max-w-md flex-col items-center px-8 py-16 text-center">
+        <div className="flex h-10 w-10 items-center justify-center rounded-[4px] bg-surface-container">
+          <svg
+            className="h-5 w-5 text-on-surface-variant"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={1.5}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0 6 6m3 12c-8.284 0-15-6.716-15-15V4.5A2.25 2.25 0 0 1 4.5 2.25h1.372c.516 0 .966.351 1.091.852l1.106 4.423c.11.44-.054.902-.417 1.173l-1.293.97a1.062 1.062 0 0 0-.38 1.21 12.035 12.035 0 0 0 7.143 7.143c.441.162.928-.004 1.21-.38l.97-1.293a1.125 1.125 0 0 1 1.173-.417l4.423 1.106c.5.125.852.575.852 1.091V19.5a2.25 2.25 0 0 1-2.25 2.25h-2.25Z"
+            />
+          </svg>
+        </div>
+        <h2 className="mt-5 text-lg font-bold text-on-surface">
+          No feedback to search yet
+        </h2>
+        <p className="mt-2 text-[13px] leading-relaxed text-on-surface-variant">
+          Connect an App Store app or upload a CSV on the Sources tab, then come
+          back here to start asking questions.
+        </p>
+        <Link
+          href={`/project/${projectId}/sources`}
+          className="mt-6 rounded-[4px] bg-on-surface px-4 py-2 text-[13px] text-white transition-colors hover:bg-secondary"
+        >
+          Go to Sources tab
+        </Link>
+      </div>
     </div>
   );
 }
