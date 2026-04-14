@@ -19,7 +19,12 @@ interface CitationBadgeProps {
 export function CitationBadge({ index, chunk, onClick }: CitationBadgeProps) {
   const isClickable = Boolean(chunk && onClick);
 
-  function handleClick() {
+  function handleClick(e: React.MouseEvent<HTMLButtonElement>) {
+    // Stop propagation so the badge click doesn't also trigger the
+    // parent assistant bubble's onClick (which would clear focusedChunkId
+    // as part of its "plain bubble click" behavior and clobber our
+    // scroll-to-chunk intent).
+    e.stopPropagation();
     if (chunk && onClick) {
       onClick(chunk.chunkId);
     }

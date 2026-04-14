@@ -49,11 +49,25 @@ export interface UserSyncResponse {
   id: string;
 }
 
+/** Full chunk + parent feedback item, fetched on demand by the X-Ray modal. */
+export interface ChunkDetail {
+  chunkId: string;
+  feedbackItemId: string;
+  chunkText: string;
+  feedbackItemContent: string;
+  sourceType: string;
+  sourceName: string;
+}
+
 /** A single retrieved chunk as it appears in a message's transparency blob. */
 export interface TransparencyChunk {
   chunkId: string;
   feedbackItemId: string;
   chunkTextPreview: string;
+  /** Full chunk text. Optional for messages created before Day 16. */
+  chunkText?: string;
+  /** Full parent feedback item content. Optional for pre-Day-16 messages. */
+  feedbackItemContent?: string;
   similarityScore: number;
   retrievalRank: number;
   sourceType: string;

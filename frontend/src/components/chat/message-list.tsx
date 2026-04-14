@@ -9,13 +9,17 @@ interface MessageListProps {
   messages: Message[];
   isPending: boolean;
   pendingChunkCount?: number;
-  onCitationClick?: (chunkId: string) => void;
+  selectedMessageId?: string | null;
+  onMessageSelect?: (messageId: string) => void;
+  onCitationClick?: (chunkId: string, messageId: string) => void;
 }
 
 export function MessageList({
   messages,
   isPending,
   pendingChunkCount,
+  selectedMessageId,
+  onMessageSelect,
   onCitationClick,
 }: MessageListProps) {
   const bottomRef = useRef<HTMLDivElement | null>(null);
@@ -31,6 +35,8 @@ export function MessageList({
         <ChatMessage
           key={msg.id}
           message={msg}
+          isSelected={selectedMessageId === msg.id}
+          onSelect={msg.role === "assistant" ? onMessageSelect : undefined}
           onCitationClick={onCitationClick}
         />
       ))}

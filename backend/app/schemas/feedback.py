@@ -60,3 +60,16 @@ class FeedbackItemResponse(BaseModel):
     metadata: dict = Field(default_factory=dict, validation_alias="item_metadata")
     external_id: str | None
     created_at: datetime
+
+
+class ChunkDetailResponse(BaseModel):
+    """Response for GET /projects/{id}/chunks/{id} — full chunk + parent item."""
+
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    chunk_id: uuid.UUID
+    feedback_item_id: uuid.UUID
+    chunk_text: str
+    feedback_item_content: str
+    source_type: str
+    source_name: str

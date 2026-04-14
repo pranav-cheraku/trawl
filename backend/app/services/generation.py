@@ -29,9 +29,12 @@ not contain enough information to answer the question, say so honestly — do no
 or invent facts.
 2. Cite chunks inline using the exact form `[Feedback #N]` where N is the 1-indexed chunk \
 number. Every factual claim should have at least one citation.
-3. Be concise. Product managers are busy — prefer short paragraphs and bullets over prose \
+3. When citing multiple chunks for the same claim, write each citation as a SEPARATE \
+bracket back-to-back: `[Feedback #1][Feedback #3]`. Do NOT combine them into one bracket. \
+Never write forms like `[Feedback #1, #3]`, `[Feedback #1, 3]`, or `[Feedback #1-3]`.
+4. Be concise. Product managers are busy — prefer short paragraphs and bullets over prose \
 walls.
-4. When you call the `cite_feedback` tool, include in `supporting_feedback_indices` only \
+5. When you call the `cite_feedback` tool, include in `supporting_feedback_indices` only \
 the chunks that directly back your claims. Do not include chunks you did not actually \
 rely on."""
 

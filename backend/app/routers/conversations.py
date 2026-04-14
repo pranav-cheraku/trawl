@@ -79,6 +79,10 @@ def _chunk_to_transparency_dict(chunk: RetrievedChunk) -> dict:
 
     Keys are camelCase so the blob matches the frontend's expected shape
     without an extra transformation layer.
+
+    Stores BOTH a short preview (for compact card display) and the full
+    chunk text + full parent feedback item content so the frontend can
+    open a detail modal without a follow-up API call.
     """
     text = chunk.chunk_text or ""
     preview = text[:280] + ("…" if len(text) > 280 else "")
@@ -86,6 +90,8 @@ def _chunk_to_transparency_dict(chunk: RetrievedChunk) -> dict:
         "chunkId": str(chunk.chunk_id),
         "feedbackItemId": str(chunk.feedback_item_id),
         "chunkTextPreview": preview,
+        "chunkText": text,
+        "feedbackItemContent": chunk.feedback_item_content,
         "similarityScore": chunk.similarity_score,
         "retrievalRank": chunk.retrieval_rank,
         "sourceType": chunk.source_type,

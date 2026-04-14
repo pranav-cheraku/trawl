@@ -38,6 +38,12 @@ export default function ExplorePage() {
     detail: string;
   } | null>(null);
 
+  // Which assistant message the X-Ray panel is showing. null means auto-follow
+  // the most recent assistant message.
+  const [selectedMessageId, setSelectedMessageId] = useState<string | null>(
+    null,
+  );
+
   // X-Ray focus plumbing
   const [focusedChunkId, setFocusedChunkId] = useState<string | null>(null);
   const [focusTick, setFocusTick] = useState(0);
@@ -46,14 +52,19 @@ export default function ExplorePage() {
   // Input imperative handle — lets us focus the textarea after chip click.
   const inputRef = useRef<ChatInputHandle>(null);
 
-  // Avoid double-initializing in React strict mode dev re-mounts.
-  const hasInitializedRef = useRef(false);
+  // Ref at the very bottom of the chat column so auto-scroll can include
+  // the FailedMessageBubble (which renders after MessageList's own bottom).
+  const chatEndRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [messages.length, isPending, failedSend]);
 
   // Initial mount: try to restore a saved conversation, otherwise check sources.
+  // The cancelled flag handles React Strict Mode's intentional double-mount:
+  // the first effect's cleanup sets cancelled=true, the second effect runs
+  // fresh with its own cancelled=false and wins the state update race.
   useEffect(() => {
-    if (hasInitializedRef.current) return;
-    hasInitializedRef.current = true;
-
     let cancelled = false;
 
     async function initialize() {
@@ -94,10 +105,23 @@ export default function ExplorePage() {
     };
   }, [projectId]);
 
-  const handleCitationClick = useCallback((chunkId: string) => {
-    setFocusedChunkId(chunkId);
-    setFocusTick((t) => t + 1);
-    setIsMobileSheetOpen(true);
+  const handleCitationClick = useCallback(
+    (chunkId: string, messageId: string) => {
+      // Switch the X-Ray panel to the clicked message AND scroll to the
+      // specific chunk inside it.
+      setSelectedMessageId(messageId);
+      setFocusedChunkId(chunkId);
+      setFocusTick((t) => t + 1);
+      setIsMobileSheetOpen(true);
+    },
+    [],
+  );
+
+  const handleMessageSelect = useCallback((messageId: string) => {
+    // Plain bubble click: switch the X-Ray to that message. Clear any
+    // pending scroll-to-chunk highlight since it was for a different message.
+    setSelectedMessageId(messageId);
+    setFocusedChunkId(null);
   }, []);
 
   const handleSend = useCallback(
@@ -151,12 +175,38 @@ export default function ExplorePage() {
           content,
         );
         setMessages((prev) => [...prev, assistant]);
+        // New reply → auto-follow latest in the X-Ray panel.
+        setSelectedMessageId(null);
+        setFocusedChunkId(null);
       } catch (err) {
         // Keep the optimistic bubble on screen; show an inline retry UI.
-        const detail =
-          err instanceof Error && err.message.includes("400")
-            ? "Your feedback sources aren't ready yet. Check the Sources tab."
-            : "Something went wrong. Please try again.";
+        // Always log the raw error for devtools debugging.
+        // eslint-disable-next-line no-console
+        console.error("sendMessage failed:", err);
+
+        const statusMatch =
+          err instanceof Error
+            ? err.message.match(/API error:\s*(\d+)/)
+            : null;
+        const status = statusMatch ? parseInt(statusMatch[1], 10) : null;
+
+        let detail: string;
+        if (status === 400) {
+          detail =
+            "Your feedback sources aren't ready yet. Check the Sources tab.";
+        } else if (status === 504) {
+          detail =
+            "Claude took too long to respond. The model is busy — retry should work.";
+        } else if (status === 500) {
+          detail =
+            "The server hit an error. If this keeps happening, check the backend logs and confirm ANTHROPIC_API_KEY is set.";
+        } else if (status !== null) {
+          detail = `The server returned ${status}. Try again.`;
+        } else {
+          detail =
+            "Couldn't reach the backend. Is the API server running?";
+        }
+
         setFailedSend({ content, userBubbleId: bubbleId, detail });
       } finally {
         setIsPending(false);
@@ -178,13 +228,19 @@ export default function ExplorePage() {
     setTimeout(() => inputRef.current?.focus(), 0);
   }, []);
 
-  // Panel always reflects the most recent assistant message.
-  const lastAssistantMessage =
-    [...messages].reverse().find((m) => m.role === "assistant") ?? null;
+  // Panel reflects the explicitly-selected assistant message, or (if none
+  // is selected) falls back to the most recent assistant reply.
+  const activeMessage = (() => {
+    if (selectedMessageId) {
+      const found = messages.find((m) => m.id === selectedMessageId);
+      if (found && found.role === "assistant") return found;
+    }
+    return [...messages].reverse().find((m) => m.role === "assistant") ?? null;
+  })();
 
   if (mountStatus === "loading") {
     return (
-      <div className="flex h-[calc(100vh-12rem)] items-center justify-center rounded-[4px] bg-surface-container-low">
+      <div className="flex h-[calc(100vh-20rem)] items-center justify-center rounded-[4px] bg-surface-container-low">
         <div className="font-mono text-[11px] uppercase tracking-[0.2em] text-on-surface-variant">
           Loading workspace…
         </div>
@@ -197,7 +253,7 @@ export default function ExplorePage() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-12rem)] flex-col gap-4">
+    <div className="flex h-[calc(100vh-20rem)] flex-col gap-4">
       {errorMessage && (
         <div className="flex items-center justify-between gap-3 rounded-[4px] bg-error/10 px-4 py-3 text-[13px] text-error">
           <div className="flex items-center gap-2">
@@ -225,6 +281,8 @@ export default function ExplorePage() {
                   messages={messages}
                   isPending={isPending}
                   pendingChunkCount={8}
+                  selectedMessageId={activeMessage?.id ?? null}
+                  onMessageSelect={handleMessageSelect}
                   onCitationClick={handleCitationClick}
                 />
                 {failedSend && !isPending && (
@@ -233,13 +291,15 @@ export default function ExplorePage() {
                     onRetry={handleRetry}
                   />
                 )}
+                <div ref={chatEndRef} />
               </div>
             )}
           </div>
         </div>
         <div className="hidden overflow-hidden lg:block">
           <XrayPanel
-            selectedMessage={lastAssistantMessage}
+            projectId={projectId}
+            selectedMessage={activeMessage}
             focusedChunkId={focusedChunkId}
             focusTick={focusTick}
           />
@@ -281,7 +341,8 @@ export default function ExplorePage() {
             </div>
             <div className="max-h-[65vh] overflow-y-auto">
               <XrayPanel
-                selectedMessage={lastAssistantMessage}
+                projectId={projectId}
+                selectedMessage={activeMessage}
                 focusedChunkId={focusedChunkId}
                 focusTick={focusTick}
               />
@@ -340,7 +401,7 @@ function FailedMessageBubble({ detail, onRetry }: FailedMessageBubbleProps) {
 
 function NoSourcesState({ projectId }: { projectId: string }) {
   return (
-    <div className="flex h-[calc(100vh-12rem)] items-center justify-center rounded-[4px] bg-surface-container-low">
+    <div className="flex h-[calc(100vh-20rem)] items-center justify-center rounded-[4px] bg-surface-container-low">
       <div className="flex max-w-md flex-col items-center px-8 py-16 text-center">
         <div className="flex h-10 w-10 items-center justify-center rounded-[4px] bg-surface-container">
           <svg

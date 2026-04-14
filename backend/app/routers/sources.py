@@ -5,7 +5,7 @@ import tempfile
 import uuid
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dependencies import get_current_user, get_db
@@ -13,6 +13,7 @@ from app.models.feedback import FeedbackItem, FeedbackSource
 from app.models.project import Project
 from app.schemas.feedback import (
     AppStoreConnectRequest,
+    ChunkDetailResponse,
     FeedbackItemResponse,
     SourceResponse,
 )
@@ -261,3 +262,72 @@ async def list_items(
         .offset(offset)
     )
     return list(result.scalars().all())
+
+
+@router.get(
+    "/projects/{project_id}/chunks/{chunk_id}",
+    response_model=ChunkDetailResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Get full text for a chunk + its parent feedback item",
+)
+async def get_chunk_detail(
+    project_id: uuid.UUID,
+    chunk_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    user_id: uuid.UUID = Depends(get_current_user),
+) -> dict:
+    """Return the full text of a chunk and its parent feedback item.
+
+    Used by the RAG X-Ray detail modal to load full content when the
+    embedded transparency blob only has a truncated preview (messages
+    created before the Day 16 schema change).
+    """
+    await _get_project_for_user(project_id, db, user_id)
+
+    result = await db.execute(
+        text(
+            """
+            SELECT
+                fc.id              AS chunk_id,
+                fc.chunk_text      AS chunk_text,
+                fc.feedback_item_id AS feedback_item_id,
+                fi.content         AS feedback_item_content,
+                fs.source_type     AS source_type,
+                fs.app_store_name  AS app_store_name,
+                fs.filename        AS filename
+            FROM feedback_chunks fc
+            JOIN feedback_items   fi ON fi.id = fc.feedback_item_id
+            JOIN feedback_sources fs ON fs.id = fi.source_id
+            WHERE fc.id = :chunk_id AND fc.project_id = :project_id
+            """
+        ),
+        {"chunk_id": chunk_id, "project_id": project_id},
+    )
+    row = result.mappings().first()
+    if row is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Chunk not found.",
+        )
+
+    # Inline source-name fallback chain (mirrors retrieval._derive_source_name)
+    source_name = (
+        row["app_store_name"]
+        or row["filename"]
+        or (
+            "App Store"
+            if row["source_type"] == "app_store"
+            else "CSV Upload"
+            if row["source_type"] == "csv"
+            else "Unknown source"
+        )
+    )
+
+    return {
+        "chunkId": str(row["chunk_id"]),
+        "feedbackItemId": str(row["feedback_item_id"]),
+        "chunkText": row["chunk_text"] or "",
+        "feedbackItemContent": row["feedback_item_content"] or "",
+        "sourceType": row["source_type"],
+        "sourceName": source_name,
+    }

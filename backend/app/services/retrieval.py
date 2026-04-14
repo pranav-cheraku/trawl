@@ -21,7 +21,7 @@ class RetrievedChunk:
     retrieval_rank: int
     source_type: str
     source_name: str
-    content_preview: str
+    feedback_item_content: str
 
 
 def _format_vector_literal(vector: list[float]) -> str:
@@ -127,8 +127,6 @@ async def retrieve_chunks(
 
     chunks: list[RetrievedChunk] = []
     for rank, row in enumerate(rows, start=1):
-        item_content: str = row["item_content"] or ""
-        preview = item_content[:240] + ("…" if len(item_content) > 240 else "")
         chunks.append(
             RetrievedChunk(
                 chunk_id=row["chunk_id"],
@@ -142,7 +140,7 @@ async def retrieve_chunks(
                     row["app_store_name"],
                     row["filename"],
                 ),
-                content_preview=preview,
+                feedback_item_content=row["item_content"] or "",
             )
         )
 

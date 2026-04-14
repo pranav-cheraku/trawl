@@ -1,5 +1,6 @@
 import type {
   AppSearchResult,
+  ChunkDetail,
   Conversation,
   ConversationDetail,
   FeedbackItem,
@@ -187,6 +188,15 @@ export async function listFeedbackItems(
   });
   return apiFetch<FeedbackItem[]>(
     `/api/projects/${projectId}/sources/${sourceId}/items?${params}`
+  );
+}
+
+export async function getChunkDetail(
+  projectId: string,
+  chunkId: string
+): Promise<ChunkDetail> {
+  return apiFetch<ChunkDetail>(
+    `/api/projects/${projectId}/chunks/${chunkId}`
   );
 }
 

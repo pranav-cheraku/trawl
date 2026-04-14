@@ -15,6 +15,10 @@ class TransparencyChunk(BaseModel):
     chunk_id: uuid.UUID
     feedback_item_id: uuid.UUID
     chunk_text_preview: str
+    # Full text stored alongside the preview so the detail modal can render
+    # without a follow-up fetch. Optional for messages created before Day 16.
+    chunk_text: str | None = None
+    feedback_item_content: str | None = None
     similarity_score: float
     retrieval_rank: int
     source_type: str
