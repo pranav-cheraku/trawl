@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { ChatInput } from "@/components/chat/chat-input";
+import { ChatInput, type ChatInputHandle } from "@/components/chat/chat-input";
 import { EmptyState } from "@/components/chat/empty-state";
 import { MessageList } from "@/components/chat/message-list";
 import { XrayPanel } from "@/components/rag-xray/xray-panel";
@@ -32,11 +32,19 @@ export default function ExplorePage() {
   const [isPending, setIsPending] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
+  const [failedSend, setFailedSend] = useState<{
+    content: string;
+    userBubbleId: string;
+    detail: string;
+  } | null>(null);
 
   // X-Ray focus plumbing
   const [focusedChunkId, setFocusedChunkId] = useState<string | null>(null);
   const [focusTick, setFocusTick] = useState(0);
   const [isMobileSheetOpen, setIsMobileSheetOpen] = useState(false);
+
+  // Input imperative handle — lets us focus the textarea after chip click.
+  const inputRef = useRef<ChatInputHandle>(null);
 
   // Avoid double-initializing in React strict mode dev re-mounts.
   const hasInitializedRef = useRef(false);
@@ -93,9 +101,10 @@ export default function ExplorePage() {
   }, []);
 
   const handleSend = useCallback(
-    async (content: string) => {
+    async (content: string, reuseBubbleId?: string) => {
       if (isPending) return;
       setErrorMessage(null);
+      setFailedSend(null);
 
       // Lazy-create the conversation on first send.
       let activeConversationId = conversationId;
@@ -118,18 +127,21 @@ export default function ExplorePage() {
         }
       }
 
-      // Optimistic user bubble
-      const optimisticId = `temp-user-${Date.now()}`;
-      const optimisticUser: Message = {
-        id: optimisticId,
-        conversationId: activeConversationId,
-        role: "user",
-        content,
-        sourceChunkIds: [],
-        transparency: null,
-        createdAt: new Date().toISOString(),
-      };
-      setMessages((prev) => [...prev, optimisticUser]);
+      // Optimistic user bubble — reuse the existing one on retry so the
+      // failed bubble visually becomes the now-pending bubble.
+      const bubbleId = reuseBubbleId ?? `temp-user-${Date.now()}`;
+      if (!reuseBubbleId) {
+        const optimisticUser: Message = {
+          id: bubbleId,
+          conversationId: activeConversationId,
+          role: "user",
+          content,
+          sourceChunkIds: [],
+          transparency: null,
+          createdAt: new Date().toISOString(),
+        };
+        setMessages((prev) => [...prev, optimisticUser]);
+      }
       setIsPending(true);
 
       try {
@@ -140,19 +152,31 @@ export default function ExplorePage() {
         );
         setMessages((prev) => [...prev, assistant]);
       } catch (err) {
-        // Remove the optimistic bubble on failure so the user can retry.
-        setMessages((prev) => prev.filter((m) => m.id !== optimisticId));
+        // Keep the optimistic bubble on screen; show an inline retry UI.
         const detail =
           err instanceof Error && err.message.includes("400")
             ? "Your feedback sources aren't ready yet. Check the Sources tab."
             : "Something went wrong. Please try again.";
-        setErrorMessage(detail);
+        setFailedSend({ content, userBubbleId: bubbleId, detail });
       } finally {
         setIsPending(false);
       }
     },
     [conversationId, isPending, projectId],
   );
+
+  const handleRetry = useCallback(() => {
+    if (!failedSend) return;
+    const { content, userBubbleId } = failedSend;
+    handleSend(content, userBubbleId);
+  }, [failedSend, handleSend]);
+
+  const handleExampleClick = useCallback((query: string) => {
+    setDraft(query);
+    // Focus the textarea so the user can just hit Enter.
+    // Wait one tick so the controlled update has flushed.
+    setTimeout(() => inputRef.current?.focus(), 0);
+  }, []);
 
   // Panel always reflects the most recent assistant message.
   const lastAssistantMessage =
@@ -162,7 +186,7 @@ export default function ExplorePage() {
     return (
       <div className="flex h-[calc(100vh-12rem)] items-center justify-center rounded-[4px] bg-surface-container-low">
         <div className="font-mono text-[11px] uppercase tracking-[0.2em] text-on-surface-variant">
-          Loading conversation…
+          Loading workspace…
         </div>
       </div>
     );
@@ -175,8 +199,11 @@ export default function ExplorePage() {
   return (
     <div className="flex h-[calc(100vh-12rem)] flex-col gap-4">
       {errorMessage && (
-        <div className="flex items-center justify-between rounded-[4px] bg-error/10 px-4 py-3 text-[13px] text-error">
-          <span>{errorMessage}</span>
+        <div className="flex items-center justify-between gap-3 rounded-[4px] bg-error/10 px-4 py-3 text-[13px] text-error">
+          <div className="flex items-center gap-2">
+            <WarningIcon />
+            <span>{errorMessage}</span>
+          </div>
           <button
             type="button"
             onClick={() => setErrorMessage(null)}
@@ -191,14 +218,22 @@ export default function ExplorePage() {
         <div className="flex flex-col overflow-hidden rounded-[4px] bg-surface-container-low">
           <div className="flex-1 overflow-y-auto p-6">
             {messages.length === 0 && !isPending ? (
-              <EmptyState onExampleClick={(q) => setDraft(q)} />
+              <EmptyState onExampleClick={handleExampleClick} />
             ) : (
-              <MessageList
-                messages={messages}
-                isPending={isPending}
-                pendingChunkCount={8}
-                onCitationClick={handleCitationClick}
-              />
+              <div className="flex flex-col gap-4">
+                <MessageList
+                  messages={messages}
+                  isPending={isPending}
+                  pendingChunkCount={8}
+                  onCitationClick={handleCitationClick}
+                />
+                {failedSend && !isPending && (
+                  <FailedMessageBubble
+                    detail={failedSend.detail}
+                    onRetry={handleRetry}
+                  />
+                )}
+              </div>
             )}
           </div>
         </div>
@@ -212,6 +247,7 @@ export default function ExplorePage() {
       </div>
 
       <ChatInput
+        ref={inputRef}
         onSend={handleSend}
         isPending={isPending}
         draft={draft}
@@ -253,6 +289,51 @@ export default function ExplorePage() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function WarningIcon() {
+  return (
+    <svg
+      className="h-4 w-4 flex-shrink-0"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={1.5}
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"
+      />
+    </svg>
+  );
+}
+
+interface FailedMessageBubbleProps {
+  detail: string;
+  onRetry: () => void;
+}
+
+function FailedMessageBubble({ detail, onRetry }: FailedMessageBubbleProps) {
+  return (
+    <div className="flex justify-start">
+      <div className="flex max-w-[85%] items-start gap-3 rounded-[4px] bg-error/10 px-4 py-3">
+        <div className="mt-0.5 text-error">
+          <WarningIcon />
+        </div>
+        <div className="flex flex-col gap-2">
+          <div className="text-[13px] leading-relaxed text-error">{detail}</div>
+          <button
+            type="button"
+            onClick={onRetry}
+            className="self-start rounded-[4px] bg-on-surface px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.15em] text-white transition-colors hover:bg-secondary"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

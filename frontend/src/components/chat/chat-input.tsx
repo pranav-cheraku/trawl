@@ -1,6 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
+
+export interface ChatInputHandle {
+  focus: () => void;
+}
 
 interface ChatInputProps {
   onSend: (content: string) => void;
@@ -22,14 +26,18 @@ const MAX_ROWS = 6;
  * Can operate either fully uncontrolled (own local draft state) or as
  * a controlled component when both `draft` and `onDraftChange` are
  * supplied — the latter is how EmptyState's example chips pre-fill.
+ *
+ * Exposes an imperative `focus()` handle via forwardRef so callers can
+ * focus the textarea after programmatically populating the draft (e.g.,
+ * when an example chip is clicked).
  */
-export function ChatInput({
+export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(function ChatInput({
   onSend,
   isPending,
   placeholder = "Ask a question about your feedback…",
   draft,
   onDraftChange,
-}: ChatInputProps) {
+}: ChatInputProps, ref) {
   const isControlled = draft !== undefined && onDraftChange !== undefined;
   const [localDraft, setLocalDraft] = useState("");
   const value = isControlled ? draft : localDraft;
@@ -42,6 +50,10 @@ export function ChatInput({
   };
 
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  useImperativeHandle(ref, () => ({
+    focus: () => textareaRef.current?.focus(),
+  }));
 
   // Auto-resize to content, clamped to MAX_ROWS
   useEffect(() => {
@@ -111,4 +123,4 @@ export function ChatInput({
       </div>
     </div>
   );
-}
+});
