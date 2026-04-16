@@ -1,19 +1,15 @@
 from __future__ import annotations
 
-import json
 import logging
 import time
 import uuid
-from collections.abc import AsyncGenerator
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
-from fastapi.responses import StreamingResponse
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.database import AsyncSessionLocal
 from app.dependencies import get_current_user, get_db
 from app.models.conversation import Conversation, Message
 from app.models.feedback import FeedbackSource
@@ -27,7 +23,7 @@ from app.schemas.conversation import (
     SendMessageRequest,
 )
 from app.services.embedding import embed_query
-from app.services.generation import generate_answer, generate_answer_stream
+from app.services.generation import generate_answer
 from app.services.retrieval import RetrievedChunk, retrieve_chunks
 
 router = APIRouter(tags=["conversations"])
@@ -375,253 +371,6 @@ async def send_message(
     )
 
     return assistant_message
-
-
-def _sse_event(event: str, data: dict) -> str:
-    """Format a Server-Sent Events frame."""
-    return f"event: {event}\ndata: {json.dumps(data)}\n\n"
-
-
-@router.post(
-    "/projects/{project_id}/conversations/{conversation_id}/messages/stream",
-    summary="Send a message and stream the RAG-generated answer via SSE",
-)
-async def send_message_stream(
-    project_id: uuid.UUID,
-    conversation_id: uuid.UUID,
-    body: SendMessageRequest,
-    db: AsyncSession = Depends(get_db),
-    user_id: uuid.UUID = Depends(get_current_user),
-) -> StreamingResponse:
-    """SSE streaming variant of the send_message endpoint.
-
-    Performs retrieval synchronously, then streams the Claude generation
-    phase as text_delta events. Persists messages on completion and emits
-    a final message_complete event with the full MessageResponse.
-    """
-    await _get_project_for_user(project_id, db, user_id)
-    conversation = await _get_conversation_for_project(
-        conversation_id, project_id, db
-    )
-
-    if not await _project_has_ready_source(db, project_id):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=(
-                "No feedback sources ready yet. Connect an App Store app or "
-                "upload a CSV on the Sources tab, then try again."
-            ),
-        )
-
-    # Load conversation history
-    history_result = await db.execute(
-        select(Message)
-        .where(Message.conversation_id == conversation.id)
-        .order_by(Message.created_at.desc())
-        .limit(HISTORY_LIMIT)
-    )
-    history = list(reversed(history_result.scalars().all()))
-
-    # --- Retrieval (synchronous, not streamed) --------------------------------
-    retrieval_start = time.perf_counter()
-    query_embedding = await embed_query(body.content)
-    chunks, total_candidates = await retrieve_chunks(
-        db,
-        project_id,
-        query_embedding,
-        top_k=TOP_K,
-        threshold=SIMILARITY_THRESHOLD,
-    )
-    retrieval_latency_ms = int((time.perf_counter() - retrieval_start) * 1000)
-    transparency_chunks = [_chunk_to_transparency_dict(c) for c in chunks]
-
-    # Capture values the generator needs (the db session from Depends will
-    # close when this function returns, so the generator uses its own).
-    conv_id = conversation.id
-    conv_title = conversation.title
-    query_content = body.content
-
-    async def _event_stream() -> AsyncGenerator[str, None]:
-        yield _sse_event("retrieval_complete", {
-            "totalChunks": len(chunks),
-            "retrievalLatencyMs": retrieval_latency_ms,
-        })
-
-        if not chunks:
-            # No relevant chunks — return a fallback answer immediately.
-            fallback_text = (
-                "I couldn't find any feedback relevant to that question. "
-                "Try rephrasing, or check the Sources tab to make sure your "
-                "feedback data is ingested."
-            )
-            async with AsyncSessionLocal() as persist_db:
-                now = datetime.utcnow()
-                user_msg = Message(
-                    conversation_id=conv_id,
-                    role="user",
-                    content=query_content,
-                    source_chunk_ids=[],
-                    transparency=None,
-                    created_at=now,
-                )
-                assistant_msg = Message(
-                    conversation_id=conv_id,
-                    role="assistant",
-                    content=fallback_text,
-                    source_chunk_ids=[],
-                    transparency={
-                        "query": query_content,
-                        "retrievedChunks": [],
-                        "modelUsed": None,
-                        "topK": TOP_K,
-                        "threshold": SIMILARITY_THRESHOLD,
-                        "totalChunksSearched": total_candidates,
-                        "retrievalLatencyMs": retrieval_latency_ms,
-                        "generationLatencyMs": 0,
-                        "inputTokens": 0,
-                        "outputTokens": 0,
-                    },
-                    created_at=datetime.utcnow(),
-                )
-                persist_db.add(user_msg)
-                persist_db.add(assistant_msg)
-
-                # Auto-populate conversation title
-                if conv_title is None:
-                    trimmed = query_content.strip()
-                    title = trimmed[: TITLE_MAX_CHARS - 1].rstrip() + "…" if len(trimmed) > TITLE_MAX_CHARS else trimmed
-                    result = await persist_db.execute(
-                        select(Conversation).where(Conversation.id == conv_id)
-                    )
-                    conv = result.scalar_one()
-                    if conv.title is None:
-                        conv.title = title
-
-                await persist_db.commit()
-                await persist_db.refresh(assistant_msg)
-
-                msg_data = MessageResponse.model_validate(
-                    assistant_msg
-                ).model_dump(mode="json", by_alias=True)
-                yield _sse_event("message_complete", {"message": msg_data})
-            return
-
-        # --- Stream generation ------------------------------------------------
-        generation_start = time.perf_counter()
-        answer_text = ""
-        supporting_chunk_ids: list[str] = []
-        model_used: str | None = None
-        input_tokens = 0
-        output_tokens = 0
-
-        try:
-            async for stream_event in generate_answer_stream(
-                query_content, chunks, history=history
-            ):
-                if stream_event.type == "text_delta":
-                    yield _sse_event("text_delta", {"delta": stream_event.delta})
-
-                elif stream_event.type == "stream_complete" and stream_event.result:
-                    gen_result = stream_event.result
-                    generation_latency_ms = int(
-                        (time.perf_counter() - generation_start) * 1000
-                    )
-                    answer_text = gen_result.answer
-                    model_used = gen_result.model
-                    input_tokens = gen_result.input_tokens
-                    output_tokens = gen_result.output_tokens
-                    supporting_chunk_ids = [
-                        str(chunks[i - 1].chunk_id)
-                        for i in gen_result.supporting_indices
-                        if 1 <= i <= len(chunks)
-                    ]
-
-                    transparency_payload = {
-                        "query": query_content,
-                        "retrievedChunks": transparency_chunks,
-                        "modelUsed": model_used,
-                        "topK": TOP_K,
-                        "threshold": SIMILARITY_THRESHOLD,
-                        "totalChunksSearched": total_candidates,
-                        "retrievalLatencyMs": retrieval_latency_ms,
-                        "generationLatencyMs": generation_latency_ms,
-                        "inputTokens": input_tokens,
-                        "outputTokens": output_tokens,
-                    }
-
-                    # Persist messages in a fresh DB session
-                    async with AsyncSessionLocal() as persist_db:
-                        now = datetime.utcnow()
-                        user_msg = Message(
-                            conversation_id=conv_id,
-                            role="user",
-                            content=query_content,
-                            source_chunk_ids=[],
-                            transparency=None,
-                            created_at=now,
-                        )
-                        assistant_msg = Message(
-                            conversation_id=conv_id,
-                            role="assistant",
-                            content=answer_text,
-                            source_chunk_ids=[
-                                uuid.UUID(sid) for sid in supporting_chunk_ids
-                            ],
-                            transparency=transparency_payload,
-                            created_at=datetime.utcnow(),
-                        )
-                        persist_db.add(user_msg)
-                        persist_db.add(assistant_msg)
-
-                        # Auto-populate conversation title
-                        if conv_title is None:
-                            trimmed = query_content.strip()
-                            title = (
-                                trimmed[: TITLE_MAX_CHARS - 1].rstrip() + "…"
-                                if len(trimmed) > TITLE_MAX_CHARS
-                                else trimmed
-                            )
-                            result = await persist_db.execute(
-                                select(Conversation).where(
-                                    Conversation.id == conv_id
-                                )
-                            )
-                            conv = result.scalar_one()
-                            if conv.title is None:
-                                conv.title = title
-
-                        await persist_db.commit()
-                        await persist_db.refresh(assistant_msg)
-
-                        msg_data = MessageResponse.model_validate(
-                            assistant_msg
-                        ).model_dump(mode="json", by_alias=True)
-                        yield _sse_event(
-                            "message_complete", {"message": msg_data}
-                        )
-
-                    logger.info(
-                        "Conversation %s: streamed answer "
-                        "(retrieval=%dms gen=%dms chunks=%d/%d)",
-                        conv_id,
-                        retrieval_latency_ms,
-                        generation_latency_ms,
-                        len(chunks),
-                        total_candidates,
-                    )
-
-        except Exception as exc:
-            logger.exception("Error during streaming generation for conversation %s", conv_id)
-            yield _sse_event("error", {"detail": str(exc)})
-
-    return StreamingResponse(
-        _event_stream(),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "X-Accel-Buffering": "no",
-        },
-    )
 
 
 @router.delete(
