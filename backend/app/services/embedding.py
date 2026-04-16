@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import json
 import logging
 
 import httpx
+import redis.asyncio as aioredis
 
 from app.config import settings
 
@@ -13,6 +16,28 @@ VOYAGE_API_URL = "https://api.voyageai.com/v1/embeddings"
 VOYAGE_MODEL = "voyage-4"
 BATCH_SIZE = 50
 MAX_RETRIES = 5
+
+CACHE_TTL_SECONDS = 3600  # 1 hour
+CACHE_KEY_PREFIX = "trawl:embed:query:"
+
+_redis_client: aioredis.Redis | None = None  # type: ignore[type-arg]
+
+
+def _get_redis() -> aioredis.Redis | None:  # type: ignore[type-arg]
+    """Return a lazy-initialized async Redis client.
+
+    Returns None if REDIS_URL is not configured. Uses short timeouts
+    so Redis issues never block the request path.
+    """
+    global _redis_client
+    if _redis_client is None and settings.REDIS_URL:
+        _redis_client = aioredis.from_url(
+            settings.REDIS_URL,
+            decode_responses=True,
+            socket_connect_timeout=2,
+            socket_timeout=2,
+        )
+    return _redis_client
 
 
 async def embed_texts(
@@ -60,11 +85,37 @@ async def embed_texts(
 async def embed_query(text: str) -> list[float]:
     """Embed a single search query using Voyage AI query mode.
 
-    Voyage recommends input_type="query" for retrieval queries (distinct from
-    "document" used when indexing chunks). Returns a single 1024-dim vector.
+    Results are cached in Redis for CACHE_TTL_SECONDS using a SHA-256 hash
+    of the query text as the key. Redis failures are transparent — on any
+    Redis error, we fall through to the Voyage API.
     """
+    cache_key = CACHE_KEY_PREFIX + hashlib.sha256(text.encode()).hexdigest()
+    redis = _get_redis()
+
+    # --- Try cache read ---
+    if redis is not None:
+        try:
+            cached = await redis.get(cache_key)
+            if cached is not None:
+                logger.debug("Embedding cache HIT for query: %s…", text[:60])
+                result: list[float] = json.loads(cached)
+                return result
+            logger.info("Embedding cache MISS for query: %s…", text[:60])
+        except Exception:
+            logger.warning("Redis read failed, falling through to Voyage API", exc_info=True)
+
+    # --- Voyage API call ---
     vectors = await embed_texts([text], input_type="query")
-    return vectors[0]
+    embedding = vectors[0]
+
+    # --- Try cache write ---
+    if redis is not None:
+        try:
+            await redis.set(cache_key, json.dumps(embedding), ex=CACHE_TTL_SECONDS)
+        except Exception:
+            logger.warning("Redis write failed, embedding not cached", exc_info=True)
+
+    return embedding
 
 
 async def _post_with_retry(
