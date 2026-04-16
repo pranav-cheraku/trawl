@@ -16,6 +16,7 @@ import {
   listConversations,
   listSources,
   sendMessage,
+  sendMessageStream,
   updateConversation,
 } from "@/lib/api";
 import type { Conversation, Message } from "@/types";
@@ -44,6 +45,10 @@ export default function ExplorePage() {
     userBubbleId: string;
     detail: string;
   } | null>(null);
+  const [streamingContent, setStreamingContent] = useState<string | null>(null);
+  const [streamPhase, setStreamPhase] = useState<
+    "retrieving" | "generating" | null
+  >(null);
 
   // Which assistant message the X-Ray panel is showing. null means auto-follow
   // the most recent assistant message.
@@ -65,7 +70,7 @@ export default function ExplorePage() {
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [messages.length, isPending, failedSend]);
+  }, [messages.length, isPending, failedSend, streamingContent]);
 
   // Initial mount: fetch conversation list, restore saved conversation,
   // check sources readiness. The cancelled flag handles React Strict Mode's
@@ -186,27 +191,72 @@ export default function ExplorePage() {
         setMessages((prev) => [...prev, optimisticUser]);
       }
       setIsPending(true);
+      setStreamPhase("retrieving");
 
       try {
-        const assistant = await sendMessage(
-          projectId,
-          activeConversationId,
-          content,
-        );
-        setMessages((prev) => [...prev, assistant]);
-        // New reply → auto-follow latest in the X-Ray panel.
-        setSelectedMessageId(null);
-        setFocusedChunkId(null);
-        // Refresh the conversation list so any new title (auto-populated
-        // on first-message send) appears in the switcher.
-        listConversations(projectId)
-          .then(setConversations)
-          .catch(() => {
-            /* non-fatal */
-          });
+        let streamStarted = false;
+
+        try {
+          await sendMessageStream(
+            projectId,
+            activeConversationId,
+            content,
+            {
+              onRetrievalComplete: () => {
+                streamStarted = true;
+                setStreamPhase("generating");
+                setStreamingContent("");
+              },
+              onTextDelta: (data) => {
+                setStreamingContent(
+                  (prev) => (prev ?? "") + data.delta,
+                );
+              },
+              onMessageComplete: (data) => {
+                setStreamingContent(null);
+                setStreamPhase(null);
+                setMessages((prev) => [...prev, data.message]);
+                setSelectedMessageId(null);
+                setFocusedChunkId(null);
+                listConversations(projectId)
+                  .then(setConversations)
+                  .catch(() => {
+                    /* non-fatal */
+                  });
+              },
+              onError: (data) => {
+                setStreamingContent(null);
+                setStreamPhase(null);
+                throw new Error(data.detail);
+              },
+            },
+          );
+        } catch (streamErr) {
+          // If the stream never started (connection failure), fall back
+          // to the non-streaming endpoint.
+          if (!streamStarted) {
+            setStreamingContent(null);
+            setStreamPhase(null);
+            const assistant = await sendMessage(
+              projectId,
+              activeConversationId,
+              content,
+            );
+            setMessages((prev) => [...prev, assistant]);
+            setSelectedMessageId(null);
+            setFocusedChunkId(null);
+            listConversations(projectId)
+              .then(setConversations)
+              .catch(() => {
+                /* non-fatal */
+              });
+          } else {
+            throw streamErr;
+          }
+        }
       } catch (err) {
-        // Keep the optimistic bubble on screen; show an inline retry UI.
-        // Always log the raw error for devtools debugging.
+        setStreamingContent(null);
+        setStreamPhase(null);
         // eslint-disable-next-line no-console
         console.error("sendMessage failed:", err);
 
@@ -214,20 +264,22 @@ export default function ExplorePage() {
           err instanceof Error
             ? err.message.match(/API error:\s*(\d+)/)
             : null;
-        const status = statusMatch ? parseInt(statusMatch[1], 10) : null;
+        const httpStatus = statusMatch
+          ? parseInt(statusMatch[1], 10)
+          : null;
 
         let detail: string;
-        if (status === 400) {
+        if (httpStatus === 400) {
           detail =
             "Your feedback sources aren't ready yet. Check the Sources tab.";
-        } else if (status === 504) {
+        } else if (httpStatus === 504) {
           detail =
             "Claude took too long to respond. The model is busy — retry should work.";
-        } else if (status === 500) {
+        } else if (httpStatus === 500) {
           detail =
             "The server hit an error. If this keeps happening, check the backend logs and confirm ANTHROPIC_API_KEY is set.";
-        } else if (status !== null) {
-          detail = `The server returned ${status}. Try again.`;
+        } else if (httpStatus !== null) {
+          detail = `The server returned ${httpStatus}. Try again.`;
         } else {
           detail =
             "Couldn't reach the backend. Is the API server running?";
@@ -415,6 +467,8 @@ export default function ExplorePage() {
                   selectedMessageId={activeMessage?.id ?? null}
                   onMessageSelect={handleMessageSelect}
                   onCitationClick={handleCitationClick}
+                  streamingContent={streamingContent}
+                  streamPhase={streamPhase}
                 />
                 {failedSend && !isPending && (
                   <FailedMessageBubble
