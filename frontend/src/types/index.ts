@@ -103,6 +103,7 @@ export interface Message {
 export interface Conversation {
   id: string;
   projectId: string;
+  title: string | null;
   createdAt: string;
 }
 

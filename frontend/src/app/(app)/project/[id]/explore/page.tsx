@@ -5,16 +5,22 @@ import { useParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ChatInput, type ChatInputHandle } from "@/components/chat/chat-input";
+import { ConversationSwitcher } from "@/components/chat/conversation-switcher";
 import { EmptyState } from "@/components/chat/empty-state";
 import { MessageList } from "@/components/chat/message-list";
 import { XrayPanel } from "@/components/rag-xray/xray-panel";
 import {
   createConversation,
+  deleteConversation,
   getConversation,
+  listConversations,
   listSources,
   sendMessage,
+  updateConversation,
 } from "@/lib/api";
-import type { Message } from "@/types";
+import type { Conversation, Message } from "@/types";
+
+const MAX_CONVERSATIONS_PER_PROJECT = 10;
 
 function sessionStorageKey(projectId: string): string {
   return `trawl:explore:${projectId}:conversationId`;
@@ -28,6 +34,7 @@ export default function ExplorePage() {
 
   const [mountStatus, setMountStatus] = useState<MountStatus>("loading");
   const [conversationId, setConversationId] = useState<string | null>(null);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isPending, setIsPending] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -60,20 +67,32 @@ export default function ExplorePage() {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages.length, isPending, failedSend]);
 
-  // Initial mount: try to restore a saved conversation, otherwise check sources.
-  // The cancelled flag handles React Strict Mode's intentional double-mount:
-  // the first effect's cleanup sets cancelled=true, the second effect runs
-  // fresh with its own cancelled=false and wins the state update race.
+  // Initial mount: fetch conversation list, restore saved conversation,
+  // check sources readiness. The cancelled flag handles React Strict Mode's
+  // intentional double-mount.
   useEffect(() => {
     let cancelled = false;
 
     async function initialize() {
+      // Always fetch the conversation list first so the switcher is
+      // populated regardless of which branch we take below.
+      let convList: Conversation[] = [];
+      try {
+        convList = await listConversations(projectId);
+        if (cancelled) return;
+        setConversations(convList);
+      } catch {
+        /* non-fatal — switcher will show as empty */
+      }
+
       const savedId =
         typeof window !== "undefined"
           ? window.sessionStorage.getItem(sessionStorageKey(projectId))
           : null;
 
-      if (savedId) {
+      // Try to restore the saved conversation only if it still exists
+      // in the list (the user may have deleted it in another tab).
+      if (savedId && convList.some((c) => c.id === savedId)) {
         try {
           const conversation = await getConversation(projectId, savedId);
           if (cancelled) return;
@@ -82,7 +101,7 @@ export default function ExplorePage() {
           setMountStatus("ready");
           return;
         } catch {
-          // Saved conversation is gone — clear and fall through.
+          // Conversation vanished server-side — clear and fall through.
           if (typeof window !== "undefined") {
             window.sessionStorage.removeItem(sessionStorageKey(projectId));
           }
@@ -178,6 +197,13 @@ export default function ExplorePage() {
         // New reply → auto-follow latest in the X-Ray panel.
         setSelectedMessageId(null);
         setFocusedChunkId(null);
+        // Refresh the conversation list so any new title (auto-populated
+        // on first-message send) appears in the switcher.
+        listConversations(projectId)
+          .then(setConversations)
+          .catch(() => {
+            /* non-fatal */
+          });
       } catch (err) {
         // Keep the optimistic bubble on screen; show an inline retry UI.
         // Always log the raw error for devtools debugging.
@@ -220,6 +246,100 @@ export default function ExplorePage() {
     const { content, userBubbleId } = failedSend;
     handleSend(content, userBubbleId);
   }, [failedSend, handleSend]);
+
+  const handleSelectConversation = useCallback(
+    async (targetId: string) => {
+      if (targetId === conversationId) return;
+      setErrorMessage(null);
+      setFailedSend(null);
+      setSelectedMessageId(null);
+      setFocusedChunkId(null);
+      try {
+        const conversation = await getConversation(projectId, targetId);
+        setConversationId(conversation.id);
+        setMessages(conversation.messages);
+        if (typeof window !== "undefined") {
+          window.sessionStorage.setItem(
+            sessionStorageKey(projectId),
+            conversation.id,
+          );
+        }
+      } catch {
+        setErrorMessage("Couldn't load that conversation. Try again.");
+      }
+    },
+    [conversationId, projectId],
+  );
+
+  const handleNewConversation = useCallback(
+    async (title: string | null) => {
+      if (conversations.length >= MAX_CONVERSATIONS_PER_PROJECT) return;
+      setErrorMessage(null);
+      setFailedSend(null);
+      setSelectedMessageId(null);
+      setFocusedChunkId(null);
+      try {
+        const newConv = await createConversation(projectId, title);
+        setConversations((prev) => [newConv, ...prev]);
+        setConversationId(newConv.id);
+        setMessages([]);
+        if (typeof window !== "undefined") {
+          window.sessionStorage.setItem(
+            sessionStorageKey(projectId),
+            newConv.id,
+          );
+        }
+        // Focus the input so the user can start typing immediately.
+        setTimeout(() => inputRef.current?.focus(), 0);
+      } catch {
+        setErrorMessage("Couldn't create a new chat. Please try again.");
+      }
+    },
+    [conversations.length, projectId],
+  );
+
+  const handleDeleteConversation = useCallback(
+    async (targetId: string) => {
+      try {
+        await deleteConversation(projectId, targetId);
+        setConversations((prev) => prev.filter((c) => c.id !== targetId));
+        // If we deleted the currently-open conversation, clear the view.
+        if (targetId === conversationId) {
+          setConversationId(null);
+          setMessages([]);
+          setSelectedMessageId(null);
+          setFocusedChunkId(null);
+          if (typeof window !== "undefined") {
+            window.sessionStorage.removeItem(sessionStorageKey(projectId));
+          }
+        }
+      } catch {
+        setErrorMessage("Couldn't delete that chat. Please try again.");
+      }
+    },
+    [conversationId, projectId],
+  );
+
+  const handleRenameConversation = useCallback(
+    async (targetId: string, title: string) => {
+      // Optimistic update so the switcher updates immediately.
+      setConversations((prev) =>
+        prev.map((c) => (c.id === targetId ? { ...c, title } : c)),
+      );
+      try {
+        await updateConversation(projectId, targetId, title);
+      } catch {
+        setErrorMessage("Couldn't rename the chat. Refresh to recover.");
+        // Refetch to revert the optimistic change.
+        listConversations(projectId)
+          .then(setConversations)
+          .catch(() => {
+            /* non-fatal */
+          });
+      }
+    },
+    [projectId],
+  );
 
   const handleExampleClick = useCallback((query: string) => {
     setDraft(query);
@@ -272,6 +392,17 @@ export default function ExplorePage() {
 
       <div className="grid flex-1 gap-4 overflow-hidden lg:grid-cols-[2fr_1fr]">
         <div className="flex flex-col overflow-hidden rounded-[4px] bg-surface-container-low">
+          <div className="flex items-center justify-between px-4 pt-4">
+            <ConversationSwitcher
+              conversations={conversations}
+              currentId={conversationId}
+              maxConversations={MAX_CONVERSATIONS_PER_PROJECT}
+              onSelect={handleSelectConversation}
+              onNew={handleNewConversation}
+              onDelete={handleDeleteConversation}
+              onRename={handleRenameConversation}
+            />
+          </div>
           <div className="flex-1 overflow-y-auto p-6">
             {messages.length === 0 && !isPending ? (
               <EmptyState onExampleClick={handleExampleClick} />
@@ -410,11 +541,12 @@ function NoSourcesState({ projectId }: { projectId: string }) {
             viewBox="0 0 24 24"
             stroke="currentColor"
             strokeWidth={1.5}
+            aria-hidden="true"
           >
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
-              d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0 6 6m3 12c-8.284 0-15-6.716-15-15V4.5A2.25 2.25 0 0 1 4.5 2.25h1.372c.516 0 .966.351 1.091.852l1.106 4.423c.11.44-.054.902-.417 1.173l-1.293.97a1.062 1.062 0 0 0-.38 1.21 12.035 12.035 0 0 0 7.143 7.143c.441.162.928-.004 1.21-.38l.97-1.293a1.125 1.125 0 0 1 1.173-.417l4.423 1.106c.5.125.852.575.852 1.091V19.5a2.25 2.25 0 0 1-2.25 2.25h-2.25Z"
+              d="M2.25 13.5h3.86a2.25 2.25 0 0 1 2.012 1.244l.256.512a2.25 2.25 0 0 0 2.013 1.244h3.218a2.25 2.25 0 0 0 2.013-1.244l.256-.512a2.25 2.25 0 0 1 2.013-1.244h3.859m-19.5.338V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18v-4.162c0-.224-.034-.447-.1-.661L19.24 5.338a2.25 2.25 0 0 0-2.15-1.588H6.911a2.25 2.25 0 0 0-2.15 1.588L2.35 13.177a2.25 2.25 0 0 0-.1.661Z"
             />
           </svg>
         </div>

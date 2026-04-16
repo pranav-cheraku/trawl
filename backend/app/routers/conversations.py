@@ -15,8 +15,10 @@ from app.models.conversation import Conversation, Message
 from app.models.feedback import FeedbackSource
 from app.models.project import Project
 from app.schemas.conversation import (
+    ConversationCreateRequest,
     ConversationDetailResponse,
     ConversationResponse,
+    ConversationUpdateRequest,
     MessageResponse,
     SendMessageRequest,
 )
@@ -30,6 +32,7 @@ logger = logging.getLogger(__name__)
 TOP_K = 8
 SIMILARITY_THRESHOLD = 0.3
 HISTORY_LIMIT = 6
+TITLE_MAX_CHARS = 80
 
 
 async def _get_project_for_user(
@@ -120,13 +123,22 @@ async def _project_has_ready_source(db: AsyncSession, project_id: uuid.UUID) -> 
 )
 async def create_conversation(
     project_id: uuid.UUID,
+    body: ConversationCreateRequest = ConversationCreateRequest(),
     db: AsyncSession = Depends(get_db),
     user_id: uuid.UUID = Depends(get_current_user),
 ) -> Conversation:
-    """Create an empty conversation for a project. Used lazily on first message."""
+    """Create a conversation for a project, optionally with a user-chosen
+    title. If no title is provided (or it's empty after stripping), the
+    conversation is untitled and will be auto-named from the first user
+    message on the next send."""
     project = await _get_project_for_user(project_id, db, user_id)
 
-    conversation = Conversation(project_id=project.id)
+    initial_title: str | None = None
+    if body.title is not None:
+        stripped = body.title.strip()
+        initial_title = stripped if stripped else None
+
+    conversation = Conversation(project_id=project.id, title=initial_title)
     db.add(conversation)
     await db.commit()
     await db.refresh(conversation)
@@ -187,6 +199,37 @@ async def get_conversation(
 
     # Sort messages chronologically ascending (oldest first)
     conversation.messages.sort(key=lambda m: m.created_at)
+    return conversation
+
+
+@router.patch(
+    "/projects/{project_id}/conversations/{conversation_id}",
+    response_model=ConversationResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Update a conversation's title",
+)
+async def update_conversation(
+    project_id: uuid.UUID,
+    conversation_id: uuid.UUID,
+    body: ConversationUpdateRequest,
+    db: AsyncSession = Depends(get_db),
+    user_id: uuid.UUID = Depends(get_current_user),
+) -> Conversation:
+    """Rename a conversation. Empty or whitespace-only titles are
+    normalized to NULL so the next user message can re-auto-populate."""
+    await _get_project_for_user(project_id, db, user_id)
+    conversation = await _get_conversation_for_project(
+        conversation_id, project_id, db
+    )
+
+    if body.title is None:
+        conversation.title = None
+    else:
+        stripped = body.title.strip()
+        conversation.title = stripped if stripped else None
+
+    await db.commit()
+    await db.refresh(conversation)
     return conversation
 
 
@@ -286,6 +329,14 @@ async def send_message(
         "outputTokens": output_tokens,
     }
 
+    # --- Auto-populate conversation title from first user message -----------
+    if conversation.title is None:
+        trimmed = body.content.strip()
+        if len(trimmed) > TITLE_MAX_CHARS:
+            conversation.title = trimmed[: TITLE_MAX_CHARS - 1].rstrip() + "…"
+        else:
+            conversation.title = trimmed
+
     # --- Persist both messages in one transaction ----------------------------
     # Explicit timestamps so user_message strictly precedes assistant_message.
     now = datetime.utcnow()
@@ -320,3 +371,24 @@ async def send_message(
     )
 
     return assistant_message
+
+
+@router.delete(
+    "/projects/{project_id}/conversations/{conversation_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_model=None,
+    summary="Delete a conversation and all its messages",
+)
+async def delete_conversation(
+    project_id: uuid.UUID,
+    conversation_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    user_id: uuid.UUID = Depends(get_current_user),
+) -> None:
+    """Delete a conversation. Cascades to all its messages."""
+    await _get_project_for_user(project_id, db, user_id)
+    conversation = await _get_conversation_for_project(
+        conversation_id, project_id, db
+    )
+    await db.delete(conversation)
+    await db.commit()

@@ -203,11 +203,17 @@ export async function getChunkDetail(
 // ── Conversation endpoints ───────────────────────────────────────────
 
 export async function createConversation(
-  projectId: string
+  projectId: string,
+  title?: string | null
 ): Promise<Conversation> {
+  const body: { title?: string | null } = {};
+  if (title !== undefined) body.title = title;
   return apiFetch<Conversation>(
     `/api/projects/${projectId}/conversations`,
-    { method: "POST" }
+    {
+      method: "POST",
+      body: JSON.stringify(body),
+    }
   );
 }
 
@@ -236,6 +242,30 @@ export async function sendMessage(
     {
       method: "POST",
       body: JSON.stringify({ content }),
+    }
+  );
+}
+
+export async function deleteConversation(
+  projectId: string,
+  conversationId: string
+): Promise<void> {
+  await apiFetch<void>(
+    `/api/projects/${projectId}/conversations/${conversationId}`,
+    { method: "DELETE" }
+  );
+}
+
+export async function updateConversation(
+  projectId: string,
+  conversationId: string,
+  title: string
+): Promise<Conversation> {
+  return apiFetch<Conversation>(
+    `/api/projects/${projectId}/conversations/${conversationId}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({ title }),
     }
   );
 }

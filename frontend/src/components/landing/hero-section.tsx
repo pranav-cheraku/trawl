@@ -1,7 +1,24 @@
 import Link from "next/link";
+import type { Session } from "next-auth";
 import SignInButton from "@/components/sign-in-button";
 
-export default function HeroSection() {
+export default function HeroSection({ session }: { session: Session | null }) {
+  const primaryCtaLabel = session ? "Open Workspace" : "Launch Architect";
+  const primaryCtaClassName =
+    "group inline-flex items-center gap-3 rounded-[4px] bg-black px-10 py-5 text-[15px] font-semibold uppercase tracking-[0.08em] text-white transition-colors hover:bg-secondary";
+  const primaryCtaIcon = (
+    <svg
+      className="h-4 w-4 transition-transform group-hover:translate-x-0.5"
+      fill="none"
+      viewBox="0 0 14 14"
+      stroke="currentColor"
+      strokeWidth={2}
+      aria-hidden="true"
+    >
+      <path d="M1 7h12M8 2l5 5-5 5" />
+    </svg>
+  );
+
   return (
     <section className="relative overflow-hidden bg-surface-container-lowest">
       {/* Blueprint grid — sits behind content, fades at edges */}
@@ -41,19 +58,17 @@ export default function HeroSection() {
             className="animate-fade-in-up mt-14 flex flex-wrap items-center gap-5"
             style={{ animationDelay: "0.3s" }}
           >
-            <SignInButton className="group inline-flex items-center gap-3 rounded-[4px] bg-black px-10 py-5 text-[15px] font-semibold uppercase tracking-[0.08em] text-white transition-colors hover:bg-secondary">
-              Launch Architect
-              <svg
-                className="h-4 w-4 transition-transform group-hover:translate-x-0.5"
-                fill="none"
-                viewBox="0 0 14 14"
-                stroke="currentColor"
-                strokeWidth={2}
-                aria-hidden="true"
-              >
-                <path d="M1 7h12M8 2l5 5-5 5" />
-              </svg>
-            </SignInButton>
+            {session ? (
+              <Link href="/dashboard" className={primaryCtaClassName}>
+                {primaryCtaLabel}
+                {primaryCtaIcon}
+              </Link>
+            ) : (
+              <SignInButton className={primaryCtaClassName}>
+                {primaryCtaLabel}
+                {primaryCtaIcon}
+              </SignInButton>
+            )}
             <Link
               href="#how-it-works"
               className="inline-flex items-center gap-2 rounded-[4px] border border-outline/30 bg-white px-10 py-5 text-[15px] font-semibold uppercase tracking-[0.08em] text-on-surface transition-colors hover:bg-surface-container-low"

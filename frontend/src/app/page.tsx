@@ -12,7 +12,7 @@ export default async function LandingPage() {
   return (
     <div className="min-h-screen bg-surface font-sans text-on-surface">
       <Navbar session={session} />
-      <HeroSection />
+      <HeroSection session={session} />
       <HowItWorksSection />
       <LiveConnectorSection />
       <RagTransparencySection />

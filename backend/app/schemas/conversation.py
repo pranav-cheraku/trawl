@@ -60,6 +60,24 @@ class SendMessageRequest(BaseModel):
     content: str = Field(..., min_length=1, max_length=2000)
 
 
+class ConversationCreateRequest(BaseModel):
+    """Request body for creating a new conversation. Title is optional;
+    if omitted (or empty), the conversation is created untitled and will
+    be auto-named from the first user message."""
+
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    title: str | None = Field(default=None, max_length=255)
+
+
+class ConversationUpdateRequest(BaseModel):
+    """Request body for updating a conversation's metadata (title)."""
+
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    title: str | None = Field(default=None, max_length=255)
+
+
 class MessageResponse(BaseModel):
     """Response shape for a single message."""
 
@@ -85,6 +103,7 @@ class ConversationResponse(BaseModel):
 
     id: uuid.UUID
     project_id: uuid.UUID
+    title: str | None
     created_at: datetime
 
 
@@ -97,5 +116,6 @@ class ConversationDetailResponse(BaseModel):
 
     id: uuid.UUID
     project_id: uuid.UUID
+    title: str | None
     created_at: datetime
     messages: list[MessageResponse]

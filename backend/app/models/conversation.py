@@ -24,6 +24,9 @@ class Conversation(Base):
     project_id: Mapped[uuid.UUID] = mapped_column(
         sa.Uuid, sa.ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
     )
+    title: Mapped[str | None] = mapped_column(
+        sa.String(255), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         sa.DateTime, server_default=sa.func.now(), nullable=False
     )
