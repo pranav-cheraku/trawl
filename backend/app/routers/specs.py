@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import uuid
+from typing import cast
 
 from celery.result import AsyncResult
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -13,7 +14,7 @@ from app.celery_app import celery_app
 from app.dependencies import get_current_user, get_db
 from app.models.feedback import FeedbackSource
 from app.models.project import Project
-from app.models.spec import Spec, SpecTransparency
+from app.models.spec import Spec
 from app.schemas.spec import (
     GenerateSpecsRequest,
     GenerateSpecsResponse,
@@ -307,7 +308,7 @@ async def get_spec_sources(
     t = spec.transparency
     return SpecSourcesResponse(
         spec_id=spec.id,
-        retrieved_chunks=t.retrieved_chunks if t else [],
+        retrieved_chunks=cast("list[dict]", t.retrieved_chunks) if t else [],
         generation_prompt=t.generation_prompt if t else None,
         model_used=t.model_used if t else None,
         total_chunks_searched=t.total_chunks_searched if t else None,
