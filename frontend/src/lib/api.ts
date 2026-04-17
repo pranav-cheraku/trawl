@@ -4,9 +4,16 @@ import type {
   Conversation,
   ConversationDetail,
   FeedbackItem,
+  GenerateSpecsResponse,
   Message,
   Project,
   Source,
+  Spec,
+  SpecPriority,
+  SpecSources,
+  SpecStatus,
+  SpecType,
+  TaskStatus,
   TokenResponse,
 } from "@/types";
 
@@ -268,4 +275,76 @@ export async function updateConversation(
       body: JSON.stringify({ title }),
     }
   );
+}
+
+// ── Spec endpoints ───────────────────────────────────────────────────
+
+export async function generateSpecs(
+  projectId: string,
+  type: SpecType,
+  focus?: string
+): Promise<GenerateSpecsResponse> {
+  const body: { type: SpecType; focus?: string } = { type };
+  if (focus) body.focus = focus;
+  return apiFetch<GenerateSpecsResponse>(
+    `/api/projects/${projectId}/generate`,
+    {
+      method: "POST",
+      body: JSON.stringify(body),
+    }
+  );
+}
+
+export async function getTaskStatus(taskId: string): Promise<TaskStatus> {
+  return apiFetch<TaskStatus>(`/api/tasks/${taskId}`);
+}
+
+export async function listSpecs(
+  projectId: string,
+  filters?: {
+    type?: SpecType;
+    status?: SpecStatus;
+    priority?: SpecPriority;
+  }
+): Promise<Spec[]> {
+  const params = new URLSearchParams();
+  if (filters?.type) params.set("type", filters.type);
+  if (filters?.status) params.set("status", filters.status);
+  if (filters?.priority) params.set("priority", filters.priority);
+  const qs = params.toString();
+  return apiFetch<Spec[]>(
+    `/api/projects/${projectId}/specs${qs ? `?${qs}` : ""}`
+  );
+}
+
+export async function updateSpec(
+  specId: string,
+  data: {
+    title?: string;
+    content?: Record<string, unknown>;
+    priority?: SpecPriority;
+    status?: SpecStatus;
+  }
+): Promise<Spec> {
+  return apiFetch<Spec>(`/api/specs/${specId}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function reorderSpecs(
+  items: { id: string; kanbanOrder: number; status: SpecStatus }[]
+): Promise<void> {
+  await apiFetch<void>(`/api/specs/reorder`, {
+    method: "PATCH",
+    body: JSON.stringify({ items }),
+  });
+}
+
+export async function deleteSpec(specId: string): Promise<void> {
+  await apiFetch<void>(`/api/specs/${specId}`, { method: "DELETE" });
+}
+
+export async function getSpecSources(specId: string): Promise<SpecSources> {
+  return apiFetch<SpecSources>(`/api/specs/${specId}/sources`);
 }

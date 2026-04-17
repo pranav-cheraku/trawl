@@ -111,3 +111,75 @@ export interface Conversation {
 export interface ConversationDetail extends Conversation {
   messages: Message[];
 }
+
+// ── Spec generation ──────────────────────────────────────────────────
+
+export type SpecType = "feature_specs" | "user_stories";
+export type SpecStatus = "backlog" | "planned" | "in_progress" | "done";
+export type SpecPriority = "critical" | "high" | "medium" | "low";
+export type TaskStatusValue =
+  | "pending"
+  | "started"
+  | "success"
+  | "failure"
+  | "retry";
+
+/** Structured body written to Spec.content for type="feature_specs". */
+export interface FeatureSpecContent {
+  title: string;
+  problem: string;
+  proposed_solution: string;
+  user_stories: string[];
+  acceptance_criteria: string[];
+  priority: SpecPriority;
+  supporting_feedback_indices: number[];
+  effort_estimate: string;
+}
+
+/** Structured body written to Spec.content for type="user_stories". */
+export interface UserStoryContent {
+  title: string;
+  theme: string;
+  acceptance_criteria: string[];
+  priority: SpecPriority;
+  supporting_feedback_indices: number[];
+  effort_estimate: string;
+}
+
+/** A single spec returned by GET /api/projects/{id}/specs. */
+export interface Spec {
+  id: string;
+  projectId: string;
+  type: SpecType;
+  title: string;
+  content: FeatureSpecContent | UserStoryContent | Record<string, unknown>;
+  priority: SpecPriority;
+  status: SpecStatus;
+  kanbanOrder: number;
+  sourceChunkIds: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** 202 response from POST /api/projects/{id}/generate. */
+export interface GenerateSpecsResponse {
+  taskId: string;
+}
+
+/** Response from GET /api/tasks/{taskId}. */
+export interface TaskStatus {
+  taskId: string;
+  status: TaskStatusValue;
+  result?: { specIds: string[]; count: number } | null;
+  error?: string | null;
+}
+
+/** Response from GET /api/specs/{id}/sources — powers the RAG X-Ray panel. */
+export interface SpecSources {
+  specId: string;
+  retrievedChunks: TransparencyChunk[];
+  generationPrompt?: string | null;
+  modelUsed?: string | null;
+  totalChunksSearched?: number | null;
+  retrievalTopK?: number | null;
+}
