@@ -18,4 +18,4 @@ celery_app.conf.update(
     enable_utc=True,
 )
 
-celery_app.conf.update(include=["app.tasks.ingestion"])
+celery_app.conf.update(include=["app.tasks.ingestion", "app.tasks.spec_generation"])

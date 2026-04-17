@@ -205,3 +205,393 @@ async def generate_answer(
         input_tokens=response.usage.input_tokens,
         output_tokens=response.usage.output_tokens,
     )
+
+
+# ---------------------------------------------------------------------------
+# Spec generation
+# ---------------------------------------------------------------------------
+
+SPEC_MAX_TOKENS = 4096
+
+FEATURE_SPEC_SYSTEM_PROMPT = """\
+You are Trawl, a product analyst that synthesizes user feedback into actionable \
+feature specifications. You will be given a numbered list of feedback chunks \
+retrieved from a product's feedback corpus.
+
+Analyze the feedback and produce 3-7 distinct feature specs. Each spec should \
+represent a clear, actionable product improvement grounded in real user feedback.
+
+Rules:
+1. Base every spec ONLY on evidence from the provided feedback chunks. Do not \
+invent problems or solutions that are not supported by the data.
+2. Cite specific feedback using 1-indexed chunk numbers in \
+`supporting_feedback_indices`. Only include chunks you actually relied on.
+3. Prioritize specs by frequency and severity of the underlying feedback.
+4. Each spec must be distinct — do not create overlapping or duplicate specs.
+5. If a focus area is provided, weight specs toward that area but still surface \
+other important themes if the data warrants it."""
+
+GENERATE_SPECS_TOOL: dict[str, Any] = {
+    "name": "generate_specs",
+    "description": (
+        "Return a list of feature specifications synthesized from user feedback."
+    ),
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "specs": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "title": {
+                            "type": "string",
+                            "description": "Short, descriptive feature title.",
+                        },
+                        "problem": {
+                            "type": "string",
+                            "description": (
+                                "The user problem this spec addresses, "
+                                "grounded in feedback evidence."
+                            ),
+                        },
+                        "proposed_solution": {
+                            "type": "string",
+                            "description": "Concrete solution description.",
+                        },
+                        "user_stories": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": (
+                                "User stories in 'As a [user], I want [action], "
+                                "so that [benefit]' format."
+                            ),
+                        },
+                        "acceptance_criteria": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "Testable acceptance criteria.",
+                        },
+                        "priority": {
+                            "type": "string",
+                            "enum": ["critical", "high", "medium", "low"],
+                            "description": (
+                                "Priority based on frequency and severity of feedback."
+                            ),
+                        },
+                        "supporting_feedback_indices": {
+                            "type": "array",
+                            "items": {"type": "integer", "minimum": 1},
+                            "description": (
+                                "1-indexed chunk numbers that support this spec."
+                            ),
+                        },
+                        "effort_estimate": {
+                            "type": "string",
+                            "enum": ["small", "medium", "large"],
+                            "description": "Rough implementation effort estimate.",
+                        },
+                    },
+                    "required": [
+                        "title",
+                        "problem",
+                        "proposed_solution",
+                        "user_stories",
+                        "acceptance_criteria",
+                        "priority",
+                        "supporting_feedback_indices",
+                        "effort_estimate",
+                    ],
+                },
+                "description": "List of feature specifications.",
+            },
+        },
+        "required": ["specs"],
+    },
+}
+
+USER_STORY_SYSTEM_PROMPT = """\
+You are Trawl, a product analyst that synthesizes user feedback into structured \
+user stories. You will be given a numbered list of feedback chunks retrieved \
+from a product's feedback corpus.
+
+Group the feedback into 3-7 themes and generate user stories for each theme. \
+Each story must follow the format: "As a [user], I want [action], so that [benefit]".
+
+Rules:
+1. Base every story ONLY on evidence from the provided feedback chunks.
+2. Cite specific feedback using 1-indexed chunk numbers in \
+`supporting_feedback_indices`. Only include chunks you actually relied on.
+3. Group related stories under a common theme name.
+4. Prioritize by frequency and severity of the underlying feedback.
+5. Each story must be distinct and actionable."""
+
+GENERATE_USER_STORIES_TOOL: dict[str, Any] = {
+    "name": "generate_user_stories",
+    "description": (
+        "Return user stories grouped by theme, synthesized from user feedback."
+    ),
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "story_groups": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "theme": {
+                            "type": "string",
+                            "description": "Theme name grouping related stories.",
+                        },
+                        "stories": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "title": {
+                                        "type": "string",
+                                        "description": (
+                                            "User story in 'As a [user], I want "
+                                            "[action], so that [benefit]' format."
+                                        ),
+                                    },
+                                    "acceptance_criteria": {
+                                        "type": "array",
+                                        "items": {"type": "string"},
+                                        "description": (
+                                            "Testable acceptance criteria."
+                                        ),
+                                    },
+                                    "priority": {
+                                        "type": "string",
+                                        "enum": [
+                                            "critical",
+                                            "high",
+                                            "medium",
+                                            "low",
+                                        ],
+                                    },
+                                    "supporting_feedback_indices": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "integer",
+                                            "minimum": 1,
+                                        },
+                                    },
+                                },
+                                "required": [
+                                    "title",
+                                    "acceptance_criteria",
+                                    "priority",
+                                    "supporting_feedback_indices",
+                                ],
+                            },
+                        },
+                    },
+                    "required": ["theme", "stories"],
+                },
+            },
+        },
+        "required": ["story_groups"],
+    },
+}
+
+
+@dataclass
+class SpecGenerationResult:
+    """Structured result from a spec generation call."""
+
+    specs: list[dict[str, Any]]
+    model: str
+    input_tokens: int
+    output_tokens: int
+
+
+def _clamp_indices(
+    raw_indices: list[Any], max_index: int
+) -> list[int]:
+    """Coerce and filter supporting_feedback_indices to valid 1-indexed range."""
+    clamped: list[int] = []
+    for idx in raw_indices:
+        try:
+            i = int(idx)
+        except (TypeError, ValueError):
+            continue
+        if 1 <= i <= max_index:
+            clamped.append(i)
+    return clamped
+
+
+async def generate_feature_specs(
+    chunks: list[RetrievedChunk],
+    project_context: str | None = None,
+) -> SpecGenerationResult:
+    """Generate feature specifications from retrieved feedback chunks.
+
+    Uses forced tool_choice to guarantee structured JSON output matching
+    the GENERATE_SPECS_TOOL schema.
+    """
+    if not settings.ANTHROPIC_API_KEY:
+        raise RuntimeError("ANTHROPIC_API_KEY is not configured")
+    if not chunks:
+        raise ValueError("generate_feature_specs requires at least one chunk")
+
+    client = AsyncAnthropic(
+        api_key=settings.ANTHROPIC_API_KEY,
+        timeout=CLIENT_TIMEOUT_SECONDS,
+    )
+
+    chunks_block = _format_chunks_for_prompt(chunks)
+    user_content = f"Feedback chunks:\n{chunks_block}"
+    if project_context:
+        user_content = f"Focus area: {project_context}\n\n{user_content}"
+
+    response = await client.messages.create(  # type: ignore[call-overload]
+        model=MODEL_ID,
+        max_tokens=SPEC_MAX_TOKENS,
+        system=FEATURE_SPEC_SYSTEM_PROMPT,
+        tools=[GENERATE_SPECS_TOOL],
+        tool_choice={"type": "tool", "name": "generate_specs"},
+        messages=[{"role": "user", "content": user_content}],
+    )
+
+    tool_block = None
+    for block in response.content:
+        if block.type == "tool_use" and block.name == "generate_specs":
+            tool_block = block
+            break
+
+    if tool_block is None:
+        raise RuntimeError(
+            "Claude did not return a generate_specs tool call"
+        )
+
+    tool_input = tool_block.input
+    if not isinstance(tool_input, dict):
+        raise RuntimeError(
+            f"generate_specs tool input is not a dict: {type(tool_input).__name__}"
+        )
+
+    raw_specs = tool_input.get("specs", [])
+    if not isinstance(raw_specs, list):
+        raise RuntimeError("generate_specs.specs is not a list")
+
+    specs: list[dict[str, Any]] = []
+    for spec in raw_specs:
+        if not isinstance(spec, dict):
+            continue
+        if not spec.get("title"):
+            continue
+        spec["supporting_feedback_indices"] = _clamp_indices(
+            spec.get("supporting_feedback_indices", []), len(chunks)
+        )
+        specs.append(spec)
+
+    logger.info(
+        "Generated %d feature specs (%d input tokens, %d output tokens)",
+        len(specs),
+        response.usage.input_tokens,
+        response.usage.output_tokens,
+    )
+
+    return SpecGenerationResult(
+        specs=specs,
+        model=MODEL_ID,
+        input_tokens=response.usage.input_tokens,
+        output_tokens=response.usage.output_tokens,
+    )
+
+
+async def generate_user_stories(
+    chunks: list[RetrievedChunk],
+    project_context: str | None = None,
+) -> SpecGenerationResult:
+    """Generate user stories grouped by theme from retrieved feedback chunks.
+
+    Flattens the grouped output into individual spec dicts for uniform
+    storage in the specs table.
+    """
+    if not settings.ANTHROPIC_API_KEY:
+        raise RuntimeError("ANTHROPIC_API_KEY is not configured")
+    if not chunks:
+        raise ValueError("generate_user_stories requires at least one chunk")
+
+    client = AsyncAnthropic(
+        api_key=settings.ANTHROPIC_API_KEY,
+        timeout=CLIENT_TIMEOUT_SECONDS,
+    )
+
+    chunks_block = _format_chunks_for_prompt(chunks)
+    user_content = f"Feedback chunks:\n{chunks_block}"
+    if project_context:
+        user_content = f"Focus area: {project_context}\n\n{user_content}"
+
+    response = await client.messages.create(  # type: ignore[call-overload]
+        model=MODEL_ID,
+        max_tokens=SPEC_MAX_TOKENS,
+        system=USER_STORY_SYSTEM_PROMPT,
+        tools=[GENERATE_USER_STORIES_TOOL],
+        tool_choice={"type": "tool", "name": "generate_user_stories"},
+        messages=[{"role": "user", "content": user_content}],
+    )
+
+    tool_block = None
+    for block in response.content:
+        if block.type == "tool_use" and block.name == "generate_user_stories":
+            tool_block = block
+            break
+
+    if tool_block is None:
+        raise RuntimeError(
+            "Claude did not return a generate_user_stories tool call"
+        )
+
+    tool_input = tool_block.input
+    if not isinstance(tool_input, dict):
+        raise RuntimeError(
+            f"generate_user_stories tool input is not a dict: "
+            f"{type(tool_input).__name__}"
+        )
+
+    story_groups = tool_input.get("story_groups", [])
+    if not isinstance(story_groups, list):
+        raise RuntimeError("generate_user_stories.story_groups is not a list")
+
+    # Flatten grouped stories into individual spec dicts
+    specs: list[dict[str, Any]] = []
+    for group in story_groups:
+        if not isinstance(group, dict):
+            continue
+        theme = group.get("theme", "Untitled Theme")
+        for story in group.get("stories", []):
+            if not isinstance(story, dict):
+                continue
+            if not story.get("title"):
+                continue
+            story["supporting_feedback_indices"] = _clamp_indices(
+                story.get("supporting_feedback_indices", []), len(chunks)
+            )
+            specs.append({
+                "title": story["title"],
+                "theme": theme,
+                "acceptance_criteria": story.get("acceptance_criteria", []),
+                "priority": story.get("priority", "medium"),
+                "supporting_feedback_indices": story["supporting_feedback_indices"],
+                "effort_estimate": "medium",
+            })
+
+    logger.info(
+        "Generated %d user stories across %d themes "
+        "(%d input tokens, %d output tokens)",
+        len(specs),
+        len(story_groups),
+        response.usage.input_tokens,
+        response.usage.output_tokens,
+    )
+
+    return SpecGenerationResult(
+        specs=specs,
+        model=MODEL_ID,
+        input_tokens=response.usage.input_tokens,
+        output_tokens=response.usage.output_tokens,
+    )
