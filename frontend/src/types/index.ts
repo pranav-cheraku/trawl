@@ -170,7 +170,12 @@ export interface GenerateSpecsResponse {
 export interface TaskStatus {
   taskId: string;
   status: TaskStatusValue;
-  result?: { specIds: string[]; count: number } | null;
+  /**
+   * Celery result payload. `result` is a raw dict on the backend, so nested
+   * keys are NOT transformed by the camelCase alias generator — they arrive
+   * in snake_case exactly as the task returned them.
+   */
+  result?: { spec_ids: string[]; count: number } | null;
   error?: string | null;
 }
 
