@@ -1,14 +1,31 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "next/navigation";
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  KeyboardSensor,
+  closestCorners,
+  useSensor,
+  useSensors,
+  type DragStartEvent,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  sortableKeyboardCoordinates,
+} from "@dnd-kit/sortable";
 import {
   generateSpecs,
   getTaskStatus,
   listSpecs,
+  reorderSpecs,
 } from "@/lib/api";
-import type { Spec, SpecType, TaskStatus } from "@/types";
+import type { Spec, SpecStatus, SpecType, TaskStatus } from "@/types";
 import KanbanBoard from "@/components/kanban/kanban-board";
+import SpecCard from "@/components/kanban/spec-card";
 
 const POLL_INTERVAL_MS = 2000;
 const MAX_POLL_MS = 120_000;
@@ -16,6 +33,17 @@ const TERMINAL_STATUSES = new Set<TaskStatus["status"]>([
   "success",
   "failure",
 ]);
+
+const STATUSES: SpecStatus[] = ["backlog", "planned", "in_progress", "done"];
+
+function emptyBuckets(): Record<SpecStatus, Spec[]> {
+  return { backlog: [], planned: [], in_progress: [], done: [] };
+}
+
+function compareSpecs(a: Spec, b: Spec): number {
+  if (a.kanbanOrder !== b.kanbanOrder) return a.kanbanOrder - b.kanbanOrder;
+  return a.createdAt.localeCompare(b.createdAt);
+}
 
 export default function SpecsPage() {
   const params = useParams();
@@ -25,10 +53,42 @@ export default function SpecsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [generatingType, setGeneratingType] = useState<SpecType | null>(null);
+  const [activeId, setActiveId] = useState<string | null>(null);
 
   const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hasLoadedRef = useRef(false);
 
+  // ── DnD sensors ───────────────────────────────────────────────────
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 8 },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // ── Group specs into columns ───────────────────────────────────────
+  const grouped = useMemo<Record<SpecStatus, Spec[]>>(() => {
+    const buckets = emptyBuckets();
+    for (const spec of specs ?? []) {
+      const bucket = buckets[spec.status as SpecStatus];
+      if (bucket) bucket.push(spec);
+      else buckets.backlog.push(spec);
+    }
+    for (const key of STATUSES) {
+      buckets[key].sort(compareSpecs);
+    }
+    return buckets;
+  }, [specs]);
+
+  // ── Active spec for DragOverlay ────────────────────────────────────
+  const activeSpec = useMemo(
+    () => (activeId ? (specs ?? []).find((s) => s.id === activeId) ?? null : null),
+    [activeId, specs]
+  );
+
+  // ── Data fetching ──────────────────────────────────────────────────
   const clearPoll = useCallback(() => {
     if (pollTimerRef.current) {
       clearTimeout(pollTimerRef.current);
@@ -58,6 +118,7 @@ export default function SpecsPage() {
     return clearPoll;
   }, [fetchSpecs, clearPoll]);
 
+  // ── Task polling ───────────────────────────────────────────────────
   const pollTask = useCallback(
     (taskId: string, startedAt: number) => {
       clearPoll();
@@ -116,6 +177,115 @@ export default function SpecsPage() {
       console.log("[specs] card clicked:", spec.id);
     }
   }, []);
+
+  // ── Drag handlers ──────────────────────────────────────────────────
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    setActiveId(String(event.active.id));
+  }, []);
+
+  const handleDragEnd = useCallback(
+    async (event: DragEndEvent) => {
+      setActiveId(null);
+      const { active, over } = event;
+      if (!over) return;
+
+      const activeSpecId = String(active.id);
+      const overId = String(over.id);
+
+      // Find source spec and its current status.
+      const currentSpecs = specs ?? [];
+      const activeSpec = currentSpecs.find((s) => s.id === activeSpecId);
+      if (!activeSpec) return;
+      const sourceStatus = activeSpec.status;
+
+      // Resolve destination status and target index.
+      let destStatus: SpecStatus;
+      let destIndex: number;
+
+      if (overId.startsWith("col:")) {
+        // Dropped directly on a column droppable — append to end.
+        destStatus = overId.slice(4) as SpecStatus;
+        destIndex = grouped[destStatus].length;
+        // If we're moving within the same column to the end, skip if nothing changed.
+        if (
+          sourceStatus === destStatus &&
+          grouped[sourceStatus].at(-1)?.id === activeSpecId
+        ) {
+          return;
+        }
+      } else {
+        // Dropped on another card — find that card.
+        const overSpec = currentSpecs.find((s) => s.id === overId);
+        if (!overSpec) return;
+        destStatus = overSpec.status;
+        destIndex = grouped[destStatus].findIndex((s) => s.id === overId);
+        if (destIndex === -1) destIndex = grouped[destStatus].length;
+      }
+
+      // ── Build new flat spec list ─────────────────────────────────────
+      // Snapshot for rollback.
+      const snapshot = [...currentSpecs];
+
+      let newSpecs: Spec[];
+
+      if (sourceStatus === destStatus) {
+        // Within-column: arrayMove on that column's spec list.
+        const colSpecs = [...grouped[sourceStatus]];
+        const fromIdx = colSpecs.findIndex((s) => s.id === activeSpecId);
+        if (fromIdx === -1 || fromIdx === destIndex) return;
+        const reordered = arrayMove(colSpecs, fromIdx, destIndex);
+
+        // Reassign dense kanbanOrder.
+        const updated = reordered.map((s, i) => ({ ...s, kanbanOrder: i }));
+
+        // Splice updated column back into flat list.
+        newSpecs = currentSpecs.map((s) => {
+          const found = updated.find((u) => u.id === s.id);
+          return found ?? s;
+        });
+      } else {
+        // Cross-column: remove from source, insert at dest.
+        const srcColSpecs = grouped[sourceStatus].filter(
+          (s) => s.id !== activeSpecId
+        );
+        const dstColSpecs = [...grouped[destStatus]];
+        const clampedIdx = Math.min(destIndex, dstColSpecs.length);
+        dstColSpecs.splice(clampedIdx, 0, { ...activeSpec, status: destStatus });
+
+        // Dense kanbanOrder for both affected columns.
+        const srcUpdated = srcColSpecs.map((s, i) => ({ ...s, kanbanOrder: i }));
+        const dstUpdated = dstColSpecs.map((s, i) => ({ ...s, kanbanOrder: i }));
+        const changedMap = new Map<string, Spec>();
+        for (const s of [...srcUpdated, ...dstUpdated]) changedMap.set(s.id, s);
+
+        newSpecs = currentSpecs.map((s) => changedMap.get(s.id) ?? s);
+      }
+
+      // ── Compute diff (only items whose kanbanOrder or status changed) ─
+      const specsBefore = new Map(currentSpecs.map((s) => [s.id, s]));
+      const diff = newSpecs.filter((s) => {
+        const before = specsBefore.get(s.id);
+        return (
+          before &&
+          (before.kanbanOrder !== s.kanbanOrder || before.status !== s.status)
+        );
+      }).map((s) => ({ id: s.id, kanbanOrder: s.kanbanOrder, status: s.status }));
+
+      if (diff.length === 0) return;
+
+      // ── Optimistic update, then persist ───────────────────────────────
+      setSpecs(newSpecs);
+
+      try {
+        await reorderSpecs(diff);
+      } catch {
+        // Rollback on error.
+        setSpecs(snapshot);
+        setErrorMessage("Failed to save reorder. Your change was reverted.");
+      }
+    },
+    [specs, grouped]
+  );
 
   const hasSpecs = (specs?.length ?? 0) > 0;
 
@@ -186,7 +356,8 @@ export default function SpecsPage() {
             <span className="relative inline-flex h-2 w-2 rounded-full bg-secondary" />
           </span>
           <span className="font-mono text-[10px] font-medium uppercase tracking-[0.18em]">
-            Generating {generatingType === "feature_specs" ? "feature specs" : "user stories"}
+            Generating{" "}
+            {generatingType === "feature_specs" ? "feature specs" : "user stories"}
           </span>
         </div>
       ) : null}
@@ -195,7 +366,19 @@ export default function SpecsPage() {
       {isLoading ? (
         <BoardSkeleton />
       ) : hasSpecs ? (
-        <KanbanBoard specs={specs ?? []} onCardClick={handleCardClick} />
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCorners}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+        >
+          <KanbanBoard grouped={grouped} onCardClick={handleCardClick} />
+          <DragOverlay>
+            {activeSpec ? (
+              <SpecCard spec={activeSpec} isDragging={false} />
+            ) : null}
+          </DragOverlay>
+        </DndContext>
       ) : (
         <EmptyState
           onGenerate={() => handleGenerate("feature_specs")}
