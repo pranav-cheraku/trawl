@@ -28,6 +28,7 @@ import KanbanBoard from "@/components/kanban/kanban-board";
 import SpecCard from "@/components/kanban/spec-card";
 import SpecDetailModal from "@/components/kanban/spec-detail-modal";
 import FilterBar, { type Filters } from "@/components/kanban/filter-bar";
+import SplitGenerateButton from "@/components/kanban/split-generate-button";
 
 const POLL_INTERVAL_MS = 2000;
 const MAX_POLL_MS = 120_000;
@@ -192,12 +193,17 @@ export default function SpecsPage() {
   );
 
   const handleGenerate = useCallback(
-    async (type: SpecType) => {
+    async (type: SpecType, focus?: string) => {
       if (generatingType) return;
       setErrorMessage(null);
       setGeneratingType(type);
+      // Focused generation: clear filters so the new specs are guaranteed
+      // to be visible on the board once the task resolves.
+      if (focus) {
+        setFilters({ type: null, status: null, priority: null });
+      }
       try {
-        const { taskId } = await generateSpecs(projectId, type);
+        const { taskId } = await generateSpecs(projectId, type, focus);
         pollTask(taskId, Date.now());
       } catch (err) {
         setGeneratingType(null);
@@ -352,18 +358,23 @@ export default function SpecsPage() {
           </h2>
         </div>
         <div className="flex items-center gap-2">
-          <GenerateButton
+          <SplitGenerateButton
             label="Feature specs"
-            onClick={() => handleGenerate("feature_specs")}
+            type="feature_specs"
+            variant="primary"
             isActive={generatingType === "feature_specs"}
             disabled={generatingType !== null}
+            onGenerate={(t) => handleGenerate(t)}
+            onFocusGenerate={(t, focus) => handleGenerate(t, focus)}
           />
-          <GenerateButton
+          <SplitGenerateButton
             label="User stories"
-            onClick={() => handleGenerate("user_stories")}
+            type="user_stories"
+            variant="ghost"
             isActive={generatingType === "user_stories"}
             disabled={generatingType !== null}
-            variant="ghost"
+            onGenerate={(t) => handleGenerate(t)}
+            onFocusGenerate={(t, focus) => handleGenerate(t, focus)}
           />
         </div>
       </header>
@@ -481,53 +492,6 @@ export default function SpecsPage() {
 }
 
 // ─────────────────────────────────────────────────────────────────────
-
-interface GenerateButtonProps {
-  label: string;
-  onClick: () => void;
-  isActive: boolean;
-  disabled: boolean;
-  variant?: "primary" | "ghost";
-}
-
-function GenerateButton({
-  label,
-  onClick,
-  isActive,
-  disabled,
-  variant = "primary",
-}: GenerateButtonProps) {
-  const base =
-    "inline-flex items-center gap-1.5 rounded-[4px] px-3 py-1.5 font-mono text-[10px] font-medium uppercase tracking-[0.18em] transition-colors disabled:cursor-not-allowed disabled:opacity-50";
-  const styles =
-    variant === "primary"
-      ? "bg-on-surface text-surface-container-lowest hover:bg-secondary"
-      : "bg-surface-container-lowest text-on-surface hover:bg-surface-container-high";
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className={`${base} ${styles}`}
-    >
-      <svg
-        className="h-3 w-3"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        strokeWidth={2}
-        aria-hidden
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M12 4.5v15m7.5-7.5h-15"
-        />
-      </svg>
-      <span>{isActive ? "Queued…" : label}</span>
-    </button>
-  );
-}
 
 function BoardSkeleton() {
   return (
