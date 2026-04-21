@@ -26,6 +26,7 @@ import {
 import type { Spec, SpecStatus, SpecType, TaskStatus } from "@/types";
 import KanbanBoard from "@/components/kanban/kanban-board";
 import SpecCard from "@/components/kanban/spec-card";
+import SpecDetailModal from "@/components/kanban/spec-detail-modal";
 
 const POLL_INTERVAL_MS = 2000;
 const MAX_POLL_MS = 120_000;
@@ -50,6 +51,7 @@ export default function SpecsPage() {
   const projectId = params.id as string;
 
   const [specs, setSpecs] = useState<Spec[] | null>(null);
+  const [selectedSpec, setSelectedSpec] = useState<Spec | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [generatingType, setGeneratingType] = useState<SpecType | null>(null);
@@ -172,10 +174,20 @@ export default function SpecsPage() {
   );
 
   const handleCardClick = useCallback((spec: Spec) => {
-    // Detail modal lands on Day 26 — log for now so the click path is wired.
-    if (process.env.NODE_ENV !== "production") {
-      console.log("[specs] card clicked:", spec.id);
-    }
+    setSelectedSpec(spec);
+  }, []);
+
+  const handleSpecUpdated = useCallback((updated: Spec) => {
+    setSpecs((prev) =>
+      prev ? prev.map((s) => (s.id === updated.id ? updated : s)) : prev,
+    );
+    // Keep the modal's spec in sync so the next edit is built on fresh state.
+    setSelectedSpec((prev) => (prev?.id === updated.id ? updated : prev));
+  }, []);
+
+  const handleSpecDeleted = useCallback((specId: string) => {
+    setSpecs((prev) => (prev ? prev.filter((s) => s.id !== specId) : prev));
+    setSelectedSpec((prev) => (prev?.id === specId ? null : prev));
   }, []);
 
   // ── Drag handlers ──────────────────────────────────────────────────
@@ -290,6 +302,7 @@ export default function SpecsPage() {
   const hasSpecs = (specs?.length ?? 0) > 0;
 
   return (
+    <>
     <div className="flex flex-col gap-4">
       {/* Header — architectural label + generation triggers */}
       <header className="flex flex-wrap items-end justify-between gap-3 rounded-[4px] bg-surface-container-lowest px-4 py-3">
@@ -386,6 +399,16 @@ export default function SpecsPage() {
         />
       )}
     </div>
+    {selectedSpec ? (
+      <SpecDetailModal
+        spec={selectedSpec}
+        projectId={projectId}
+        onClose={() => setSelectedSpec(null)}
+        onSpecUpdated={handleSpecUpdated}
+        onSpecDeleted={handleSpecDeleted}
+      />
+    ) : null}
+    </>
   );
 }
 
