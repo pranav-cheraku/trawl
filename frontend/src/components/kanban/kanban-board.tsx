@@ -6,6 +6,8 @@ import KanbanColumn from "./kanban-column";
 interface Props {
   grouped: Record<SpecStatus, Spec[]>;
   onCardClick?: (spec: Spec) => void;
+  totalsByStatus?: Record<SpecStatus, number>;
+  isFilterActive?: boolean;
 }
 
 const COLUMNS: { status: SpecStatus; label: string }[] = [
@@ -15,7 +17,12 @@ const COLUMNS: { status: SpecStatus; label: string }[] = [
   { status: "done", label: "Done" },
 ];
 
-export default function KanbanBoard({ grouped, onCardClick }: Props) {
+export default function KanbanBoard({
+  grouped,
+  onCardClick,
+  totalsByStatus,
+  isFilterActive,
+}: Props) {
   return (
     <div
       className="grid gap-3 md:grid-cols-2 lg:grid-cols-4"
@@ -30,6 +37,8 @@ export default function KanbanBoard({ grouped, onCardClick }: Props) {
           label={label}
           specs={grouped[status]}
           onCardClick={onCardClick}
+          totalCount={totalsByStatus?.[status]}
+          isFilterActive={isFilterActive}
         />
       ))}
     </div>

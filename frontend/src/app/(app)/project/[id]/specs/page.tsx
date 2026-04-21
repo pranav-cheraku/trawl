@@ -27,6 +27,7 @@ import type { Spec, SpecStatus, SpecType, TaskStatus } from "@/types";
 import KanbanBoard from "@/components/kanban/kanban-board";
 import SpecCard from "@/components/kanban/spec-card";
 import SpecDetailModal from "@/components/kanban/spec-detail-modal";
+import FilterBar, { type Filters } from "@/components/kanban/filter-bar";
 
 const POLL_INTERVAL_MS = 2000;
 const MAX_POLL_MS = 120_000;
@@ -56,6 +57,11 @@ export default function SpecsPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [generatingType, setGeneratingType] = useState<SpecType | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [filters, setFilters] = useState<Filters>({
+    type: null,
+    status: null,
+    priority: null,
+  });
 
   const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hasLoadedRef = useRef(false);
@@ -70,10 +76,40 @@ export default function SpecsPage() {
     })
   );
 
+  // ── Filter + derived values ────────────────────────────────────────
+  const filteredSpecs = useMemo(() => {
+    if (!specs) return null;
+    return specs.filter((s) => {
+      if (filters.type && s.type !== filters.type) return false;
+      if (filters.status && s.status !== filters.status) return false;
+      if (filters.priority && s.priority !== filters.priority) return false;
+      return true;
+    });
+  }, [specs, filters]);
+
+  const totalsByStatus = useMemo<Record<SpecStatus, number>>(() => {
+    const totals: Record<SpecStatus, number> = {
+      backlog: 0,
+      planned: 0,
+      in_progress: 0,
+      done: 0,
+    };
+    for (const s of specs ?? []) {
+      const key = s.status as SpecStatus;
+      if (key in totals) totals[key] += 1;
+    }
+    return totals;
+  }, [specs]);
+
+  const isFilterActive =
+    filters.type !== null ||
+    filters.status !== null ||
+    filters.priority !== null;
+
   // ── Group specs into columns ───────────────────────────────────────
   const grouped = useMemo<Record<SpecStatus, Spec[]>>(() => {
     const buckets = emptyBuckets();
-    for (const spec of specs ?? []) {
+    for (const spec of filteredSpecs ?? []) {
       const bucket = buckets[spec.status as SpecStatus];
       if (bucket) bucket.push(spec);
       else buckets.backlog.push(spec);
@@ -82,7 +118,7 @@ export default function SpecsPage() {
       buckets[key].sort(compareSpecs);
     }
     return buckets;
-  }, [specs]);
+  }, [filteredSpecs]);
 
   // ── Active spec for DragOverlay ────────────────────────────────────
   const activeSpec = useMemo(
@@ -198,6 +234,7 @@ export default function SpecsPage() {
   const handleDragEnd = useCallback(
     async (event: DragEndEvent) => {
       setActiveId(null);
+      if (isFilterActive) return;
       const { active, over } = event;
       if (!over) return;
 
@@ -296,7 +333,7 @@ export default function SpecsPage() {
         setErrorMessage("Failed to save reorder. Your change was reverted.");
       }
     },
-    [specs, grouped]
+    [specs, grouped, isFilterActive]
   );
 
   const hasSpecs = (specs?.length ?? 0) > 0;
@@ -361,6 +398,32 @@ export default function SpecsPage() {
         </div>
       ) : null}
 
+      {/* Filter bar — only when specs exist */}
+      {hasSpecs ? (
+        <FilterBar
+          filters={filters}
+          onChange={setFilters}
+          filteredCount={filteredSpecs?.length ?? 0}
+          totalCount={specs?.length ?? 0}
+        />
+      ) : null}
+
+      {/* No-match banner */}
+      {isFilterActive && filteredSpecs?.length === 0 ? (
+        <div className="flex items-center justify-between gap-3 rounded-[4px] bg-surface-container-low px-4 py-3 text-[13px] text-on-surface-variant">
+          <span>No specs match the current filter.</span>
+          <button
+            type="button"
+            onClick={() =>
+              setFilters({ type: null, status: null, priority: null })
+            }
+            className="font-mono text-[10px] font-medium uppercase tracking-[0.15em] text-on-surface hover:underline"
+          >
+            Clear filters
+          </button>
+        </div>
+      ) : null}
+
       {/* Generating indicator — thin strip */}
       {generatingType ? (
         <div className="flex items-center gap-3 rounded-[4px] bg-secondary/10 px-4 py-2.5 text-[12px] text-secondary">
@@ -385,7 +448,12 @@ export default function SpecsPage() {
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
-          <KanbanBoard grouped={grouped} onCardClick={handleCardClick} />
+          <KanbanBoard
+            grouped={grouped}
+            totalsByStatus={totalsByStatus}
+            isFilterActive={isFilterActive}
+            onCardClick={handleCardClick}
+          />
           <DragOverlay>
             {activeSpec ? (
               <SpecCard spec={activeSpec} isDragging={false} />

@@ -18,6 +18,11 @@ interface Props {
   onCardClick?: (spec: Spec) => void;
   /** Optional footer / empty-state slot. */
   emptyState?: ReactNode;
+  /** Total count across all filter states (unfiltered). When provided and
+   *  different from specs.length, shows "N / totalCount" in the header. */
+  totalCount?: number;
+  /** When true, dragging is disabled on all cards in this column. */
+  isFilterActive?: boolean;
 }
 
 export default function KanbanColumn({
@@ -27,6 +32,8 @@ export default function KanbanColumn({
   specs,
   onCardClick,
   emptyState,
+  totalCount,
+  isFilterActive,
 }: Props) {
   const paddedIndex = String(index).padStart(2, "0");
 
@@ -34,13 +41,19 @@ export default function KanbanColumn({
   // distinguish "dropped on a column" from "dropped on a specific card".
   const { setNodeRef, isOver } = useDroppable({ id: `col:${status}` });
 
+  // Dim the column when filter hid everything in it (totalCount > 0 but specs is empty).
+  const isHiddenByFilter =
+    specs.length === 0 &&
+    typeof totalCount === "number" &&
+    totalCount > 0;
+
   return (
     <section
       className={`flex min-h-[280px] flex-col rounded-[4px] transition-colors ${
         isOver
           ? "bg-surface-container"
           : "bg-surface-container-low"
-      }`}
+      }${isHiddenByFilter ? " opacity-40" : ""}`}
     >
       {/* Header — architectural label + count badge */}
       <header className="flex items-center justify-between gap-2 px-3 pt-3 pb-2.5">
@@ -53,7 +66,14 @@ export default function KanbanColumn({
           </span>
         </div>
         <span className="rounded-[2px] bg-surface-container-highest px-1.5 py-0.5 font-mono text-[10px] font-medium text-on-surface-variant">
-          {specs.length}
+          <span className="font-mono font-medium text-on-surface">
+            {specs.length}
+          </span>
+          {typeof totalCount === "number" && totalCount !== specs.length ? (
+            <span className="ml-1 font-normal text-on-surface-variant/70">
+              / {totalCount}
+            </span>
+          ) : null}
         </span>
       </header>
 
@@ -65,10 +85,16 @@ export default function KanbanColumn({
         >
           {specs.length === 0 ? (
             <div className="flex flex-1 items-center justify-center py-6">
-              {emptyState ?? (
-                <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-on-surface-variant/50">
-                  Empty
-                </p>
+              {isHiddenByFilter ? (
+                <div className="px-2 py-3 text-center font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-on-surface-variant/70">
+                  · {totalCount} hidden ·
+                </div>
+              ) : (
+                emptyState ?? (
+                  <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-on-surface-variant/50">
+                    Empty
+                  </p>
+                )
               )}
             </div>
           ) : (
@@ -77,6 +103,7 @@ export default function KanbanColumn({
                 key={spec.id}
                 spec={spec}
                 onClick={onCardClick}
+                disabled={isFilterActive}
               />
             ))
           )}
