@@ -429,6 +429,7 @@ export default function ExplorePage() {
         </div>
         <div className="hidden overflow-hidden lg:block">
           <XrayPanel
+            variant="chat"
             projectId={projectId}
             selectedMessage={activeMessage}
             focusedChunkId={focusedChunkId}
@@ -472,6 +473,7 @@ export default function ExplorePage() {
             </div>
             <div className="max-h-[65vh] overflow-y-auto">
               <XrayPanel
+                variant="chat"
                 projectId={projectId}
                 selectedMessage={activeMessage}
                 focusedChunkId={focusedChunkId}

@@ -39,3 +39,6 @@ docs/
 
 # Notes
 notes/
+
+# Playwright MCP session artifacts (browser snapshots + console logs)
+.playwright-mcp/
