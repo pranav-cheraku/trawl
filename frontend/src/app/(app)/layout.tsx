@@ -221,10 +221,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
       </header>
 
-      {/* Main content */}
-      <main className="bg-surface">
-        <div className="mx-auto max-w-6xl px-6 py-10">{children}</div>
-      </main>
+      {/* Main content — no max-w here; each page owns its width */}
+      <main className="bg-surface">{children}</main>
     </div>
   );
 }

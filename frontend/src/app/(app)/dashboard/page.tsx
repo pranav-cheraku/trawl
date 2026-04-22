@@ -176,7 +176,7 @@ export default function DashboardPage() {
 
   return (
     <>
-      <div>
+      <div className="mx-auto max-w-6xl px-6 py-10">
         {/* Header */}
         <div className="flex items-end justify-between">
           <div>

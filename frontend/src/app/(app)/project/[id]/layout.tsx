@@ -70,29 +70,41 @@ export default function ProjectLayout({
   }, [projectId]);
 
   return (
-    <div>
-      {/* Back link */}
+    <div className="mx-auto max-w-screen-2xl px-6 py-5">
+      {/* Back chip */}
       <Link
         href="/dashboard"
-        className="inline-flex items-center gap-1.5 text-xs font-medium text-on-surface-variant transition-colors hover:text-on-surface"
+        className="inline-flex items-center gap-1.5 font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-on-surface-variant transition-colors hover:text-on-surface"
       >
-        <svg className="h-3 w-3" fill="none" viewBox="0 0 14 14" stroke="currentColor" strokeWidth={1.5}>
+        <svg
+          className="h-2.5 w-2.5"
+          fill="none"
+          viewBox="0 0 14 14"
+          stroke="currentColor"
+          strokeWidth={1.5}
+          aria-hidden="true"
+        >
           <path d="M13 7H1M6 2L1 7l5 5" />
         </svg>
         All Projects
       </Link>
 
-      {/* Project header */}
-      <div className="mt-4">
+      {/* Compact crumb: WORKSPACE / {project name} */}
+      <div className="mt-2.5 flex items-baseline gap-3.5">
+        <span className="font-mono text-[10px] font-medium uppercase tracking-[0.25em] text-on-surface-variant/70">
+          Workspace /
+        </span>
         {project ? (
-          <h1 className="text-2xl font-bold text-on-surface">{project.name}</h1>
+          <h1 className="text-[20px] font-semibold leading-tight tracking-[-0.01em] text-on-surface">
+            {project.name}
+          </h1>
         ) : (
-          <div className="h-8 w-48 animate-pulse rounded-[4px] bg-surface-container" />
+          <div className="h-6 w-48 animate-pulse rounded-[4px] bg-surface-container" />
         )}
       </div>
 
-      {/* Workspace tabs — active tab gets 2px secondary top-border */}
-      <nav className="mt-6 flex gap-1" aria-label="Project tabs">
+      {/* Workspace tabs — unchanged markup */}
+      <nav className="mt-4 flex gap-1" aria-label="Project tabs">
         {tabs.map((tab) => {
           const href = `/project/${projectId}/${tab.segment}`;
           const isActive = pathname === href || pathname.startsWith(href + "/");
@@ -114,8 +126,8 @@ export default function ProjectLayout({
         })}
       </nav>
 
-      {/* Tab content */}
-      <div className="mt-8">{children}</div>
+      {/* Tab content — full-bleed within max-w-screen-2xl outer container */}
+      <div className="mt-4">{children}</div>
     </div>
   );
 }

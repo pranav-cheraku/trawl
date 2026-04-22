@@ -19,6 +19,7 @@ import {
 } from "@dnd-kit/sortable";
 import {
   generateSpecs,
+  getProject,
   getTaskStatus,
   listSpecs,
   reorderSpecs,
@@ -29,6 +30,7 @@ import SpecCard from "@/components/kanban/spec-card";
 import SpecDetailModal from "@/components/kanban/spec-detail-modal";
 import FilterBar, { type Filters } from "@/components/kanban/filter-bar";
 import SplitGenerateButton from "@/components/kanban/split-generate-button";
+import ExportMenu from "@/components/kanban/export-menu";
 
 const POLL_INTERVAL_MS = 2000;
 const MAX_POLL_MS = 120_000;
@@ -63,6 +65,7 @@ export default function SpecsPage() {
     status: null,
     priority: null,
   });
+  const [projectName, setProjectName] = useState<string | null>(null);
 
   const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hasLoadedRef = useRef(false);
@@ -154,8 +157,20 @@ export default function SpecsPage() {
 
   useEffect(() => {
     fetchSpecs();
-    return clearPoll;
-  }, [fetchSpecs, clearPoll]);
+    // Best-effort project name fetch for export filename + markdown heading.
+    let cancelled = false;
+    getProject(projectId)
+      .then((p) => {
+        if (!cancelled) setProjectName(p.name);
+      })
+      .catch(() => {
+        /* swallow — fall back to UUID prefix when exporting */
+      });
+    return () => {
+      cancelled = true;
+      clearPoll();
+    };
+  }, [fetchSpecs, clearPoll, projectId]);
 
   // ── Task polling ───────────────────────────────────────────────────
   const pollTask = useCallback(
@@ -416,6 +431,14 @@ export default function SpecsPage() {
           onChange={setFilters}
           filteredCount={filteredSpecs?.length ?? 0}
           totalCount={specs?.length ?? 0}
+          right={
+            filteredSpecs ? (
+              <ExportMenu
+                specs={filteredSpecs}
+                projectName={projectName ?? projectId.slice(0, 8)}
+              />
+            ) : null
+          }
         />
       ) : null}
 
