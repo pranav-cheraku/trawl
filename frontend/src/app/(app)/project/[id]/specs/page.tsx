@@ -31,6 +31,9 @@ import SpecDetailModal from "@/components/kanban/spec-detail-modal";
 import FilterBar, { type Filters } from "@/components/kanban/filter-bar";
 import SplitGenerateButton from "@/components/kanban/split-generate-button";
 import ExportMenu from "@/components/kanban/export-menu";
+import WorkspaceHeader, {
+  type WorkspaceStat,
+} from "@/components/workspace/workspace-header";
 
 const POLL_INTERVAL_MS = 2000;
 const MAX_POLL_MS = 120_000;
@@ -109,6 +112,19 @@ export default function SpecsPage() {
     filters.type !== null ||
     filters.status !== null ||
     filters.priority !== null;
+
+  const statsForHeader = useMemo<WorkspaceStat[]>(() => {
+    const list = specs ?? [];
+    const critHigh = list.filter(
+      (s) => s.priority === "critical" || s.priority === "high"
+    ).length;
+    const done = list.filter((s) => s.status === "done").length;
+    return [
+      { value: list.length.toString(), key: "Total Specs" },
+      { value: critHigh.toString(), key: "Critical + High" },
+      { value: done.toString(), key: "Done" },
+    ];
+  }, [specs]);
 
   // ── Group specs into columns ───────────────────────────────────────
   const grouped = useMemo<Record<SpecStatus, Spec[]>>(() => {
@@ -362,37 +378,33 @@ export default function SpecsPage() {
   return (
     <>
     <div className="flex flex-col gap-4">
-      {/* Header — architectural label + generation triggers */}
-      <header className="flex flex-wrap items-end justify-between gap-3 rounded-[4px] bg-surface-container-lowest px-4 py-3">
-        <div className="flex flex-col gap-1">
-          <span className="font-mono text-[10px] font-medium uppercase tracking-[0.25em] text-on-surface-variant/70">
-            Workspace / Kanban
-          </span>
-          <h2 className="text-[17px] font-semibold leading-tight text-on-surface">
-            Specs
-          </h2>
-        </div>
-        <div className="flex items-center gap-2">
-          <SplitGenerateButton
-            label="Feature specs"
-            type="feature_specs"
-            variant="primary"
-            isActive={generatingType === "feature_specs"}
-            disabled={generatingType !== null}
-            onGenerate={(t) => handleGenerate(t)}
-            onFocusGenerate={(t, focus) => handleGenerate(t, focus)}
-          />
-          <SplitGenerateButton
-            label="User stories"
-            type="user_stories"
-            variant="ghost"
-            isActive={generatingType === "user_stories"}
-            disabled={generatingType !== null}
-            onGenerate={(t) => handleGenerate(t)}
-            onFocusGenerate={(t, focus) => handleGenerate(t, focus)}
-          />
-        </div>
-      </header>
+      <WorkspaceHeader
+        label="Workspace / Kanban"
+        title="Specs"
+        stats={hasSpecs ? statsForHeader : undefined}
+        right={
+          <div className="flex items-center gap-2">
+            <SplitGenerateButton
+              label="Feature specs"
+              type="feature_specs"
+              variant="primary"
+              isActive={generatingType === "feature_specs"}
+              disabled={generatingType !== null}
+              onGenerate={(t) => handleGenerate(t)}
+              onFocusGenerate={(t, focus) => handleGenerate(t, focus)}
+            />
+            <SplitGenerateButton
+              label="User stories"
+              type="user_stories"
+              variant="ghost"
+              isActive={generatingType === "user_stories"}
+              disabled={generatingType !== null}
+              onGenerate={(t) => handleGenerate(t)}
+              onFocusGenerate={(t, focus) => handleGenerate(t, focus)}
+            />
+          </div>
+        }
+      />
 
       {/* Error banner */}
       {errorMessage ? (
