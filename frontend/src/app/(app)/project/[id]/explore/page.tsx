@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ChatInput, type ChatInputHandle } from "@/components/chat/chat-input";
-import { ConversationSwitcher } from "@/components/chat/conversation-switcher";
+import { ConversationRail } from "@/components/chat/conversation-rail";
 import { EmptyState } from "@/components/chat/empty-state";
 import { MessageList } from "@/components/chat/message-list";
 import { XrayPanel } from "@/components/rag-xray/xray-panel";
@@ -18,7 +18,7 @@ import {
   sendMessage,
   updateConversation,
 } from "@/lib/api";
-import type { Conversation, Message } from "@/types";
+import type { Conversation, Message, Source } from "@/types";
 
 const MAX_CONVERSATIONS_PER_PROJECT = 10;
 
@@ -35,6 +35,7 @@ export default function ExplorePage() {
   const [mountStatus, setMountStatus] = useState<MountStatus>("loading");
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [sources, setSources] = useState<Source[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isPending, setIsPending] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -74,16 +75,22 @@ export default function ExplorePage() {
     let cancelled = false;
 
     async function initialize() {
-      // Always fetch the conversation list first so the switcher is
-      // populated regardless of which branch we take below.
-      let convList: Conversation[] = [];
-      try {
-        convList = await listConversations(projectId);
-        if (cancelled) return;
-        setConversations(convList);
-      } catch {
-        /* non-fatal — switcher will show as empty */
-      }
+      // Fetch the conversation list and sources in parallel. Sources drives the
+      // corpus context strip and the no-sources gate; conversation list drives
+      // the rail. Both are needed regardless of which branch we take below.
+      const [convResult, sourcesResult] = await Promise.allSettled([
+        listConversations(projectId),
+        listSources(projectId),
+      ]);
+      if (cancelled) return;
+
+      const convList: Conversation[] =
+        convResult.status === "fulfilled" ? convResult.value : [];
+      setConversations(convList);
+
+      const fetchedSources =
+        sourcesResult.status === "fulfilled" ? sourcesResult.value : [];
+      setSources(fetchedSources);
 
       const savedId =
         typeof window !== "undefined"
@@ -108,13 +115,14 @@ export default function ExplorePage() {
         }
       }
 
-      try {
-        const sources = await listSources(projectId);
-        if (cancelled) return;
-        const hasReady = sources.some((s) => s.status === "ready");
+      // Decide mountStatus from the already-fetched sources.
+      if (sourcesResult.status === "fulfilled") {
+        const hasReady = fetchedSources.some((s) => s.status === "ready");
         setMountStatus(hasReady ? "ready" : "no-sources");
-      } catch {
-        if (!cancelled) setMountStatus("ready");
+      } else {
+        // Sources fetch failed — allow the user into the workspace rather than
+        // locking them out.
+        setMountStatus("ready");
       }
     }
 
@@ -372,8 +380,14 @@ export default function ExplorePage() {
     return <NoSourcesState projectId={projectId} />;
   }
 
+  const reviewCount = sources.reduce(
+    (acc, s) => acc + (s.recordCount ?? 0),
+    0
+  );
+  const readySources = sources.filter((s) => s.status === "ready");
+
   return (
-    <div className="flex h-[calc(100vh-20rem)] flex-col gap-4">
+    <div className="flex h-[calc(100vh-12rem)] flex-col gap-3">
       {errorMessage && (
         <div className="flex items-center justify-between gap-3 rounded-[4px] bg-error/10 px-4 py-3 text-[13px] text-error">
           <div className="flex items-center gap-2">
@@ -390,20 +404,104 @@ export default function ExplorePage() {
         </div>
       )}
 
-      <div className="grid flex-1 gap-4 overflow-hidden lg:grid-cols-[2fr_1fr]">
-        <div className="flex flex-col overflow-hidden rounded-[4px] bg-surface-container-low">
-          <div className="flex items-center justify-between px-4 pt-4">
-            <ConversationSwitcher
-              conversations={conversations}
-              currentId={conversationId}
-              maxConversations={MAX_CONVERSATIONS_PER_PROJECT}
-              onSelect={handleSelectConversation}
-              onNew={handleNewConversation}
-              onDelete={handleDeleteConversation}
-              onRename={handleRenameConversation}
-            />
+      {/* Corpus context strip — spans the full width of the workspace */}
+      <div className="flex flex-wrap items-center justify-between gap-4 rounded-[4px] bg-surface-container-lowest px-4 py-2.5">
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="flex items-center gap-1.5">
+            <span className="font-mono text-[13px] font-medium text-on-surface">
+              {reviewCount.toLocaleString()}
+            </span>
+            <span className="font-mono text-[9px] font-medium uppercase tracking-[0.15em] text-on-surface-variant/60">
+              Reviews Indexed
+            </span>
           </div>
-          <div className="flex-1 overflow-y-auto p-6">
+          <span aria-hidden className="h-4 w-px bg-on-surface/[0.08]" />
+          <div className="flex items-center gap-1.5">
+            <span className="font-mono text-[13px] font-medium text-on-surface">
+              {readySources.length}
+            </span>
+            <span className="font-mono text-[9px] font-medium uppercase tracking-[0.15em] text-on-surface-variant/60">
+              Active Sources
+            </span>
+          </div>
+          {readySources.length > 0 && (
+            <>
+              <span aria-hidden className="h-4 w-px bg-on-surface/[0.08]" />
+              <div className="flex flex-wrap gap-1">
+                {readySources.slice(0, 3).map((s) => (
+                  <span
+                    key={s.id}
+                    className="rounded-[2px] bg-surface-container-high px-1.5 py-0.5 font-mono text-[9.5px] font-medium uppercase tracking-[0.1em] text-on-surface"
+                  >
+                    {s.sourceType === "app_store"
+                      ? s.appStoreName ?? `App Store #${s.appStoreId ?? ""}`
+                      : s.filename ?? "CSV"}
+                  </span>
+                ))}
+                {readySources.length > 3 && (
+                  <span className="font-mono text-[9.5px] text-on-surface-variant/70">
+                    +{readySources.length - 3}
+                  </span>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+        <span className="font-mono text-[9px] font-medium uppercase tracking-[0.2em] text-on-surface-variant/60">
+          Explore / Conversation
+        </span>
+      </div>
+
+      {/* Tri-column workspace — lg: rail | chat | xray; <lg: stack */}
+      <div className="grid flex-1 gap-3 overflow-hidden lg:grid-cols-[200px_1fr_380px] xl:grid-cols-[220px_1fr_440px]">
+        {/* Conversation rail — desktop only */}
+        <div className="hidden lg:block">
+          <ConversationRail
+            conversations={conversations}
+            currentId={conversationId}
+            maxConversations={MAX_CONVERSATIONS_PER_PROJECT}
+            onSelect={handleSelectConversation}
+            onNew={handleNewConversation}
+            onDelete={handleDeleteConversation}
+            onRename={handleRenameConversation}
+          />
+        </div>
+
+        {/* Chat column — contains messages + input */}
+        <div className="flex flex-col overflow-hidden rounded-[4px] bg-surface-container-low">
+          {/* Mobile: rail collapses into a horizontal scrollable chip row */}
+          <div className="flex items-center gap-2 overflow-x-auto bg-surface-container-low px-3 py-2 shadow-[inset_0_-1px_0_rgba(15,23,42,0.04)] lg:hidden">
+            <button
+              type="button"
+              onClick={() => handleNewConversation(null)}
+              disabled={
+                conversations.length >= MAX_CONVERSATIONS_PER_PROJECT
+              }
+              className="flex-shrink-0 rounded-[4px] bg-on-surface px-2 py-1 font-mono text-[9px] font-medium uppercase tracking-[0.15em] text-surface-container-lowest disabled:opacity-40"
+            >
+              + New
+            </button>
+            {conversations.map((c) => {
+              const isActive = c.id === conversationId;
+              return (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => handleSelectConversation(c.id)}
+                  className={`flex-shrink-0 rounded-[4px] px-2 py-1 text-[11.5px] ${
+                    isActive
+                      ? "bg-surface-container-lowest font-semibold text-on-surface"
+                      : "bg-transparent text-on-surface-variant"
+                  }`}
+                >
+                  {c.title?.trim() || "New chat"}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Scroll area */}
+          <div className="flex-1 overflow-y-auto p-5">
             {messages.length === 0 && !isPending ? (
               <EmptyState onExampleClick={handleExampleClick} />
             ) : (
@@ -426,7 +524,20 @@ export default function ExplorePage() {
               </div>
             )}
           </div>
+
+          {/* Input anchored inside the chat column */}
+          <div className="bg-surface-container-lowest p-3 shadow-[inset_0_1px_0_rgba(15,23,42,0.04)]">
+            <ChatInput
+              ref={inputRef}
+              onSend={handleSend}
+              isPending={isPending}
+              draft={draft}
+              onDraftChange={setDraft}
+            />
+          </div>
         </div>
+
+        {/* X-Ray panel — desktop only, wider than before */}
         <div className="hidden overflow-hidden lg:block">
           <XrayPanel
             variant="chat"
@@ -438,15 +549,7 @@ export default function ExplorePage() {
         </div>
       </div>
 
-      <ChatInput
-        ref={inputRef}
-        onSend={handleSend}
-        isPending={isPending}
-        draft={draft}
-        onDraftChange={setDraft}
-      />
-
-      {/* Mobile bottom sheet for X-Ray panel */}
+      {/* Mobile bottom sheet for X-Ray panel — unchanged */}
       {isMobileSheetOpen && (
         <div className="fixed inset-0 z-40 lg:hidden">
           <button
