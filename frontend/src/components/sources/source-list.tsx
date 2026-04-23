@@ -282,102 +282,176 @@ export default function SourceList({ projectId, refreshKey }: Props) {
           No sources connected yet. Use the connectors above to add feedback.
         </p>
       ) : (
-        <div className="mt-3 overflow-hidden rounded-[4px]">
-          {/* Table header */}
-          <div
-            className={`grid ${columnTemplate} items-center gap-3 bg-surface-container-low px-3 py-2 font-mono text-[9.5px] font-medium uppercase tracking-[0.15em] text-on-surface-variant/70`}
-          >
-            <span className="sr-only">Type</span>
-            <span>Source</span>
-            <span>Type</span>
-            <span>Records</span>
-            <span>Status</span>
-            <span>Added</span>
-            <span className="sr-only">Actions</span>
-          </div>
-
-          {/* Rows */}
-          {sources.map((source, idx) => (
-            <div key={source.id}>
+        <>
+          {/* ── md+ columnar table ── */}
+          <div className="hidden md:block">
+            <div className="mt-3 overflow-hidden rounded-[4px]">
+              {/* Table header */}
               <div
-                className={`grid ${columnTemplate} cursor-pointer items-center gap-3 px-3 py-2.5 transition-colors hover:bg-surface-container-low ${
-                  expandedId === source.id ? "bg-surface-container-low" : ""
-                } ${
-                  idx !== sources.length - 1
-                    ? "shadow-[inset_0_-1px_0_rgba(15,23,42,0.04)]"
-                    : ""
-                }`}
-                onClick={() =>
-                  setExpandedId(expandedId === source.id ? null : source.id)
-                }
+                className={`grid ${columnTemplate} items-center gap-3 bg-surface-container-low px-3 py-2 font-mono text-[9.5px] font-medium uppercase tracking-[0.15em] text-on-surface-variant/70`}
               >
-                <div className="flex items-center justify-center">
-                  <SourceTypeIcon sourceType={source.sourceType} />
-                </div>
+                <span className="sr-only">Type</span>
+                <span>Source</span>
+                <span>Type</span>
+                <span>Records</span>
+                <span>Status</span>
+                <span>Added</span>
+                <span className="sr-only">Actions</span>
+              </div>
 
-                {/* Source name column */}
-                <div className="min-w-0">
-                  <div className="truncate text-[13px] text-on-surface">
-                    {getSourceName(source)}
-                  </div>
-                </div>
+              {/* Rows */}
+              {sources.map((source, idx) => (
+                <div key={source.id}>
+                  <div
+                    className={`grid ${columnTemplate} cursor-pointer items-center gap-3 px-3 py-2.5 transition-colors hover:bg-surface-container-low ${
+                      expandedId === source.id ? "bg-surface-container-low" : ""
+                    } ${
+                      idx !== sources.length - 1
+                        ? "shadow-[inset_0_-1px_0_rgba(15,23,42,0.04)]"
+                        : ""
+                    }`}
+                    onClick={() =>
+                      setExpandedId(expandedId === source.id ? null : source.id)
+                    }
+                  >
+                    <div className="flex items-center justify-center">
+                      <SourceTypeIcon sourceType={source.sourceType} />
+                    </div>
 
-                {/* Type column */}
-                <span className="font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-on-surface-variant">
-                  {source.sourceType === "app_store" ? "App Store" : "CSV"}
-                </span>
+                    {/* Source name column */}
+                    <div className="min-w-0">
+                      <div className="truncate text-[13px] text-on-surface">
+                        {getSourceName(source)}
+                      </div>
+                    </div>
 
-                {/* Records column */}
-                <span className="font-mono text-[12px] text-on-surface">
-                  {source.recordCount.toLocaleString()}
-                </span>
-
-                {/* Status column */}
-                {confirmDeleteId === source.id ? (
-                  <div className="col-span-3">
-                    <InlineConfirm
-                      message="Delete this source?"
-                      onConfirm={() => handleDelete(source.id)}
-                      onCancel={() => setConfirmDeleteId(null)}
-                      isSubmitting={deletingId === source.id}
-                    />
-                  </div>
-                ) : (
-                  <>
-                    <StatusBadge status={source.status} />
-
-                    {/* Added column */}
-                    <span className="font-mono text-[10px] text-on-surface-variant">
-                      {formatDate(source.createdAt)}
+                    {/* Type column */}
+                    <span className="font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-on-surface-variant">
+                      {source.sourceType === "app_store" ? "App Store" : "CSV"}
                     </span>
 
-                    {/* Actions column */}
-                    <div className="flex items-center justify-end gap-1">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setConfirmDeleteId(source.id);
-                        }}
-                        className="rounded-[4px] p-1 text-on-surface-variant opacity-40 transition-opacity hover:text-error hover:opacity-100"
-                        title="Delete source"
-                        aria-label="Delete source"
-                      >
-                        <svg
-                          className="h-3.5 w-3.5"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                          strokeWidth={1.5}
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"
-                          />
-                        </svg>
-                      </button>
+                    {/* Records column */}
+                    <span className="font-mono text-[12px] text-on-surface">
+                      {source.recordCount.toLocaleString()}
+                    </span>
+
+                    {/* Status column */}
+                    {confirmDeleteId === source.id ? (
+                      <div className="col-span-3">
+                        <InlineConfirm
+                          message="Delete this source?"
+                          onConfirm={() => handleDelete(source.id)}
+                          onCancel={() => setConfirmDeleteId(null)}
+                          isSubmitting={deletingId === source.id}
+                        />
+                      </div>
+                    ) : (
+                      <>
+                        <StatusBadge status={source.status} />
+
+                        {/* Added column */}
+                        <span className="font-mono text-[10px] text-on-surface-variant">
+                          {formatDate(source.createdAt)}
+                        </span>
+
+                        {/* Actions column */}
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setConfirmDeleteId(source.id);
+                            }}
+                            className="rounded-[4px] p-1 text-on-surface-variant opacity-40 transition-opacity hover:text-error hover:opacity-100"
+                            title="Delete source"
+                            aria-label="Delete source"
+                          >
+                            <svg
+                              className="h-3.5 w-3.5"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                              strokeWidth={1.5}
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"
+                              />
+                            </svg>
+                          </button>
+                          <svg
+                            className={`h-3.5 w-3.5 text-on-surface-variant transition-transform ${
+                              expandedId === source.id ? "rotate-180" : ""
+                            }`}
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            strokeWidth={2}
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="m19.5 8.25-7.5 7.5-7.5-7.5"
+                            />
+                          </svg>
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Expanded feedback items panel — unchanged logic */}
+                  {expandedId === source.id && source.status === "ready" && (
+                    <div className="bg-surface-container px-3 py-2">
+                      <FeedbackItemPanel
+                        projectId={projectId}
+                        sourceId={source.id}
+                      />
+                    </div>
+                  )}
+                  {expandedId === source.id && source.status !== "ready" && (
+                    <div className="bg-surface-container px-3 py-2">
+                      <p className="text-[12px] text-on-surface-variant">
+                        {source.status === "error"
+                          ? "Ingestion failed for this source."
+                          : "Still processing... items will appear when ready."}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* ── <md card list ── */}
+          <div className="mt-3 flex flex-col gap-2 md:hidden">
+            {sources.map((source) => (
+              <div
+                key={source.id}
+                className={`flex flex-col rounded-[4px] transition-colors ${
+                  expandedId === source.id
+                    ? "bg-surface-container-low"
+                    : "bg-surface-container-low hover:bg-surface-container-low"
+                }`}
+              >
+                {/* Card header — tap to expand */}
+                <button
+                  type="button"
+                  onClick={() =>
+                    setExpandedId(expandedId === source.id ? null : source.id)
+                  }
+                  className="flex items-start gap-3 px-3 py-2.5 text-left"
+                >
+                  <div className="mt-0.5 flex-shrink-0">
+                    <SourceTypeIcon sourceType={source.sourceType} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    {/* Top row: name + chevron */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1 truncate text-[13px] text-on-surface">
+                        {getSourceName(source)}
+                      </div>
                       <svg
-                        className={`h-3.5 w-3.5 text-on-surface-variant transition-transform ${
+                        className={`mt-1 h-3 w-3 flex-shrink-0 text-on-surface-variant transition-transform ${
                           expandedId === source.id ? "rotate-180" : ""
                         }`}
                         fill="none"
@@ -392,31 +466,84 @@ export default function SourceList({ projectId, refreshKey }: Props) {
                         />
                       </svg>
                     </div>
-                  </>
+
+                    {/* Meta row: type · records · status · added */}
+                    <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+                      <span className="font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-on-surface-variant">
+                        {source.sourceType === "app_store" ? "App Store" : "CSV"}
+                      </span>
+                      <span className="font-mono text-[11px] text-on-surface">
+                        {source.recordCount.toLocaleString()} records
+                      </span>
+                      <StatusBadge status={source.status} />
+                      <span className="font-mono text-[10px] text-on-surface-variant">
+                        {formatDate(source.createdAt)}
+                      </span>
+                    </div>
+                  </div>
+                </button>
+
+                {/* Delete action / confirmation row */}
+                {confirmDeleteId === source.id ? (
+                  <div className="px-3 pb-2.5">
+                    <InlineConfirm
+                      message="Delete this source?"
+                      onConfirm={() => handleDelete(source.id)}
+                      onCancel={() => setConfirmDeleteId(null)}
+                      isSubmitting={deletingId === source.id}
+                    />
+                  </div>
+                ) : (
+                  <div className="flex justify-end px-3 pb-2">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setConfirmDeleteId(source.id);
+                      }}
+                      className="inline-flex items-center gap-1 rounded-[4px] px-2 py-1 font-mono text-[9px] font-medium uppercase tracking-[0.15em] text-on-surface-variant opacity-60 transition-opacity hover:text-error hover:opacity-100"
+                      aria-label="Delete source"
+                    >
+                      <svg
+                        className="h-3 w-3"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={1.5}
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"
+                        />
+                      </svg>
+                      Delete
+                    </button>
+                  </div>
+                )}
+
+                {/* Expanded feedback items panel */}
+                {expandedId === source.id && source.status === "ready" && (
+                  <div className="bg-surface-container px-3 py-2">
+                    <FeedbackItemPanel
+                      projectId={projectId}
+                      sourceId={source.id}
+                    />
+                  </div>
+                )}
+                {expandedId === source.id && source.status !== "ready" && (
+                  <div className="bg-surface-container px-3 py-2">
+                    <p className="text-[12px] text-on-surface-variant">
+                      {source.status === "error"
+                        ? "Ingestion failed for this source."
+                        : "Still processing... items will appear when ready."}
+                    </p>
+                  </div>
                 )}
               </div>
-
-              {/* Expanded feedback items panel — unchanged logic */}
-              {expandedId === source.id && source.status === "ready" && (
-                <div className="bg-surface-container px-3 py-2">
-                  <FeedbackItemPanel
-                    projectId={projectId}
-                    sourceId={source.id}
-                  />
-                </div>
-              )}
-              {expandedId === source.id && source.status !== "ready" && (
-                <div className="bg-surface-container px-3 py-2">
-                  <p className="text-[12px] text-on-surface-variant">
-                    {source.status === "error"
-                      ? "Ingestion failed for this source."
-                      : "Still processing... items will appear when ready."}
-                  </p>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        </>
       )}
     </div>
   );
