@@ -242,13 +242,16 @@ export async function getConversation(
 export async function sendMessage(
   projectId: string,
   conversationId: string,
-  content: string
+  content: string,
+  sourceIds?: string[]
 ): Promise<Message> {
+  const body: { content: string; sourceIds?: string[] } = { content };
+  if (sourceIds !== undefined) body.sourceIds = sourceIds;
   return apiFetch<Message>(
     `/api/projects/${projectId}/conversations/${conversationId}/messages`,
     {
       method: "POST",
-      body: JSON.stringify({ content }),
+      body: JSON.stringify(body),
     }
   );
 }
@@ -282,10 +285,14 @@ export async function updateConversation(
 export async function generateSpecs(
   projectId: string,
   type: SpecType,
-  focus?: string
+  focus?: string,
+  sourceIds?: string[]
 ): Promise<GenerateSpecsResponse> {
-  const body: { type: SpecType; focus?: string } = { type };
+  const body: { type: SpecType; focus?: string; sourceIds?: string[] } = {
+    type,
+  };
   if (focus) body.focus = focus;
+  if (sourceIds !== undefined) body.sourceIds = sourceIds;
   return apiFetch<GenerateSpecsResponse>(
     `/api/projects/${projectId}/generate`,
     {
