@@ -19,6 +19,9 @@ class GenerateSpecsRequest(BaseModel):
 
     type: str = Field(..., pattern=r"^(feature_specs|user_stories)$")
     focus: str | None = Field(default=None, max_length=500)
+    # Optional list of source UUIDs to scope retrieval (see SendMessageRequest
+    # for semantics). None or omitted means "all sources."
+    source_ids: list[uuid.UUID] | None = None
 
 
 class GenerateSpecsResponse(BaseModel):

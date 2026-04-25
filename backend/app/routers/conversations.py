@@ -284,6 +284,7 @@ async def send_message(
         query_embedding,
         top_k=TOP_K,
         threshold=SIMILARITY_THRESHOLD,
+        source_ids=body.source_ids,
     )
     retrieval_latency_ms = int((time.perf_counter() - retrieval_start) * 1000)
 

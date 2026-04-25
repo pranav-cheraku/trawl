@@ -58,6 +58,11 @@ class SendMessageRequest(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
     content: str = Field(..., min_length=1, max_length=2000)
+    # Optional list of source UUIDs to scope retrieval. Sent as JSON
+    # `sourceIds` from the frontend; transformed by alias_generator. None or
+    # omitted means "all sources." An explicit empty list means "user muted
+    # every source" — retrieval will return no chunks.
+    source_ids: list[uuid.UUID] | None = None
 
 
 class ConversationCreateRequest(BaseModel):

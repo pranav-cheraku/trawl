@@ -124,7 +124,14 @@ async def generate_specs(
     # Convention: commit before .delay() so the Celery worker sees the data
     await db.commit()
 
-    task = generate_specs_task.delay(str(project_id), body.type, body.focus)
+    # Celery serializes arguments to JSON, so pass UUIDs as strings; the task
+    # converts them back to uuid.UUID before forwarding into retrieval.
+    source_ids_for_task: list[str] | None = (
+        [str(s) for s in body.source_ids] if body.source_ids is not None else None
+    )
+    task = generate_specs_task.delay(
+        str(project_id), body.type, body.focus, source_ids_for_task
+    )
     return GenerateSpecsResponse(task_id=task.id)
 
 

@@ -30,6 +30,7 @@ async def _async_generate_specs(
     project_id: uuid.UUID,
     spec_type: str,
     focus: str | None,
+    source_ids: list[uuid.UUID] | None,
 ) -> tuple[SpecGenerationResult | None, list[RetrievedChunk], int]:
     """Run all async I/O (embed, retrieve, generate) in a single event loop.
 
@@ -44,7 +45,12 @@ async def _async_generate_specs(
 
     async with AsyncSessionLocal() as db:
         chunks, total_candidates = await retrieve_chunks(
-            db, project_id, query_embedding, SPEC_TOP_K, SPEC_THRESHOLD
+            db,
+            project_id,
+            query_embedding,
+            SPEC_TOP_K,
+            SPEC_THRESHOLD,
+            source_ids=source_ids,
         )
 
     if not chunks:
@@ -86,6 +92,7 @@ def generate_specs_task(
     project_id: str,
     spec_type: str,
     focus: str | None,
+    source_ids: list[str] | None = None,
 ) -> dict:
     """Async Celery task: retrieve chunks, generate specs via Claude, persist.
 
@@ -96,10 +103,19 @@ def generate_specs_task(
 
     with SyncSessionLocal() as session:
         try:
+            # Parse source_ids inside the try so any malformed UUID surfaces
+            # via the existing logger.exception below instead of crashing
+            # silently before the session is even open.
+            parsed_source_ids: list[uuid.UUID] | None = (
+                [uuid.UUID(s) for s in source_ids]
+                if source_ids is not None
+                else None
+            )
+
             # Run all async I/O in a single event loop to avoid conflicts
             # between Redis (embedding cache), asyncpg, and the Anthropic client.
             result, chunks, total_candidates = asyncio.run(
-                _async_generate_specs(pid, spec_type, focus)
+                _async_generate_specs(pid, spec_type, focus, parsed_source_ids)
             )
 
             if result is None or not chunks:
@@ -160,11 +176,12 @@ def generate_specs_task(
 
             spec_ids = [str(s.id) for s in created_specs]
             logger.info(
-                "Generated %d specs for project %s (type=%s, focus=%r)",
+                "Generated %d specs for project %s (type=%s, focus=%r, source_ids=%s)",
                 len(spec_ids),
                 pid,
                 spec_type,
                 focus,
+                "all" if source_ids is None else f"{len(source_ids)} sources",
             )
             return {"spec_ids": spec_ids, "count": len(spec_ids)}
 
