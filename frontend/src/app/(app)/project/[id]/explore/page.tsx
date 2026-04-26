@@ -9,6 +9,7 @@ import { ConversationRail } from "@/components/chat/conversation-rail";
 import { EmptyState } from "@/components/chat/empty-state";
 import { MessageList } from "@/components/chat/message-list";
 import { XrayPanel } from "@/components/rag-xray/xray-panel";
+import { SourceScopeChips } from "@/components/sources/source-scope-chips";
 import {
   createConversation,
   deleteConversation,
@@ -18,6 +19,7 @@ import {
   sendMessage,
   updateConversation,
 } from "@/lib/api";
+import { useSourceScope } from "@/lib/use-source-scope";
 import type { Conversation, Message, Source } from "@/types";
 
 const MAX_CONVERSATIONS_PER_PROJECT = 10;
@@ -63,6 +65,11 @@ export default function ExplorePage() {
   // Ref at the very bottom of the chat column so auto-scroll can include
   // the FailedMessageBubble (which renders after MessageList's own bottom).
   const chatEndRef = useRef<HTMLDivElement | null>(null);
+
+  const sourceScope = useSourceScope(projectId, "explore");
+
+  // Derived from `sources` state — computed early so callbacks can reference it.
+  const readySources = sources.filter((s) => s.status === "ready");
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -200,6 +207,7 @@ export default function ExplorePage() {
           projectId,
           activeConversationId,
           content,
+          sourceScope.activeIds(readySources),
         );
         setMessages((prev) => [...prev, assistant]);
         // New reply → auto-follow latest in the X-Ray panel.
@@ -246,7 +254,7 @@ export default function ExplorePage() {
         setIsPending(false);
       }
     },
-    [conversationId, isPending, projectId],
+    [conversationId, isPending, projectId, sourceScope, readySources],
   );
 
   const handleRetry = useCallback(() => {
@@ -384,7 +392,6 @@ export default function ExplorePage() {
     (acc, s) => acc + (s.recordCount ?? 0),
     0
   );
-  const readySources = sources.filter((s) => s.status === "ready");
 
   return (
     <div className="flex h-[calc(100vh-12rem)] flex-col gap-3">
@@ -418,7 +425,7 @@ export default function ExplorePage() {
           <span aria-hidden className="h-4 w-px bg-on-surface/[0.08]" />
           <div className="flex items-center gap-1.5">
             <span className="font-mono text-[13px] font-medium text-on-surface">
-              {readySources.length}
+              {sourceScope.activeIds(readySources).length}/{readySources.length}
             </span>
             <span className="font-mono text-[9px] font-medium uppercase tracking-[0.15em] text-on-surface-variant/60">
               Active Sources
@@ -427,23 +434,12 @@ export default function ExplorePage() {
           {readySources.length > 0 && (
             <>
               <span aria-hidden className="h-4 w-px bg-on-surface/[0.08]" />
-              <div className="flex flex-wrap gap-1">
-                {readySources.slice(0, 3).map((s) => (
-                  <span
-                    key={s.id}
-                    className="rounded-[2px] bg-surface-container-high px-1.5 py-0.5 font-mono text-[9.5px] font-medium uppercase tracking-[0.1em] text-on-surface"
-                  >
-                    {s.sourceType === "app_store"
-                      ? s.appStoreName ?? `App Store #${s.appStoreId ?? ""}`
-                      : s.filename ?? "CSV"}
-                  </span>
-                ))}
-                {readySources.length > 3 && (
-                  <span className="font-mono text-[9.5px] text-on-surface-variant/70">
-                    +{readySources.length - 3}
-                  </span>
-                )}
-              </div>
+              <SourceScopeChips
+                sources={readySources}
+                mutedIds={sourceScope.mutedIds}
+                onToggle={sourceScope.toggle}
+                ariaLabel="Active sources for this conversation"
+              />
             </>
           )}
         </div>
@@ -527,13 +523,25 @@ export default function ExplorePage() {
 
           {/* Input anchored inside the chat column */}
           <div className="bg-surface-container-lowest p-3 shadow-[inset_0_1px_0_rgba(15,23,42,0.04)]">
-            <ChatInput
-              ref={inputRef}
-              onSend={handleSend}
-              isPending={isPending}
-              draft={draft}
-              onDraftChange={setDraft}
-            />
+            {sourceScope.activeIds(readySources).length === 0 ? (
+              <div
+                role="status"
+                className="rounded-[4px] bg-surface-container-low px-3 py-3 text-[12.5px] text-on-surface-variant"
+              >
+                <span className="font-mono text-[10px] font-medium uppercase tracking-[0.18em] text-on-surface-variant/70">
+                  Scope empty —
+                </span>{" "}
+                activate at least one source above to ask a question.
+              </div>
+            ) : (
+              <ChatInput
+                ref={inputRef}
+                onSend={handleSend}
+                isPending={isPending}
+                draft={draft}
+                onDraftChange={setDraft}
+              />
+            )}
           </div>
         </div>
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import type { Source } from "@/types";
 
@@ -116,5 +116,10 @@ export function useSourceScope(
     [mutedIds],
   );
 
-  return { mutedIds, isMuted, toggle, clear, activeIds };
+  // Stabilize the return object so consumers' useMemo / useCallback hooks
+  // that depend on the hook output don't re-run on every render.
+  return useMemo(
+    () => ({ mutedIds, isMuted, toggle, clear, activeIds }),
+    [mutedIds, isMuted, toggle, clear, activeIds],
+  );
 }

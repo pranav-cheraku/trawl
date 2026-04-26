@@ -21,10 +21,13 @@ import {
   generateSpecs,
   getProject,
   getTaskStatus,
+  listSources,
   listSpecs,
   reorderSpecs,
 } from "@/lib/api";
-import type { Spec, SpecStatus, SpecType, TaskStatus } from "@/types";
+import type { Source, Spec, SpecStatus, SpecType, TaskStatus } from "@/types";
+import { SourceScopeChips } from "@/components/sources/source-scope-chips";
+import { useSourceScope } from "@/lib/use-source-scope";
 import KanbanBoard from "@/components/kanban/kanban-board";
 import SpecCard from "@/components/kanban/spec-card";
 import SpecDetailModal from "@/components/kanban/spec-detail-modal";
@@ -59,6 +62,8 @@ export default function SpecsPage() {
 
   const [specs, setSpecs] = useState<Spec[] | null>(null);
   const [selectedSpec, setSelectedSpec] = useState<Spec | null>(null);
+  const [sources, setSources] = useState<Source[]>([]);
+  const sourceScope = useSourceScope(projectId, "specs");
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [generatingType, setGeneratingType] = useState<SpecType | null>(null);
@@ -112,6 +117,17 @@ export default function SpecsPage() {
     filters.type !== null ||
     filters.status !== null ||
     filters.priority !== null;
+
+  const readySources = useMemo(
+    () => sources.filter((s) => s.status === "ready"),
+    [sources],
+  );
+  const activeIds = useMemo(
+    () => sourceScope.activeIds(readySources),
+    [sourceScope, readySources],
+  );
+  const isScopeEmpty =
+    readySources.length > 0 && activeIds.length === 0;
 
   const statsForHeader = useMemo<WorkspaceStat[]>(() => {
     const list = specs ?? [];
@@ -173,14 +189,21 @@ export default function SpecsPage() {
 
   useEffect(() => {
     fetchSpecs();
-    // Best-effort project name fetch for export filename + markdown heading.
     let cancelled = false;
+    // Project name + sources are both best-effort; failures fall back gracefully.
     getProject(projectId)
       .then((p) => {
         if (!cancelled) setProjectName(p.name);
       })
       .catch(() => {
         /* swallow — fall back to UUID prefix when exporting */
+      });
+    listSources(projectId)
+      .then((data) => {
+        if (!cancelled) setSources(data);
+      })
+      .catch(() => {
+        /* non-fatal — scope strip will show "no ready sources yet" */
       });
     return () => {
       cancelled = true;
@@ -234,7 +257,7 @@ export default function SpecsPage() {
         setFilters({ type: null, status: null, priority: null });
       }
       try {
-        const { taskId } = await generateSpecs(projectId, type, focus);
+        const { taskId } = await generateSpecs(projectId, type, focus, activeIds);
         pollTask(taskId, Date.now());
       } catch (err) {
         setGeneratingType(null);
@@ -243,7 +266,7 @@ export default function SpecsPage() {
         );
       }
     },
-    [generatingType, projectId, pollTask]
+    [generatingType, projectId, pollTask, activeIds]
   );
 
   const handleCardClick = useCallback((spec: Spec) => {
@@ -389,7 +412,7 @@ export default function SpecsPage() {
               type="feature_specs"
               variant="primary"
               isActive={generatingType === "feature_specs"}
-              disabled={generatingType !== null}
+              disabled={generatingType !== null || isScopeEmpty}
               onGenerate={(t) => handleGenerate(t)}
               onFocusGenerate={(t, focus) => handleGenerate(t, focus)}
             />
@@ -398,7 +421,7 @@ export default function SpecsPage() {
               type="user_stories"
               variant="ghost"
               isActive={generatingType === "user_stories"}
-              disabled={generatingType !== null}
+              disabled={generatingType !== null || isScopeEmpty}
               onGenerate={(t) => handleGenerate(t)}
               onFocusGenerate={(t, focus) => handleGenerate(t, focus)}
             />
@@ -435,6 +458,34 @@ export default function SpecsPage() {
           </button>
         </div>
       ) : null}
+
+      {/* Source scope strip — controls which sources future generations use */}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-[4px] bg-surface-container-lowest px-4 py-2.5">
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-on-surface-variant/70">
+            Sources
+          </span>
+          <SourceScopeChips
+            sources={readySources}
+            mutedIds={sourceScope.mutedIds}
+            onToggle={sourceScope.toggle}
+            ariaLabel="Source scope for spec generation"
+          />
+        </div>
+        {readySources.length > 0 ? (
+          <span
+            className={
+              isScopeEmpty
+                ? "font-mono text-[10px] font-medium uppercase tracking-[0.18em] text-error"
+                : "font-mono text-[10px] font-medium uppercase tracking-[0.18em] text-on-surface-variant/70"
+            }
+          >
+            {isScopeEmpty
+              ? "Activate at least one source to generate"
+              : `Generation will use ${activeIds.length} of ${readySources.length} source${readySources.length === 1 ? "" : "s"}`}
+          </span>
+        ) : null}
+      </div>
 
       {/* Filter bar — only when specs exist */}
       {hasSpecs ? (
