@@ -1,0 +1,244 @@
+"use client";
+
+import { useEffect, useMemo, useRef, useState } from "react";
+
+import type { Source } from "@/types";
+
+interface SourceScopeMenuProps {
+  /** Pre-filtered to status === "ready" by the caller. */
+  sources: Source[];
+  mutedIds: string[];
+  onToggle: (sourceId: string) => void;
+  /** Un-mute every source. Wired to useSourceScope.clear by callers. */
+  onEnableAll: () => void;
+  /** Optional ARIA label for the trigger button. */
+  ariaLabel?: string;
+}
+
+/**
+ * Compute display names with duplicate suffixes. Mirrors the logic in
+ * source-list.tsx so the same source renders identically across the app.
+ */
+function computeDisplayNames(sources: Source[]): Map<string, string> {
+  const sorted = [...sources].sort((a, b) =>
+    a.createdAt.localeCompare(b.createdAt),
+  );
+  const totals = new Map<string, number>();
+  const keyFor = (s: Source): string => {
+    if (s.sourceType === "app_store") {
+      return `appstore::${s.appStoreName ?? s.appStoreId ?? ""}`;
+    }
+    return `csv::${s.filename ?? "CSV Upload"}`;
+  };
+  for (const s of sorted) {
+    const k = keyFor(s);
+    totals.set(k, (totals.get(k) ?? 0) + 1);
+  }
+
+  const seen = new Map<string, number>();
+  const result = new Map<string, string>();
+  for (const s of sorted) {
+    const k = keyFor(s);
+    const idx = (seen.get(k) ?? 0) + 1;
+    seen.set(k, idx);
+    const total = totals.get(k) ?? 1;
+    const suffix = total > 1 ? ` (${idx})` : "";
+    if (s.sourceType === "app_store") {
+      const label = s.appStoreName ?? `#${s.appStoreId ?? "?"}`;
+      result.set(s.id, `App Store - ${label}${suffix}`);
+    } else {
+      const label = s.filename ?? "CSV Upload";
+      result.set(s.id, `${label}${suffix}`);
+    }
+  }
+  return result;
+}
+
+export function SourceScopeMenu({
+  sources,
+  mutedIds,
+  onToggle,
+  onEnableAll,
+  ariaLabel,
+}: SourceScopeMenuProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  const displayNames = useMemo(() => computeDisplayNames(sources), [sources]);
+  const mutedSet = useMemo(() => new Set(mutedIds), [mutedIds]);
+
+  const totalCount = sources.length;
+  const activeCount = totalCount - sources.filter((s) => mutedSet.has(s.id)).length;
+  const isScopeEmpty = totalCount > 0 && activeCount === 0;
+  const isAllActive = totalCount > 0 && activeCount === totalCount;
+
+  // Esc closes the popover.
+  useEffect(() => {
+    if (!isOpen) return;
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setIsOpen(false);
+    }
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [isOpen]);
+
+  // Click outside closes the popover. Register via setTimeout(0) so the
+  // click that opens the popover doesn't immediately close it.
+  useEffect(() => {
+    if (!isOpen) return;
+    function handleMouseDown(e: MouseEvent) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(e.target as Node)
+      ) {
+        setIsOpen(false);
+      }
+    }
+    const timer = setTimeout(() => {
+      window.addEventListener("mousedown", handleMouseDown);
+    }, 0);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("mousedown", handleMouseDown);
+    };
+  }, [isOpen]);
+
+  if (totalCount === 0) {
+    return (
+      <span className="font-mono text-[10px] uppercase tracking-[0.15em] text-on-surface-variant/70">
+        No ready sources yet
+      </span>
+    );
+  }
+
+  // Trigger label content. ALL → signal-blue tag; partial → "N/M" in
+  // signal-blue; empty → "NONE ACTIVE" in error tone (with the whole
+  // trigger flipping to error styling).
+  let triggerCount: React.ReactNode;
+  if (isScopeEmpty) {
+    triggerCount = <span>NONE ACTIVE</span>;
+  } else if (isAllActive) {
+    triggerCount = (
+      <span className="font-semibold text-secondary">ALL</span>
+    );
+  } else {
+    triggerCount = (
+      <span className="font-semibold text-secondary">
+        {activeCount}/{totalCount}
+      </span>
+    );
+  }
+
+  return (
+    <div ref={containerRef} className="relative inline-block">
+      <button
+        type="button"
+        onClick={() => setIsOpen((v) => !v)}
+        aria-haspopup="menu"
+        aria-expanded={isOpen}
+        aria-label={ariaLabel ?? "Source scope selector"}
+        className={
+          isScopeEmpty
+            ? "inline-flex items-center gap-1.5 rounded-[4px] bg-error/10 px-2.5 py-1 font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-error transition-colors hover:bg-error/15"
+            : "inline-flex items-center gap-1.5 rounded-[4px] bg-surface-container-high px-2.5 py-1 font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-on-surface transition-colors hover:bg-surface-container-highest"
+        }
+      >
+        <span>Sources · </span>
+        {triggerCount}
+        <svg
+          className={`h-2 w-2 transition-transform ${
+            isOpen ? "rotate-180" : ""
+          }`}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2.5}
+          aria-hidden="true"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="m6 9 6 6 6-6"
+          />
+        </svg>
+      </button>
+
+      {isOpen && (
+        <div
+          role="menu"
+          className="absolute right-0 top-[calc(100%+6px)] z-20 min-w-[280px] max-w-[360px] rounded-[4px] bg-surface-container-lowest/[0.94] shadow-[0_8px_24px_rgba(15,23,42,0.04)] ring-1 ring-inset ring-outline-variant/20 backdrop-blur-md"
+        >
+          <div className="flex items-center justify-between gap-3 bg-surface-container-low/60 px-3 py-2">
+            <span className="font-mono text-[9px] font-medium uppercase tracking-[0.18em] text-on-surface-variant/70">
+              Active Sources · {activeCount}/{totalCount}
+            </span>
+            {!isAllActive ? (
+              <button
+                type="button"
+                onClick={() => onEnableAll()}
+                className="font-mono text-[9px] font-medium uppercase tracking-[0.15em] text-on-surface-variant transition-colors hover:text-on-surface"
+              >
+                Enable all
+              </button>
+            ) : null}
+          </div>
+
+          <div className="max-h-[320px] overflow-y-auto p-1.5">
+            {sources.map((source) => {
+              const muted = mutedSet.has(source.id);
+              const label = displayNames.get(source.id) ?? source.id;
+              const meta = `${source.recordCount.toLocaleString()} records`;
+              return (
+                <button
+                  key={source.id}
+                  type="button"
+                  onClick={() => onToggle(source.id)}
+                  aria-pressed={!muted}
+                  className="flex w-full items-center gap-2.5 rounded-[4px] px-2 py-1.5 transition-colors hover:bg-surface-container-low/70"
+                >
+                  {muted ? (
+                    <span
+                      className="h-3.5 w-3.5 flex-shrink-0 rounded-[2px] ring-[1.5px] ring-inset ring-on-surface/25"
+                      aria-hidden="true"
+                    />
+                  ) : (
+                    <span
+                      className="flex h-3.5 w-3.5 flex-shrink-0 items-center justify-center rounded-[2px] bg-secondary"
+                      aria-hidden="true"
+                    >
+                      <svg
+                        className="h-2 w-2 text-white"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={3}
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="m4.5 12.75 6 6 9-13.5"
+                        />
+                      </svg>
+                    </span>
+                  )}
+                  <span
+                    className={
+                      muted
+                        ? "min-w-0 flex-1 truncate text-left text-[12.5px] text-on-surface-variant/60"
+                        : "min-w-0 flex-1 truncate text-left text-[12.5px] text-on-surface"
+                    }
+                  >
+                    {label}
+                  </span>
+                  <span className="flex-shrink-0 font-mono text-[10px] text-on-surface-variant/70">
+                    {meta}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

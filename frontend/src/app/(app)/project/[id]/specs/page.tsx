@@ -26,7 +26,7 @@ import {
   reorderSpecs,
 } from "@/lib/api";
 import type { Source, Spec, SpecStatus, SpecType, TaskStatus } from "@/types";
-import { SourceScopeChips } from "@/components/sources/source-scope-chips";
+import { SourceScopeMenu } from "@/components/sources/source-scope-menu";
 import { useSourceScope } from "@/lib/use-source-scope";
 import KanbanBoard from "@/components/kanban/kanban-board";
 import SpecCard from "@/components/kanban/spec-card";
@@ -463,12 +463,13 @@ export default function SpecsPage() {
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-[4px] bg-surface-container-lowest px-4 py-2.5">
         <div className="flex flex-wrap items-center gap-3">
           <span className="font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-on-surface-variant/70">
-            Sources
+            Scope
           </span>
-          <SourceScopeChips
+          <SourceScopeMenu
             sources={readySources}
             mutedIds={sourceScope.mutedIds}
             onToggle={sourceScope.toggle}
+            onEnableAll={sourceScope.clear}
             ariaLabel="Source scope for spec generation"
           />
         </div>

@@ -9,7 +9,7 @@ import { ConversationRail } from "@/components/chat/conversation-rail";
 import { EmptyState } from "@/components/chat/empty-state";
 import { MessageList } from "@/components/chat/message-list";
 import { XrayPanel } from "@/components/rag-xray/xray-panel";
-import { SourceScopeChips } from "@/components/sources/source-scope-chips";
+import { SourceScopeMenu } from "@/components/sources/source-scope-menu";
 import {
   createConversation,
   deleteConversation,
@@ -434,10 +434,11 @@ export default function ExplorePage() {
           {readySources.length > 0 && (
             <>
               <span aria-hidden className="h-4 w-px bg-on-surface/[0.08]" />
-              <SourceScopeChips
+              <SourceScopeMenu
                 sources={readySources}
                 mutedIds={sourceScope.mutedIds}
                 onToggle={sourceScope.toggle}
+                onEnableAll={sourceScope.clear}
                 ariaLabel="Active sources for this conversation"
               />
             </>
