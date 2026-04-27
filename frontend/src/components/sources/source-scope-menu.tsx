@@ -111,15 +111,20 @@ export function SourceScopeMenu({
     );
   }
 
-  // Trigger label content. ALL → signal-blue tag; partial → "N/M" in
-  // signal-blue; empty → "NONE ACTIVE" in error tone (with the whole
-  // trigger flipping to error styling).
+  // Trigger label content. All-active uses an "ALL" tag; partial and
+  // empty both render "N/M" so the trigger width stays stable as the
+  // user toggles. The empty state is communicated by the error-toned
+  // pill background, not the label text.
   let triggerCount: React.ReactNode;
-  if (isScopeEmpty) {
-    triggerCount = <span>NONE ACTIVE</span>;
-  } else if (isAllActive) {
+  if (isAllActive) {
     triggerCount = (
       <span className="font-semibold text-secondary">ALL</span>
+    );
+  } else if (isScopeEmpty) {
+    triggerCount = (
+      <span className="font-semibold">
+        {activeCount}/{totalCount}
+      </span>
     );
   } else {
     triggerCount = (
@@ -139,14 +144,16 @@ export function SourceScopeMenu({
         aria-label={ariaLabel ?? "Source scope selector"}
         className={
           isScopeEmpty
-            ? "inline-flex items-center gap-1.5 rounded-[4px] bg-error/10 px-2.5 py-1 font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-error transition-colors hover:bg-error/15"
-            : "inline-flex items-center gap-1.5 rounded-[4px] bg-surface-container-high px-2.5 py-1 font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-on-surface transition-colors hover:bg-surface-container-highest"
+            ? "inline-flex min-w-[120px] items-center justify-between gap-1.5 rounded-[4px] bg-error/10 px-2.5 py-1 font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-error transition-colors hover:bg-error/15"
+            : "inline-flex min-w-[120px] items-center justify-between gap-1.5 rounded-[4px] bg-surface-container-high px-2.5 py-1 font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-on-surface transition-colors hover:bg-surface-container-highest"
         }
       >
-        <span>Sources · </span>
-        {triggerCount}
+        <span className="inline-flex items-center">
+          <span>Sources · </span>
+          {triggerCount}
+        </span>
         <svg
-          className={`h-2 w-2 transition-transform ${
+          className={`h-2 w-2 flex-shrink-0 transition-transform ${
             isOpen ? "rotate-180" : ""
           }`}
           viewBox="0 0 24 24"
@@ -166,7 +173,7 @@ export function SourceScopeMenu({
       {isOpen && (
         <div
           role="menu"
-          className="absolute right-0 top-[calc(100%+6px)] z-20 min-w-[280px] max-w-[360px] rounded-[4px] bg-surface-container-lowest/[0.94] shadow-[0_8px_24px_rgba(15,23,42,0.04)] ring-1 ring-inset ring-outline-variant/20 backdrop-blur-md"
+          className="absolute right-0 top-[calc(100%+6px)] z-20 w-[360px] max-w-[calc(100vw-2rem)] rounded-[4px] bg-surface-container-lowest/[0.94] shadow-[0_8px_24px_rgba(15,23,42,0.04)] ring-1 ring-inset ring-outline-variant/20 backdrop-blur-md"
         >
           <div className="flex items-center justify-between gap-3 bg-surface-container-low/60 px-3 py-2">
             <span className="font-mono text-[9px] font-medium uppercase tracking-[0.18em] text-on-surface-variant/70">
@@ -194,16 +201,16 @@ export function SourceScopeMenu({
                   type="button"
                   onClick={() => onToggle(source.id)}
                   aria-pressed={!muted}
-                  className="flex w-full items-center gap-2.5 rounded-[4px] px-2 py-1.5 transition-colors hover:bg-surface-container-low/70"
+                  className="flex w-full items-start gap-2.5 rounded-[4px] px-2 py-1.5 transition-colors hover:bg-surface-container-low/70"
                 >
                   {muted ? (
                     <span
-                      className="h-3.5 w-3.5 flex-shrink-0 rounded-[2px] ring-[1.5px] ring-inset ring-on-surface/25"
+                      className="mt-[3px] h-3.5 w-3.5 flex-shrink-0 rounded-[2px] ring-[1.5px] ring-inset ring-on-surface/25"
                       aria-hidden="true"
                     />
                   ) : (
                     <span
-                      className="flex h-3.5 w-3.5 flex-shrink-0 items-center justify-center rounded-[2px] bg-secondary"
+                      className="mt-[3px] flex h-3.5 w-3.5 flex-shrink-0 items-center justify-center rounded-[2px] bg-secondary"
                       aria-hidden="true"
                     >
                       <svg
@@ -221,17 +228,19 @@ export function SourceScopeMenu({
                       </svg>
                     </span>
                   )}
-                  <span
-                    className={
-                      muted
-                        ? "min-w-0 flex-1 truncate text-left text-[12.5px] text-on-surface-variant/60"
-                        : "min-w-0 flex-1 truncate text-left text-[12.5px] text-on-surface"
-                    }
-                  >
-                    {label}
-                  </span>
-                  <span className="flex-shrink-0 font-mono text-[10px] text-on-surface-variant/70">
-                    {meta}
+                  <span className="flex min-w-0 flex-1 flex-col items-start gap-0.5">
+                    <span
+                      className={
+                        muted
+                          ? "max-w-full break-words text-left text-[12.5px] leading-tight text-on-surface-variant/60"
+                          : "max-w-full break-words text-left text-[12.5px] leading-tight text-on-surface"
+                      }
+                    >
+                      {label}
+                    </span>
+                    <span className="font-mono text-[9.5px] uppercase tracking-[0.1em] text-on-surface-variant/70">
+                      {meta}
+                    </span>
                   </span>
                 </button>
               );
