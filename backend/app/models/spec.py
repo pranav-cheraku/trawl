@@ -10,6 +10,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.base import Base
 
 if TYPE_CHECKING:
+    from app.models.build_next import BuildReportSpec
     from app.models.project import Project
 
 
@@ -39,6 +40,12 @@ class Spec(Base):
     source_chunk_ids: Mapped[list[uuid.UUID]] = mapped_column(
         sa.ARRAY(sa.Uuid), default=list, nullable=False
     )
+    build_report_spec_id: Mapped[uuid.UUID | None] = mapped_column(
+        sa.Uuid,
+        sa.ForeignKey("build_report_specs.id", ondelete="SET NULL"),
+        nullable=True,
+        unique=True,
+    )
     created_at: Mapped[datetime] = mapped_column(
         sa.DateTime, server_default=sa.func.now(), nullable=False
     )
@@ -51,6 +58,10 @@ class Spec(Base):
 
     project: Mapped[Project] = relationship(  # noqa: F821
         "Project", back_populates="specs"
+    )
+    build_report_spec_source: Mapped[BuildReportSpec | None] = relationship(  # noqa: F821
+        "BuildReportSpec",
+        foreign_keys=[build_report_spec_id],
     )
     transparency: Mapped[SpecTransparency | None] = relationship(
         "SpecTransparency",

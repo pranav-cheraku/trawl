@@ -1,7 +1,12 @@
 from __future__ import annotations
 
 from app.models.base import Base
-from app.models.build_next import BuildNextAnalysis
+from app.models.build_next import (
+    BuildReport,
+    BuildReportChunk,
+    BuildReportSpec,
+    BuildTheme,
+)
 from app.models.chunk import FeedbackChunk
 from app.models.conversation import Conversation, Message
 from app.models.feedback import FeedbackItem, FeedbackSource
@@ -20,5 +25,8 @@ __all__ = [
     "SpecTransparency",
     "Conversation",
     "Message",
-    "BuildNextAnalysis",
+    "BuildReport",
+    "BuildTheme",
+    "BuildReportSpec",
+    "BuildReportChunk",
 ]

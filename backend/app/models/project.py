@@ -10,7 +10,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.base import Base
 
 if TYPE_CHECKING:
-    from app.models.build_next import BuildNextAnalysis
+    from app.models.build_next import BuildReport
     from app.models.chunk import FeedbackChunk
     from app.models.conversation import Conversation
     from app.models.feedback import FeedbackItem, FeedbackSource
@@ -57,6 +57,6 @@ class Project(Base):
     conversations: Mapped[list[Conversation]] = relationship(  # noqa: F821
         "Conversation", back_populates="project", cascade="all, delete-orphan"
     )
-    build_next_analyses: Mapped[list[BuildNextAnalysis]] = relationship(  # noqa: F821
-        "BuildNextAnalysis", back_populates="project", cascade="all, delete-orphan"
+    build_reports: Mapped[list[BuildReport]] = relationship(  # noqa: F821
+        "BuildReport", back_populates="project", cascade="all, delete-orphan"
     )
