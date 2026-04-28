@@ -638,3 +638,401 @@ async def _generate_all_theme_specs(
         "spec_output_tokens": total_output_tokens,
     }
     return pairs, metadata
+
+
+# ---------------------------------------------------------------------------
+# Build-order rationale + executive summary tools
+# ---------------------------------------------------------------------------
+
+BUILD_ORDER_TOOL: dict = {
+    "name": "rank_build_order",
+    "description": (
+        "Given a numbered list of theme+spec pairs, return a single-line "
+        "rationale per spec explaining why it's at its current rank in the "
+        "build order. Rationales should reference frequency, severity, and "
+        "user impact."
+    ),
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "rationales": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "spec_index": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "description": "1-indexed position in the input list.",
+                        },
+                        "rationale": {
+                            "type": "string",
+                            "description": "One short sentence on why this spec is at this rank.",
+                        },
+                    },
+                    "required": ["spec_index", "rationale"],
+                },
+            }
+        },
+        "required": ["rationales"],
+    },
+}
+
+EXEC_SUMMARY_TOOL: dict = {
+    "name": "summarize_report",
+    "description": (
+        "Generate a 2-3 sentence executive summary of the build report's "
+        "top themes — what's most impactful, what's the recommended focus."
+    ),
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "summary": {
+                "type": "string",
+                "description": "2-3 sentence PM-friendly executive summary.",
+            }
+        },
+        "required": ["summary"],
+    },
+}
+
+# Priority weights used during global spec ranking.
+# Score = theme.severity_score * priority_weight; higher is more urgent.
+PRIORITY_WEIGHTS: dict[str, int] = {
+    "critical": 4,
+    "high": 3,
+    "medium": 2,
+    "low": 1,
+}
+
+
+# ---------------------------------------------------------------------------
+# Global ranking (synchronous — pure math, no I/O)
+# ---------------------------------------------------------------------------
+
+def _rank_specs_globally(
+    pairs: list[ThemeWithSpecs],
+) -> list[tuple[GeneratedSpec, ClusteredTheme]]:
+    """Compute a global build order across all themes' specs.
+
+    Score = theme.severity_score * priority_weight. Returns specs ordered
+    best-first; mutates each spec's ``build_rank`` in-place.
+
+    Themes whose spec generation failed (``generation_failed=True``) are
+    skipped entirely so they don't pollute the ranking.
+    """
+    flat: list[tuple[GeneratedSpec, ClusteredTheme, float]] = []
+    for pair in pairs:
+        if pair.generation_failed:
+            continue
+        for spec in pair.specs:
+            priority = str(spec.content.get("priority", "medium")).lower()
+            weight = PRIORITY_WEIGHTS.get(priority, 2)
+            score = pair.theme.severity_score * weight
+            flat.append((spec, pair.theme, score))
+
+    flat.sort(key=lambda x: -x[2])
+
+    ranked: list[tuple[GeneratedSpec, ClusteredTheme]] = []
+    for rank, (spec, theme, _score) in enumerate(flat, start=1):
+        spec.build_rank = rank
+        ranked.append((spec, theme))
+    return ranked
+
+
+# ---------------------------------------------------------------------------
+# Build-order rationale generation
+# ---------------------------------------------------------------------------
+
+async def _generate_build_order_rationales(
+    ranked: list[tuple[GeneratedSpec, ClusteredTheme]],
+) -> tuple[dict[int, str], dict]:
+    """Ask Claude to write a one-sentence rationale per ranked spec.
+
+    Uses forced tool_choice on ``rank_build_order`` so we get a structured
+    list of ``{spec_index, rationale}`` objects back without manual parsing.
+    The ``spec_index`` values Claude returns are 1-indexed positions in the
+    ``ranked`` list (i.e. the spec's ``build_rank``).
+
+    Returns:
+        A 2-tuple of:
+        - ``rationales`` — dict mapping build_rank → rationale string.
+        - ``metadata`` — timing + token dict for ``retrieval_metadata``.
+    """
+    if not ranked:
+        return {}, {
+            "rationale_ms": 0,
+            "rationale_input_tokens": 0,
+            "rationale_output_tokens": 0,
+        }
+
+    if not settings.ANTHROPIC_API_KEY:
+        raise RuntimeError("ANTHROPIC_API_KEY is not configured")
+
+    client = AsyncAnthropic(
+        api_key=settings.ANTHROPIC_API_KEY,
+        timeout=60.0,
+    )
+
+    lines: list[str] = []
+    for idx, (spec, theme) in enumerate(ranked, start=1):
+        lines.append(
+            f"{idx}. **{spec.title}** (theme: {theme.name}, "
+            f"priority: {spec.content.get('priority', 'medium')}, "
+            f"theme severity: {theme.severity_score:.2f})"
+        )
+    user_message = (
+        "Below is the proposed build order for a feedback-driven roadmap. "
+        "Write a one-sentence rationale per item explaining why it's at "
+        "its current position.\n\n" + "\n".join(lines)
+    )
+
+    start = time.monotonic()
+    response = await client.messages.create(  # type: ignore[call-overload]
+        model=MODEL_ID,
+        max_tokens=SUMMARY_MAX_TOKENS,
+        tools=[BUILD_ORDER_TOOL],
+        tool_choice={"type": "tool", "name": "rank_build_order"},
+        messages=[{"role": "user", "content": user_message}],
+    )
+    elapsed_ms = int((time.monotonic() - start) * 1000)
+
+    tool_input: dict | None = None
+    for block in response.content:
+        if getattr(block, "type", None) == "tool_use":
+            tool_input = dict(block.input)  # type: ignore[arg-type]
+            break
+
+    if tool_input is None:
+        raise RuntimeError("Claude did not return a rank_build_order tool call")
+    if not isinstance(tool_input, dict):
+        raise RuntimeError("rank_build_order returned non-dict input")
+
+    rationales_list = tool_input.get("rationales", [])
+    if not isinstance(rationales_list, list):
+        raise RuntimeError("rank_build_order returned non-list rationales")
+
+    rationales: dict[int, str] = {}
+    for entry in rationales_list:
+        if not isinstance(entry, dict):
+            continue  # Skip malformed entries silently — defensive.
+        raw_idx = entry.get("spec_index")
+        raw_text = entry.get("rationale")
+        if (
+            isinstance(raw_idx, int)
+            and isinstance(raw_text, str)
+            and 1 <= raw_idx <= len(ranked)
+        ):
+            rationales[raw_idx] = raw_text
+
+    metadata = {
+        "rationale_ms": elapsed_ms,
+        "rationale_input_tokens": response.usage.input_tokens,
+        "rationale_output_tokens": response.usage.output_tokens,
+    }
+
+    logger.info(
+        "Build Next rationale gen: %d/%d entries (%dms, %d in / %d out tokens)",
+        len(rationales),
+        len(ranked),
+        elapsed_ms,
+        response.usage.input_tokens,
+        response.usage.output_tokens,
+    )
+
+    return rationales, metadata
+
+
+# ---------------------------------------------------------------------------
+# Executive summary generation
+# ---------------------------------------------------------------------------
+
+async def _generate_executive_summary(
+    pairs: list[ThemeWithSpecs],
+) -> tuple[str, dict]:
+    """Ask Claude for a 2-3 sentence summary of the report's top themes.
+
+    Only the top 3 themes (by severity_score, already sorted by
+    ``_cluster_themes``) are passed to the model to keep the prompt tight.
+    Uses forced tool_choice on ``summarize_report`` for structured output.
+
+    Returns:
+        A 2-tuple of:
+        - ``summary`` — the 2-3 sentence executive summary string.
+        - ``metadata`` — timing + token dict for ``retrieval_metadata``.
+    """
+    if not pairs:
+        return "", {
+            "summary_ms": 0,
+            "summary_input_tokens": 0,
+            "summary_output_tokens": 0,
+        }
+
+    if not settings.ANTHROPIC_API_KEY:
+        raise RuntimeError("ANTHROPIC_API_KEY is not configured")
+
+    client = AsyncAnthropic(
+        api_key=settings.ANTHROPIC_API_KEY,
+        timeout=60.0,
+    )
+
+    top_pairs = pairs[:3]
+    lines = [
+        f"- {p.theme.name} ({p.theme.frequency_pct:.0%} of feedback, "
+        f"severity {p.theme.severity_score:.2f}): {p.theme.description}"
+        for p in top_pairs
+    ]
+    user_message = (
+        "Here are the top themes from a feedback analysis. Write a 2-3 "
+        "sentence executive summary identifying the most impactful "
+        "opportunities.\n\n" + "\n".join(lines)
+    )
+
+    start = time.monotonic()
+    response = await client.messages.create(  # type: ignore[call-overload]
+        model=MODEL_ID,
+        max_tokens=SUMMARY_MAX_TOKENS,
+        tools=[EXEC_SUMMARY_TOOL],
+        tool_choice={"type": "tool", "name": "summarize_report"},
+        messages=[{"role": "user", "content": user_message}],
+    )
+    elapsed_ms = int((time.monotonic() - start) * 1000)
+
+    tool_input: dict | None = None
+    for block in response.content:
+        if getattr(block, "type", None) == "tool_use":
+            tool_input = dict(block.input)  # type: ignore[arg-type]
+            break
+
+    if tool_input is None:
+        raise RuntimeError("Claude did not return a summarize_report tool call")
+    if not isinstance(tool_input, dict):
+        raise RuntimeError("summarize_report returned non-dict input")
+
+    summary = str(tool_input.get("summary", "")).strip()
+
+    metadata = {
+        "summary_ms": elapsed_ms,
+        "summary_input_tokens": response.usage.input_tokens,
+        "summary_output_tokens": response.usage.output_tokens,
+    }
+
+    logger.info(
+        "Build Next exec summary: %d chars (%dms, %d in / %d out tokens)",
+        len(summary),
+        elapsed_ms,
+        response.usage.input_tokens,
+        response.usage.output_tokens,
+    )
+
+    return summary, metadata
+
+
+# ---------------------------------------------------------------------------
+# Public entrypoint
+# ---------------------------------------------------------------------------
+
+async def run_build_next(
+    db: AsyncSession,
+    project_id: uuid.UUID,
+    source_ids: list[uuid.UUID] | None,
+) -> BuildNextResult:
+    """Orchestrate the full Build Next pipeline.
+
+    Steps: embed 5 queries → retrieve top-K per query → dedupe →
+    cluster themes → generate specs per theme (concurrent, partial-failure
+    tolerant) → globally rank specs → generate per-rank rationales →
+    generate executive summary → return result for persistence.
+
+    Raises ``RuntimeError`` if retrieval returns no chunks, if clustering
+    returns no themes, or if every theme's spec generation fails.
+    Per-theme spec gen failures are handled internally and surface via
+    ``ThemeWithSpecs.generation_failed`` — they do not abort the run.
+
+    The ``source_ids`` argument follows the same three-state semantics as
+    ``retrieve_chunks``:
+    - ``None`` — no source filter (all sources).
+    - ``[]`` — explicitly empty; short-circuits to zero chunks (RuntimeError).
+    - non-empty list — scoped to those source IDs only.
+    """
+    overall_start = time.monotonic()
+
+    chunks, source_query_attribution, retrieve_meta = await _embed_and_retrieve(
+        db, project_id, source_ids
+    )
+    if not chunks:
+        raise RuntimeError(
+            "No matching feedback found. Add more sources or broaden source scope."
+        )
+
+    themes, cluster_meta = await _cluster_themes(chunks)
+    if not themes:
+        raise RuntimeError(
+            "Clustering returned no themes. Try re-running the analysis."
+        )
+
+    pairs, spec_meta = await _generate_all_theme_specs(themes, chunks)
+
+    failed_count = sum(1 for p in pairs if p.generation_failed)
+    if failed_count == len(pairs):
+        raise RuntimeError(
+            "Spec generation failed for all themes. Try re-running."
+        )
+
+    ranked = _rank_specs_globally(pairs)
+    rationales, rationale_meta = await _generate_build_order_rationales(ranked)
+    exec_summary, summary_meta = await _generate_executive_summary(pairs)
+
+    # Build the persistent build_order JSONB payload.
+    build_order: list[dict] = []
+    for spec, _theme in ranked:
+        build_order.append(
+            {
+                "rank": spec.build_rank,
+                "spec_title": spec.title,
+                "rationale": rationales.get(spec.build_rank, ""),
+            }
+        )
+
+    total_elapsed_ms = int((time.monotonic() - overall_start) * 1000)
+    retrieval_metadata: dict = {
+        "model": MODEL_ID,
+        **retrieve_meta,
+        **cluster_meta,
+        **spec_meta,
+        **rationale_meta,
+        **summary_meta,
+        "total_ms": total_elapsed_ms,
+        "partial_failure_themes": failed_count,
+        "token_usage": {
+            "input": (
+                cluster_meta.get("cluster_input_tokens", 0)
+                + spec_meta.get("spec_input_tokens", 0)
+                + rationale_meta.get("rationale_input_tokens", 0)
+                + summary_meta.get("summary_input_tokens", 0)
+            ),
+            "output": (
+                cluster_meta.get("cluster_output_tokens", 0)
+                + spec_meta.get("spec_output_tokens", 0)
+                + rationale_meta.get("rationale_output_tokens", 0)
+                + summary_meta.get("summary_output_tokens", 0)
+            ),
+        },
+    }
+
+    logger.info(
+        "Build Next complete: %d themes, %d specs, %d failed-themes, %dms total",
+        len(pairs),
+        sum(len(p.specs) for p in pairs),
+        failed_count,
+        total_elapsed_ms,
+    )
+
+    return BuildNextResult(
+        themes=pairs,
+        chunks=chunks,
+        chunk_source_queries=source_query_attribution,
+        executive_summary=exec_summary,
+        build_order=build_order,
+        retrieval_metadata=retrieval_metadata,
+    )
