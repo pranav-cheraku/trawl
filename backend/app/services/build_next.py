@@ -374,3 +374,267 @@ async def _cluster_themes(
     )
 
     return themes, metadata
+
+
+THEME_SPEC_TOOL: dict = {
+    "name": "generate_theme_specs",
+    "description": (
+        "Generate 1-3 feature specs for the given theme, each grounded in "
+        "the provided feedback chunks. Each spec must cite chunks via "
+        "supporting_feedback_indices."
+    ),
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "specs": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 3,
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "title": {"type": "string"},
+                        "problem": {"type": "string"},
+                        "proposed_solution": {"type": "string"},
+                        "user_stories": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                        },
+                        "acceptance_criteria": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                        },
+                        "priority": {
+                            "type": "string",
+                            "enum": ["critical", "high", "medium", "low"],
+                        },
+                        "effort_estimate": {
+                            "type": "string",
+                            "description": "Short rough estimate (e.g. 'S', 'M', 'L', '2 sprints').",
+                        },
+                        "supporting_feedback_indices": {
+                            "type": "array",
+                            "items": {"type": "integer", "minimum": 1},
+                        },
+                    },
+                    "required": [
+                        "title",
+                        "problem",
+                        "proposed_solution",
+                        "user_stories",
+                        "acceptance_criteria",
+                        "priority",
+                        "effort_estimate",
+                        "supporting_feedback_indices",
+                    ],
+                },
+            }
+        },
+        "required": ["specs"],
+    },
+}
+
+THEME_SPEC_SYSTEM_PROMPT = """You are Trawl, a product manager drafting \
+feature specs from user feedback.
+
+You'll be given a theme name + description, and a numbered list of feedback \
+chunks belonging to that theme. Generate 1-3 actionable feature specs.
+
+Rules:
+1. Each spec must address something concrete users complained about, requested, \
+or struggled with — derived from the feedback chunks, not invented.
+2. supporting_feedback_indices must be 1-indexed into the chunks I gave you. \
+Only include chunks the spec actually relies on.
+3. Be terse but specific. PMs are busy.
+4. Priority levels: critical (safety/legal/major churn), high (significant UX \
+or revenue impact), medium (clear improvement), low (nice-to-have).
+5. effort_estimate: a short label like "S", "M", "L", or "2 sprints".
+
+Return your output via the generate_theme_specs tool — no prose."""
+
+
+async def _generate_theme_specs(
+    theme: ClusteredTheme,
+    all_chunks: list[RetrievedChunk],
+) -> tuple[list[GeneratedSpec], dict]:
+    """Call Claude to generate 1-3 specs for one theme.
+
+    The chunks passed to Claude are renumbered locally (1..N for THIS theme)
+    so supporting_feedback_indices come back in a small, theme-local range.
+    We then translate those indices back to global retrieval ranks before
+    persistence.
+    """
+    if not settings.ANTHROPIC_API_KEY:
+        raise RuntimeError("ANTHROPIC_API_KEY is not configured")
+
+    if not all_chunks:
+        raise RuntimeError("Cannot generate specs from an empty chunk list")
+
+    client = AsyncAnthropic(
+        api_key=settings.ANTHROPIC_API_KEY,
+        timeout=60.0,
+    )
+
+    # Slice down to this theme's chunks and renumber 1..N locally.
+    theme_chunks = [all_chunks[i] for i in theme.chunk_indices]
+    if not theme_chunks:
+        # Defensive: cluster_themes should have dropped empty themes already.
+        return [], {"spec_ms": 0, "spec_input_tokens": 0, "spec_output_tokens": 0}
+
+    local_lines: list[str] = []
+    for local_idx, chunk in enumerate(theme_chunks, start=1):
+        local_lines.append(
+            f"[Feedback #{local_idx}] (similarity: {chunk.similarity_score:.2f})"
+        )
+        local_lines.append(chunk.chunk_text.strip())
+        local_lines.append("")
+    chunk_block = "\n".join(local_lines).rstrip()
+
+    user_message = (
+        f"Theme: **{theme.name}**\n\n"
+        f"Description: {theme.description}\n\n"
+        f"Feedback chunks for this theme:\n\n{chunk_block}"
+    )
+
+    start = time.monotonic()
+    response = await client.messages.create(  # type: ignore[call-overload]
+        model=MODEL_ID,
+        max_tokens=SPEC_MAX_TOKENS,
+        system=THEME_SPEC_SYSTEM_PROMPT,
+        tools=[THEME_SPEC_TOOL],
+        tool_choice={"type": "tool", "name": "generate_theme_specs"},
+        messages=[{"role": "user", "content": user_message}],
+    )
+    elapsed_ms = int((time.monotonic() - start) * 1000)
+
+    tool_input: dict | None = None
+    for block in response.content:
+        if getattr(block, "type", None) == "tool_use":
+            tool_input = dict(block.input)  # type: ignore[arg-type]
+            break
+
+    if tool_input is None:
+        raise RuntimeError("Claude did not return a generate_theme_specs tool call")
+    if not isinstance(tool_input, dict):
+        raise RuntimeError("generate_theme_specs returned non-dict input")
+
+    raw_specs = tool_input.get("specs", [])
+    if not isinstance(raw_specs, list):
+        raise RuntimeError("generate_theme_specs returned non-list specs")
+
+    n_local = len(theme_chunks)
+    specs: list[GeneratedSpec] = []
+    for raw in raw_specs:
+        if not isinstance(raw, dict):
+            continue  # Skip malformed spec entries silently — defensive.
+
+        if "priority" not in raw:
+            logger.warning(
+                "Build Next theme spec gen: priority missing for theme=%r, defaulting to 'medium'",
+                theme.name,
+            )
+        if "effort_estimate" not in raw:
+            logger.warning(
+                "Build Next theme spec gen: effort_estimate missing for theme=%r, defaulting to 'M'",
+                theme.name,
+            )
+
+        # Translate local 1..N indices back to global retrieval_ranks.
+        # `theme_chunks` is a slice of `all_chunks`; each chunk still carries
+        # the global retrieval_rank that `_embed_and_retrieve` assigned, so
+        # `theme_chunks[i - 1].retrieval_rank` is the global rank.
+        local_indices = [
+            i
+            for i in raw.get("supporting_feedback_indices", [])
+            if isinstance(i, int) and 1 <= i <= n_local
+        ]
+        global_ranks = [
+            theme_chunks[i - 1].retrieval_rank for i in local_indices
+        ]
+
+        content: dict = {
+            "problem": str(raw.get("problem", "")),
+            "proposed_solution": str(raw.get("proposed_solution", "")),
+            "user_stories": list(raw.get("user_stories", [])),
+            "acceptance_criteria": list(raw.get("acceptance_criteria", [])),
+            "priority": str(raw.get("priority", "medium")),
+            "effort_estimate": str(raw.get("effort_estimate", "M")),
+            "supporting_feedback_indices": global_ranks,
+        }
+
+        specs.append(
+            GeneratedSpec(
+                title=str(raw.get("title", "Untitled spec"))[:255],
+                content=content,
+            )
+        )
+
+    metadata = {
+        "spec_ms": elapsed_ms,
+        "spec_input_tokens": response.usage.input_tokens,
+        "spec_output_tokens": response.usage.output_tokens,
+    }
+
+    logger.info(
+        "Build Next theme spec gen: theme=%r, %d specs (%dms, %d in / %d out tokens)",
+        theme.name,
+        len(specs),
+        elapsed_ms,
+        response.usage.input_tokens,
+        response.usage.output_tokens,
+    )
+
+    return specs, metadata
+
+
+async def _generate_all_theme_specs(
+    themes: list[ClusteredTheme],
+    chunks: list[RetrievedChunk],
+) -> tuple[list[ThemeWithSpecs], dict]:
+    """Generate specs for all themes concurrently with partial-failure tolerance.
+
+    Per-theme failures are caught individually. If a theme's spec gen
+    raises, we record ``generation_failed=True`` and yield no specs. The
+    caller decides whether all-failed → run failure or some-succeeded →
+    partial success.
+
+    Concurrent gather is safe here because each call hits the Anthropic
+    API over its own HTTP request — no shared DB session, unlike retrieval.
+    """
+    # asyncio.gather with return_exceptions=True so one failure doesn't
+    # cancel the others.
+    results = await asyncio.gather(
+        *(_generate_theme_specs(t, chunks) for t in themes),
+        return_exceptions=True,
+    )
+
+    pairs: list[ThemeWithSpecs] = []
+    total_input_tokens = 0
+    total_output_tokens = 0
+    total_spec_ms = 0
+
+    for theme, result in zip(themes, results, strict=True):
+        if isinstance(result, BaseException):
+            logger.warning(
+                "Spec generation failed for theme %s: %s",
+                theme.name,
+                result,
+            )
+            pairs.append(
+                ThemeWithSpecs(theme=theme, specs=[], generation_failed=True)
+            )
+            continue
+        specs, meta = result
+        total_input_tokens += meta["spec_input_tokens"]
+        total_output_tokens += meta["spec_output_tokens"]
+        total_spec_ms += meta["spec_ms"]
+        pairs.append(
+            ThemeWithSpecs(theme=theme, specs=specs, generation_failed=False)
+        )
+
+    metadata = {
+        "spec_total_ms": total_spec_ms,
+        "spec_input_tokens": total_input_tokens,
+        "spec_output_tokens": total_output_tokens,
+    }
+    return pairs, metadata
