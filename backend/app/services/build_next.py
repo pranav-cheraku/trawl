@@ -6,9 +6,15 @@ import time
 import uuid
 from dataclasses import dataclass, field
 
+from anthropic import AsyncAnthropic
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
 from app.services.embedding import embed_query
+from app.services.generation import (
+    MODEL_ID,
+    _format_chunks_for_prompt,
+)
 from app.services.retrieval import RetrievedChunk, retrieve_chunks
 
 logger = logging.getLogger(__name__)
@@ -25,6 +31,9 @@ BUILD_NEXT_QUERIES: list[str] = [
 
 TOP_K_PER_QUERY = 10
 RETRIEVAL_THRESHOLD = 0.25
+CLUSTER_MAX_TOKENS = 4096
+SPEC_MAX_TOKENS = 4096
+SUMMARY_MAX_TOKENS = 1024
 
 
 @dataclass
@@ -182,3 +191,186 @@ async def _embed_and_retrieve(
     )
 
     return ordered, source_query, metadata
+
+
+CLUSTER_THEMES_TOOL: dict = {
+    "name": "cluster_feedback_themes",
+    "description": (
+        "Cluster the provided feedback chunks into 3-6 thematic groups. "
+        "Each chunk should belong to exactly one theme. Theme names should "
+        "be product-management-friendly (e.g. 'Search Reliability', "
+        "'Onboarding Friction')."
+    ),
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "themes": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 6,
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "name": {
+                            "type": "string",
+                            "description": "Short PM-friendly theme name.",
+                        },
+                        "description": {
+                            "type": "string",
+                            "description": "1-2 sentence summary of the theme.",
+                        },
+                        "chunk_indices": {
+                            "type": "array",
+                            "items": {"type": "integer", "minimum": 1},
+                            "description": (
+                                "1-indexed chunk numbers belonging to this theme."
+                            ),
+                        },
+                        "severity_hint": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 1,
+                            "description": (
+                                "Qualitative severity 0-1; combine rating signals, "
+                                "frustration language, churn risk."
+                            ),
+                        },
+                    },
+                    "required": [
+                        "name",
+                        "description",
+                        "chunk_indices",
+                        "severity_hint",
+                    ],
+                },
+            }
+        },
+        "required": ["themes"],
+    },
+}
+
+CLUSTER_SYSTEM_PROMPT = """You are Trawl, a product analyst that clusters \
+user feedback into strategic themes for product managers.
+
+Rules:
+1. Group the numbered feedback chunks into 3-6 themes by topical similarity. \
+Every chunk must belong to exactly one theme.
+2. Theme names should be PM-friendly noun phrases (e.g., "Search Reliability", \
+"Performance Issues"). Avoid generic labels like "Misc" or "Other".
+3. The description is 1-2 short sentences explaining the theme's nature.
+4. severity_hint is your qualitative read on impact: how urgent, how widespread, \
+how much it threatens retention. 0 = trivial, 1 = company-critical.
+5. Return your output via the cluster_feedback_themes tool — no prose."""
+
+
+async def _cluster_themes(
+    chunks: list[RetrievedChunk],
+) -> tuple[list[ClusteredTheme], dict]:
+    """Call Claude with tool_choice forced to cluster_feedback_themes.
+
+    Returns (themes, metadata). Themes have ``chunk_indices`` rewritten to
+    0-indexed for downstream code; ``frequency_pct``, ``severity_score``,
+    and ``chunk_count`` computed.
+
+    Severity scoring blends two signals equally (v1):
+    - ``frequency_pct``: fraction of all deduped chunks assigned to this theme
+      (proxy for how widespread the issue is across the corpus).
+    - ``severity_hint``: Claude's qualitative read on urgency/retention risk.
+    Blending both avoids over-ranking large-but-trivial themes and
+    small-but-critical ones.
+    """
+    if not settings.ANTHROPIC_API_KEY:
+        raise RuntimeError("ANTHROPIC_API_KEY is not configured")
+    if not chunks:
+        raise RuntimeError("Cannot cluster themes from an empty chunk list")
+
+    client = AsyncAnthropic(
+        api_key=settings.ANTHROPIC_API_KEY,
+        timeout=60.0,
+    )
+
+    user_message = (
+        "Cluster these feedback chunks into themes:\n\n"
+        + _format_chunks_for_prompt(chunks)
+    )
+
+    start = time.monotonic()
+    response = await client.messages.create(  # type: ignore[call-overload]
+        model=MODEL_ID,
+        max_tokens=CLUSTER_MAX_TOKENS,
+        system=CLUSTER_SYSTEM_PROMPT,
+        tools=[CLUSTER_THEMES_TOOL],
+        tool_choice={"type": "tool", "name": "cluster_feedback_themes"},
+        messages=[{"role": "user", "content": user_message}],
+    )
+    elapsed_ms = int((time.monotonic() - start) * 1000)
+
+    # Extract the tool input — Claude is forced to return exactly one tool_use block.
+    tool_input: dict | None = None
+    for block in response.content:
+        if getattr(block, "type", None) == "tool_use":
+            tool_input = dict(block.input)  # type: ignore[arg-type]
+            break
+
+    if tool_input is None:
+        raise RuntimeError("Claude did not return a cluster_feedback_themes tool call")
+
+    if not isinstance(tool_input, dict):
+        raise RuntimeError("cluster_feedback_themes returned non-dict input")
+    raw_themes = tool_input.get("themes", [])
+    if not isinstance(raw_themes, list):
+        raise RuntimeError("cluster_feedback_themes returned non-list themes")
+    total_chunks = len(chunks)
+
+    themes: list[ClusteredTheme] = []
+    for raw in raw_themes:
+        if not isinstance(raw, dict):
+            continue  # Skip malformed theme entries silently — defensive.
+        # Claude returns 1-indexed; convert to 0-indexed and clamp to valid range.
+        zero_indexed = [
+            i - 1
+            for i in raw.get("chunk_indices", [])
+            if isinstance(i, int) and 1 <= i <= total_chunks
+        ]
+        # Dedupe within the theme (defensive against Claude returning duplicates).
+        zero_indexed = sorted(set(zero_indexed))
+
+        chunk_count = len(zero_indexed)
+        if chunk_count == 0:
+            # Drop empty themes — shouldn't happen with forced tool_choice but defensive.
+            continue
+
+        frequency_pct = chunk_count / total_chunks if total_chunks > 0 else 0.0
+        severity_hint = float(raw.get("severity_hint", 0.5))
+        # Combined score: blend frequency and severity_hint equally for v1.
+        severity_score = (frequency_pct + severity_hint) / 2.0
+
+        themes.append(
+            ClusteredTheme(
+                name=str(raw.get("name", "Untitled theme"))[:255],
+                description=str(raw.get("description", "")),
+                chunk_indices=zero_indexed,
+                severity_hint=severity_hint,
+                frequency_pct=frequency_pct,
+                severity_score=severity_score,
+                chunk_count=chunk_count,
+            )
+        )
+
+    # Rank themes by severity_score descending so callers can iterate in priority order.
+    themes.sort(key=lambda t: -t.severity_score)
+
+    metadata = {
+        "cluster_ms": elapsed_ms,
+        "cluster_input_tokens": response.usage.input_tokens,
+        "cluster_output_tokens": response.usage.output_tokens,
+    }
+
+    logger.info(
+        "Build Next clustering: %d themes from %d chunks (%dms)",
+        len(themes),
+        total_chunks,
+        elapsed_ms,
+    )
+
+    return themes, metadata
