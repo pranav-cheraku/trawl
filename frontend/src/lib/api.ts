@@ -1,5 +1,9 @@
 import type {
   AppSearchResult,
+  BuildReport,
+  BuildReportChunk,
+  BuildReportChunksResponse,
+  BuildReportSummary,
   ChunkDetail,
   Conversation,
   ConversationDetail,
@@ -7,6 +11,8 @@ import type {
   GenerateSpecsResponse,
   Message,
   Project,
+  PromoteBuildSpecResponse,
+  RunBuildNextResponse,
   Source,
   Spec,
   SpecPriority,
@@ -16,6 +22,16 @@ import type {
   TaskStatus,
   TokenResponse,
 } from "@/types";
+
+export class AlreadyRunningError extends Error {
+  constructor(
+    public readonly existingReportId: string,
+    public readonly taskId: string | null,
+  ) {
+    super("A Build Next run is already in progress for this project");
+    this.name = "AlreadyRunningError";
+  }
+}
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -354,4 +370,89 @@ export async function deleteSpec(specId: string): Promise<void> {
 
 export async function getSpecSources(specId: string): Promise<SpecSources> {
   return apiFetch<SpecSources>(`/api/specs/${specId}/sources`);
+}
+
+// ── Build Next endpoints ─────────────────────────────────────────────
+
+export async function runBuildNext(
+  projectId: string,
+  sourceIds?: string[],
+): Promise<RunBuildNextResponse> {
+  const body: Record<string, unknown> = {};
+  if (sourceIds !== undefined) body.sourceIds = sourceIds;
+
+  const token = await getAuthToken();
+  const res = await fetch(
+    `${API_BASE_URL}/api/projects/${projectId}/build-next/runs`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(body),
+    },
+  );
+
+  if (res.status === 409) {
+    const detail = (await res.json().catch(() => ({}))) as {
+      detail?: { existingReportId?: string; taskId?: string | null };
+    };
+    const existing = detail.detail?.existingReportId ?? "";
+    throw new AlreadyRunningError(existing, detail.detail?.taskId ?? null);
+  }
+  if (!res.ok) {
+    const detail = (await res.json().catch(() => ({}))) as { detail?: string };
+    throw new Error(detail.detail ?? `runBuildNext failed: ${res.status}`);
+  }
+  return (await res.json()) as RunBuildNextResponse;
+}
+
+export async function listBuildRuns(
+  projectId: string,
+): Promise<BuildReportSummary[]> {
+  return apiFetch<BuildReportSummary[]>(
+    `/api/projects/${projectId}/build-next/runs`,
+  );
+}
+
+export async function getBuildReport(reportId: string): Promise<BuildReport> {
+  return apiFetch<BuildReport>(`/api/build-reports/${reportId}`);
+}
+
+export async function getBuildReportChunks(
+  reportId: string,
+): Promise<BuildReportChunk[]> {
+  const res = await apiFetch<BuildReportChunksResponse>(
+    `/api/build-reports/${reportId}/chunks`,
+  );
+  return res.chunks;
+}
+
+export async function promoteBuildSpec(
+  reportId: string,
+  specId: string,
+): Promise<PromoteBuildSpecResponse | { existingSpecId: string }> {
+  const token = await getAuthToken();
+  const res = await fetch(
+    `${API_BASE_URL}/api/build-reports/${reportId}/specs/${specId}/promote`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    },
+  );
+  if (res.status === 409) {
+    const detail = (await res.json().catch(() => ({}))) as {
+      detail?: { existingSpecId?: string };
+    };
+    return { existingSpecId: detail.detail?.existingSpecId ?? "" };
+  }
+  if (!res.ok) {
+    const detail = (await res.json().catch(() => ({}))) as { detail?: string };
+    throw new Error(detail.detail ?? `promoteBuildSpec failed: ${res.status}`);
+  }
+  return (await res.json()) as PromoteBuildSpecResponse;
 }
