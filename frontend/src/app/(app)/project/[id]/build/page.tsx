@@ -4,6 +4,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 
 import EmptyState from "@/components/build-next/empty-state";
+import FailureState from "@/components/build-next/failure-state";
+import RunningState from "@/components/build-next/running-state";
+import RunSwitcher from "@/components/build-next/run-switcher";
 import { SourceScopeMenu } from "@/components/sources/source-scope-menu";
 import WorkspaceHeader, {
   type WorkspaceStat,
@@ -40,6 +43,7 @@ export default function BuildNextPage() {
   const [chunks, setChunks] = useState<BuildReportChunk[] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [errorBanner, setErrorBanner] = useState<string | null>(null);
+  const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
 
   const pollTimerRef = useRef<NodeJS.Timeout | null>(null);
   const pollStartRef = useRef<number | null>(null);
@@ -167,6 +171,7 @@ export default function BuildNextPage() {
 
   const handleRun = useCallback(async () => {
     setErrorBanner(null);
+    setChunks(null); // align with handleSelectRun — old chunks shouldn't linger
     try {
       const { reportId } = await runBuildNext(
         projectId,
@@ -189,6 +194,23 @@ export default function BuildNextPage() {
       }
     }
   }, [projectId, readySources, activeIds, refreshReport, startPolling]);
+
+  const handleSelectRun = useCallback(
+    async (runId: string | null) => {
+      setSelectedReportId(runId);
+      const target = runId ?? runs[0]?.id;
+      if (!target) return;
+      stopPolling();
+      setChunks(null);
+      const fresh = await refreshReport(target);
+      if (fresh && (fresh.status === "running" || fresh.status === "pending")) {
+        startPolling(fresh.id);
+      } else if (fresh && fresh.status === "success") {
+        getBuildReportChunks(fresh.id).then(setChunks).catch(console.error);
+      }
+    },
+    [runs, refreshReport, startPolling, stopPolling],
+  );
 
   const stats: WorkspaceStat[] =
     report?.status === "success"
@@ -216,14 +238,21 @@ export default function BuildNextPage() {
         title="What Should We Build Next?"
         stats={stats.length > 0 ? stats : undefined}
         right={
-          <button
-            type="button"
-            onClick={handleRun}
-            disabled={isScopeEmpty || isInFlight}
-            className="rounded-[4px] bg-on-surface px-4 py-2 font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-surface-container-lowest transition-colors hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {runs.length === 0 ? "Run analysis" : "Re-run analysis"}
-          </button>
+          <div className="flex items-center gap-3">
+            <RunSwitcher
+              runs={runs}
+              selectedRunId={selectedReportId}
+              onSelect={handleSelectRun}
+            />
+            <button
+              type="button"
+              onClick={handleRun}
+              disabled={isScopeEmpty || isInFlight}
+              className="rounded-[4px] bg-on-surface px-4 py-2 font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-surface-container-lowest transition-colors hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {runs.length === 0 ? "Run analysis" : "Re-run analysis"}
+            </button>
+          </div>
         }
       />
 
@@ -279,11 +308,13 @@ export default function BuildNextPage() {
             onRun={handleRun}
           />
         ) : report?.status === "running" || report?.status === "pending" ? (
-          <PlaceholderRunning />
+          <RunningState startedAtIso={report.createdAt} />
         ) : report?.status === "failure" ? (
-          <PlaceholderFailure
+          <FailureState
             reason={report.failureReason ?? "Unknown error"}
+            failedAtIso={report.completedAt}
             onRetry={handleRun}
+            isScopeEmpty={isScopeEmpty}
           />
         ) : report?.status === "success" ? (
           <PlaceholderSuccess report={report} chunks={chunks} />
@@ -300,39 +331,7 @@ export default function BuildNextPage() {
   );
 }
 
-// ----- Placeholder substates (replaced in CP4-CP7) -----
-
-function PlaceholderRunning() {
-  return (
-    <div className="rounded-[4px] bg-surface-container-lowest px-8 py-16 text-center font-mono text-[11px] uppercase tracking-[0.18em] text-on-surface-variant">
-      Running…
-    </div>
-  );
-}
-
-function PlaceholderFailure({
-  reason,
-  onRetry,
-}: {
-  reason: string;
-  onRetry: () => void;
-}) {
-  return (
-    <div className="rounded-[4px] bg-surface-container-lowest px-8 py-16 text-center">
-      <h2 className="text-lg font-bold text-error">Run failed</h2>
-      <p className="mx-auto mt-2 max-w-sm text-[13px] text-on-surface-variant">
-        {reason}
-      </p>
-      <button
-        type="button"
-        onClick={onRetry}
-        className="mt-6 rounded-[4px] bg-on-surface px-5 py-2.5 font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-surface-container-lowest hover:bg-secondary"
-      >
-        Re-run analysis →
-      </button>
-    </div>
-  );
-}
+// ----- Placeholder substates (replaced in CP5+) -----
 
 function PlaceholderSuccess({
   report,
