@@ -15,6 +15,7 @@ import { SourceScopeMenu } from "@/components/sources/source-scope-menu";
 import WorkspaceHeader, {
   type WorkspaceStat,
 } from "@/components/workspace/workspace-header";
+import { XrayPanel } from "@/components/rag-xray/xray-panel";
 import {
   AlreadyRunningError,
   getBuildReport,
@@ -267,7 +268,7 @@ export default function BuildNextPage() {
   );
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 overflow-x-hidden">
       <WorkspaceHeader
         label="Workspace / Build Next"
         title="What Should We Build Next?"
@@ -352,7 +353,7 @@ export default function BuildNextPage() {
             isScopeEmpty={isScopeEmpty}
           />
         ) : report?.status === "success" ? (
-          <div className="grid gap-4 lg:grid-cols-[1fr_380px] xl:grid-cols-[1fr_440px]">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_380px] xl:grid-cols-[1fr_440px]">
             <div className="flex flex-col gap-4">
               {report.executiveSummary !== null ? (
                 <ExecutiveSummaryCard
@@ -381,12 +382,39 @@ export default function BuildNextPage() {
                   promotingIds={promotingIds}
                 />
               ))}
+              {/* Mobile inline X-Ray; desktop has it in the right aside below. */}
+              <div className="block lg:hidden">
+                {chunks ? (
+                  <XrayPanel
+                    variant="build"
+                    projectId={projectId}
+                    reportChunks={chunks}
+                    reportMetadata={report.retrievalMetadata}
+                    focusedChunkId={null}
+                    focusTick={0}
+                  />
+                ) : (
+                  <div className="rounded-[4px] bg-surface-container-low p-4 text-center font-mono text-[10px] uppercase tracking-[0.18em] text-on-surface-variant">
+                    Loading X-Ray…
+                  </div>
+                )}
+              </div>
             </div>
-            {/* CP7 will replace this with <XrayPanel variant="build">. */}
-            <aside className="hidden rounded-[4px] bg-surface-container-high p-4 lg:block">
-              <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-on-surface-variant">
-                X-Ray placeholder · {chunks?.length ?? 0} chunks
-              </p>
+            <aside className="hidden lg:block">
+              {chunks ? (
+                <XrayPanel
+                  variant="build"
+                  projectId={projectId}
+                  reportChunks={chunks}
+                  reportMetadata={report.retrievalMetadata}
+                  focusedChunkId={null}
+                  focusTick={0}
+                />
+              ) : (
+                <div className="rounded-[4px] bg-surface-container-low p-4 text-center font-mono text-[10px] uppercase tracking-[0.18em] text-on-surface-variant">
+                  Loading X-Ray…
+                </div>
+              )}
             </aside>
           </div>
         ) : (
@@ -396,18 +424,27 @@ export default function BuildNextPage() {
         )}
       </div>
 
-      {selectedSpec && report ? (
-        <BuildSpecDetailModal
-          spec={selectedSpec}
-          theme={
-            report.themes.find((t) => t.id === selectedSpec.themeId) ?? null
-          }
-          projectId={projectId}
-          onClose={() => setSelectedSpec(null)}
-          onPromote={() => handlePromote(selectedSpec)}
-          isPromoting={promotingIds.has(selectedSpec.id)}
-        />
-      ) : null}
+      {selectedSpec && report
+        ? (() => {
+            // Derive the freshest spec from report.specs so promote-to-Kanban
+            // updates the modal's button state without a re-open.
+            const liveSpec =
+              report.specs.find((s) => s.id === selectedSpec.id) ??
+              selectedSpec;
+            return (
+              <BuildSpecDetailModal
+                spec={liveSpec}
+                theme={
+                  report.themes.find((t) => t.id === liveSpec.themeId) ?? null
+                }
+                projectId={projectId}
+                onClose={() => setSelectedSpec(null)}
+                onPromote={() => handlePromote(liveSpec)}
+                isPromoting={promotingIds.has(liveSpec.id)}
+              />
+            );
+          })()
+        : null}
     </div>
   );
 }

@@ -30,12 +30,16 @@ export default function ThemeSpecCard({
 
   return (
     <article className="flex items-stretch gap-3 rounded-[4px] bg-surface-container-lowest px-4 py-3 transition-colors hover:bg-surface-container-high">
-      <button type="button" onClick={onClick} className="flex-1 text-left">
-        <div className="flex items-center gap-2">
-          <span className="rounded-[2px] bg-surface-container-highest px-1.5 py-0.5 font-mono text-[9.5px] font-semibold uppercase tracking-[0.14em] text-on-surface-variant">
+      <button
+        type="button"
+        onClick={onClick}
+        className="flex min-w-0 flex-1 flex-col text-left"
+      >
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="flex-shrink-0 rounded-[2px] bg-surface-container-highest px-1.5 py-0.5 font-mono text-[9.5px] font-semibold uppercase tracking-[0.14em] text-on-surface-variant">
             B{spec.buildRank}
           </span>
-          <span className="line-clamp-2 text-[13px] font-medium text-on-surface">
+          <span className="line-clamp-2 min-w-0 text-[13px] font-medium text-on-surface">
             {spec.title}
           </span>
         </div>

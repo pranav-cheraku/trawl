@@ -25,7 +25,7 @@ export default function ExecutiveSummaryCard({
       <p className="mt-3 max-w-3xl text-[14px] leading-relaxed text-on-surface">
         {summary || "No summary generated."}
       </p>
-      <div className="mt-5 flex flex-wrap gap-x-5 gap-y-1 font-mono text-[10px] uppercase tracking-[0.16em] text-on-surface-variant">
+      <div className="mt-5 flex min-w-0 flex-wrap gap-x-5 gap-y-1 font-mono text-[10px] uppercase tracking-[0.16em] text-on-surface-variant">
         {metadata?.model ? <span>Model · {metadata.model}</span> : null}
         {metadata?.queries?.length ? (
           <span>Queries · {metadata.queries.length}</span>
@@ -40,12 +40,12 @@ export default function ExecutiveSummaryCard({
             {tokenOut.toLocaleString()} out
           </span>
         ) : null}
-        {partialFailure ? (
-          <span className="text-error">
-            · Partial failure — some themes had spec generation errors
-          </span>
-        ) : null}
       </div>
+      {partialFailure ? (
+        <p className="mt-2 text-[12px] leading-relaxed text-error">
+          · Partial failure — some themes had spec generation errors.
+        </p>
+      ) : null}
     </section>
   );
 }

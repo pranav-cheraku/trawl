@@ -5,7 +5,13 @@ import { useEffect, useRef, useState } from "react";
 import { ChunkCard } from "@/components/rag-xray/chunk-card";
 import { ChunkDetailModal } from "@/components/rag-xray/chunk-detail-modal";
 import { XrayEmpty } from "@/components/rag-xray/xray-empty";
-import type { Message, SpecSources, TransparencyChunk } from "@/types";
+import type {
+  BuildReportChunk,
+  BuildRetrievalMetadata,
+  Message,
+  SpecSources,
+  TransparencyChunk,
+} from "@/types";
 
 type ChatVariant = {
   variant: "chat";
@@ -23,7 +29,16 @@ type SpecVariant = {
   focusTick: number;
 };
 
-type XrayPanelProps = ChatVariant | SpecVariant;
+type BuildVariant = {
+  variant: "build";
+  projectId: string;
+  reportChunks: BuildReportChunk[];
+  reportMetadata: BuildRetrievalMetadata | null;
+  focusedChunkId: string | null;
+  focusTick: number;
+};
+
+type XrayPanelProps = ChatVariant | SpecVariant | BuildVariant;
 
 const HIGHLIGHT_DURATION_MS = 800;
 
@@ -75,6 +90,44 @@ export function XrayPanel(props: XrayPanelProps) {
         header={<XrayChatHeader transparency={transparency} />}
         chunks={chunks}
         threshold={transparency.threshold}
+        highlightedChunkId={highlightedChunkId}
+        onChunkClick={setDetailChunk}
+        cardRefs={cardRefs}
+        detailChunk={detailChunk}
+        closeDetail={() => setDetailChunk(null)}
+        projectId={projectId}
+      />
+    );
+  }
+
+  // ── Build variant: derive chunks from a Build Next report ─────────────
+  if (props.variant === "build") {
+    const { reportChunks, reportMetadata } = props;
+    // TODO(post-v1): per-chunk Q-attribution badge requires extending ChunkCard.
+    const buildChunks: TransparencyChunk[] = reportChunks.map((c) => ({
+      chunkId: c.chunkId,
+      feedbackItemId: c.feedbackItemId,
+      chunkTextPreview:
+        c.chunkText.length > 280
+          ? c.chunkText.slice(0, 280) + "…"
+          : c.chunkText,
+      chunkText: c.chunkText,
+      similarityScore: c.similarity,
+      retrievalRank: c.retrievalRank,
+      sourceType: "",
+      sourceName: c.sourceName,
+    }));
+
+    return (
+      <PanelShell
+        header={
+          <XrayBuildHeader
+            metadata={reportMetadata}
+            retrievedCount={buildChunks.length}
+          />
+        }
+        chunks={buildChunks}
+        threshold={null}
         highlightedChunkId={highlightedChunkId}
         onChunkClick={setDetailChunk}
         cardRefs={cardRefs}
@@ -219,6 +272,43 @@ function XrayChatHeader({ transparency }: XrayChatHeaderProps) {
           {transparency.retrievalLatencyMs}ms
         </div>
       )}
+    </div>
+  );
+}
+
+interface XrayBuildHeaderProps {
+  metadata: BuildRetrievalMetadata | null;
+  retrievedCount: number;
+}
+
+function XrayBuildHeader({ metadata, retrievedCount }: XrayBuildHeaderProps) {
+  if (!metadata) {
+    return (
+      <div className="flex flex-col gap-1.5 px-4 pt-4 pb-3">
+        <div className="font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-on-surface-variant">
+          RAG X-Ray
+        </div>
+      </div>
+    );
+  }
+  const queryCount = metadata.queries?.length ?? 0;
+  const tokens = metadata.tokenUsage
+    ? metadata.tokenUsage.input + metadata.tokenUsage.output
+    : null;
+  return (
+    <div className="flex flex-col gap-1.5 px-4 pt-4 pb-3">
+      <div className="font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-on-surface-variant">
+        RAG X-Ray · Build Report
+      </div>
+      <div className="flex flex-wrap gap-x-3 gap-y-1 font-mono text-[10px] text-on-surface-variant">
+        {metadata.model ? <span>Model · {metadata.model}</span> : null}
+        {queryCount > 0 ? <span>{queryCount} queries</span> : null}
+        {metadata.topKPerQuery ? (
+          <span>k={metadata.topKPerQuery} per query</span>
+        ) : null}
+        <span>{retrievedCount} retrieved</span>
+        {tokens != null ? <span>{tokens.toLocaleString()} tokens</span> : null}
+      </div>
     </div>
   );
 }

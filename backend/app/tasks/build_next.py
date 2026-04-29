@@ -89,10 +89,19 @@ async def _async_run_and_persist(
         await _mark_failure(report_id, str(e))
         return {"reportId": str(report_id), "status": "failure", "reason": str(e)}
     except Exception as e:
-        # Unexpected internal failure.
+        # Unexpected internal failure. Surface a PM-friendly message — the
+        # exception's own .message often carries the actionable detail (e.g.
+        # Anthropic's "API usage limit reached" text); prefer it over the
+        # bare class name.
         logger.exception("Unexpected build_next failure for report %s", report_id)
-        await _mark_failure(report_id, f"Internal error: {type(e).__name__}")
-        return {"reportId": str(report_id), "status": "failure", "reason": "internal"}
+        detail = (
+            getattr(e, "message", None)
+            or (str(e) if str(e) else None)
+            or type(e).__name__
+        )
+        reason = f"Generation service error — {detail}"
+        await _mark_failure(report_id, reason)
+        return {"reportId": str(report_id), "status": "failure", "reason": reason}
 
     # Persist the success path. Single transaction.
     async with AsyncSessionLocal() as db:
