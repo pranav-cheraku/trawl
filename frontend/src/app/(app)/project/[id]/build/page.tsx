@@ -4,9 +4,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 
 import EmptyState from "@/components/build-next/empty-state";
+import ExecutiveSummaryCard from "@/components/build-next/executive-summary-card";
 import FailureState from "@/components/build-next/failure-state";
 import RunningState from "@/components/build-next/running-state";
 import RunSwitcher from "@/components/build-next/run-switcher";
+import ThemeDistributionChart from "@/components/build-next/theme-distribution-chart";
 import { SourceScopeMenu } from "@/components/sources/source-scope-menu";
 import WorkspaceHeader, {
   type WorkspaceStat,
@@ -317,7 +319,36 @@ export default function BuildNextPage() {
             isScopeEmpty={isScopeEmpty}
           />
         ) : report?.status === "success" ? (
-          <PlaceholderSuccess report={report} chunks={chunks} />
+          <div className="grid gap-4 lg:grid-cols-[1fr_380px] xl:grid-cols-[1fr_440px]">
+            <div className="flex flex-col gap-4">
+              {report.executiveSummary !== null ? (
+                <ExecutiveSummaryCard
+                  summary={report.executiveSummary}
+                  metadata={report.retrievalMetadata}
+                  partialFailure={report.partialFailure}
+                />
+              ) : null}
+              <ThemeDistributionChart
+                themes={report.themes}
+                onThemeClick={(themeId) => {
+                  const el = document.getElementById(`theme-${themeId}`);
+                  if (el) {
+                    el.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }
+                }}
+              />
+              {/* CP6 will replace this with theme cards stacked below the chart. */}
+              <div className="rounded-[4px] bg-surface-container-lowest px-6 py-12 text-center font-mono text-[10px] uppercase tracking-[0.18em] text-on-surface-variant">
+                Theme cards · render in CP6
+              </div>
+            </div>
+            {/* CP7 will replace this with <XrayPanel variant="build">. */}
+            <aside className="hidden rounded-[4px] bg-surface-container-high p-4 lg:block">
+              <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-on-surface-variant">
+                X-Ray placeholder · {chunks?.length ?? 0} chunks
+              </p>
+            </aside>
+          </div>
         ) : (
           <div className="rounded-[4px] bg-surface-container-lowest px-8 py-16 text-center text-[12px] text-on-surface-variant">
             No report.
@@ -327,25 +358,6 @@ export default function BuildNextPage() {
 
       {/* CP4 will surface projectName in the archived-run pill. */}
       <span className="hidden">{projectName ?? ""}</span>
-    </div>
-  );
-}
-
-// ----- Placeholder substates (replaced in CP5+) -----
-
-function PlaceholderSuccess({
-  report,
-  chunks,
-}: {
-  report: BuildReport;
-  chunks: BuildReportChunk[] | null;
-}) {
-  return (
-    <div className="rounded-[4px] bg-surface-container-lowest px-8 py-16">
-      <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-on-surface-variant">
-        Report rendered (placeholder) · {report.themes.length} themes ·{" "}
-        {report.specs.length} specs · {chunks?.length ?? 0} chunks
-      </p>
     </div>
   );
 }
