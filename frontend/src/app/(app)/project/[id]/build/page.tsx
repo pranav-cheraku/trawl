@@ -3,11 +3,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 
+import BuildSpecDetailModal from "@/components/build-next/build-spec-detail-modal";
 import EmptyState from "@/components/build-next/empty-state";
 import ExecutiveSummaryCard from "@/components/build-next/executive-summary-card";
 import FailureState from "@/components/build-next/failure-state";
 import RunningState from "@/components/build-next/running-state";
 import RunSwitcher from "@/components/build-next/run-switcher";
+import ThemeCard from "@/components/build-next/theme-card";
 import ThemeDistributionChart from "@/components/build-next/theme-distribution-chart";
 import { SourceScopeMenu } from "@/components/sources/source-scope-menu";
 import WorkspaceHeader, {
@@ -17,15 +19,16 @@ import {
   AlreadyRunningError,
   getBuildReport,
   getBuildReportChunks,
-  getProject,
   listBuildRuns,
   listSources,
+  promoteBuildSpec,
   runBuildNext,
 } from "@/lib/api";
 import { useSourceScope } from "@/lib/use-source-scope";
 import type {
   BuildReport,
   BuildReportChunk,
+  BuildReportSpec,
   BuildReportSummary,
   Source,
 } from "@/types";
@@ -38,7 +41,6 @@ export default function BuildNextPage() {
   const params = useParams<{ id: string }>();
   const projectId = params.id;
 
-  const [projectName, setProjectName] = useState<string | null>(null);
   const [sources, setSources] = useState<Source[]>([]);
   const [runs, setRuns] = useState<BuildReportSummary[]>([]);
   const [report, setReport] = useState<BuildReport | null>(null);
@@ -46,6 +48,9 @@ export default function BuildNextPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [errorBanner, setErrorBanner] = useState<string | null>(null);
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
+
+  const [selectedSpec, setSelectedSpec] = useState<BuildReportSpec | null>(null);
+  const [promotingIds, setPromotingIds] = useState<Set<string>>(new Set());
 
   const pollTimerRef = useRef<NodeJS.Timeout | null>(null);
   const pollStartRef = useRef<number | null>(null);
@@ -136,15 +141,11 @@ export default function BuildNextPage() {
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      const [projectRes, sourcesRes, runsRes] = await Promise.allSettled([
-        getProject(projectId),
+      const [sourcesRes, runsRes] = await Promise.allSettled([
         listSources(projectId),
         listBuildRuns(projectId),
       ]);
       if (cancelled) return;
-      if (projectRes.status === "fulfilled") {
-        setProjectName(projectRes.value.name);
-      }
       if (sourcesRes.status === "fulfilled") setSources(sourcesRes.value);
       const runsList =
         runsRes.status === "fulfilled" ? runsRes.value : [];
@@ -196,6 +197,38 @@ export default function BuildNextPage() {
       }
     }
   }, [projectId, readySources, activeIds, refreshReport, startPolling]);
+
+  const handlePromote = useCallback(
+    async (spec: BuildReportSpec) => {
+      if (!report) return;
+      setPromotingIds((prev) => new Set(prev).add(spec.id));
+      try {
+        const result = await promoteBuildSpec(report.id, spec.id);
+        const newSpecId =
+          "kanbanSpecId" in result ? result.kanbanSpecId : result.existingSpecId;
+        setReport((prev) =>
+          prev
+            ? {
+                ...prev,
+                specs: prev.specs.map((s) =>
+                  s.id === spec.id ? { ...s, promotedSpecId: newSpecId } : s,
+                ),
+              }
+            : prev,
+        );
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "Failed to promote spec";
+        setErrorBanner(`Couldn't add to Kanban. ${msg}`);
+      } finally {
+        setPromotingIds((prev) => {
+          const next = new Set(prev);
+          next.delete(spec.id);
+          return next;
+        });
+      }
+    },
+    [report],
+  );
 
   const handleSelectRun = useCallback(
     async (runId: string | null) => {
@@ -337,10 +370,17 @@ export default function BuildNextPage() {
                   }
                 }}
               />
-              {/* CP6 will replace this with theme cards stacked below the chart. */}
-              <div className="rounded-[4px] bg-surface-container-lowest px-6 py-12 text-center font-mono text-[10px] uppercase tracking-[0.18em] text-on-surface-variant">
-                Theme cards · render in CP6
-              </div>
+              {report.themes.map((theme) => (
+                <ThemeCard
+                  key={theme.id}
+                  theme={theme}
+                  specs={report.specs}
+                  projectId={projectId}
+                  onSpecClick={(spec) => setSelectedSpec(spec)}
+                  onPromote={handlePromote}
+                  promotingIds={promotingIds}
+                />
+              ))}
             </div>
             {/* CP7 will replace this with <XrayPanel variant="build">. */}
             <aside className="hidden rounded-[4px] bg-surface-container-high p-4 lg:block">
@@ -356,8 +396,18 @@ export default function BuildNextPage() {
         )}
       </div>
 
-      {/* CP4 will surface projectName in the archived-run pill. */}
-      <span className="hidden">{projectName ?? ""}</span>
+      {selectedSpec && report ? (
+        <BuildSpecDetailModal
+          spec={selectedSpec}
+          theme={
+            report.themes.find((t) => t.id === selectedSpec.themeId) ?? null
+          }
+          projectId={projectId}
+          onClose={() => setSelectedSpec(null)}
+          onPromote={() => handlePromote(selectedSpec)}
+          isPromoting={promotingIds.has(selectedSpec.id)}
+        />
+      ) : null}
     </div>
   );
 }
