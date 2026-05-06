@@ -1,0 +1,58 @@
+[
+  {
+    "id": "s1",
+    "title": "Add cancellation reminder 48h before trial end",
+    "priority": "critical",
+    "status": "backlog",
+    "citationCount": 6,
+    "type": "feature_specs"
+  },
+  {
+    "id": "s2",
+    "title": "Restore offline downloads after trial expiry",
+    "priority": "critical",
+    "status": "backlog",
+    "citationCount": 4,
+    "type": "feature_specs"
+  },
+  {
+    "id": "s3",
+    "title": "Surface cancel button in main settings",
+    "priority": "high",
+    "status": "backlog",
+    "citationCount": 3,
+    "type": "feature_specs"
+  },
+  {
+    "id": "s4",
+    "title": "Improve search for niche live versions",
+    "priority": "medium",
+    "status": "backlog",
+    "citationCount": 2,
+    "type": "feature_specs"
+  },
+  {
+    "id": "s5",
+    "title": "Audiobook section toggle in home",
+    "priority": "high",
+    "status": "planned",
+    "citationCount": 5,
+    "type": "feature_specs"
+  },
+  {
+    "id": "s6",
+    "title": "HiFi audio rollout plan",
+    "priority": "medium",
+    "status": "planned",
+    "citationCount": 4,
+    "type": "feature_specs"
+  },
+  {
+    "id": "s7",
+    "title": "Persistent login + 2FA",
+    "priority": "high",
+    "status": "in_progress",
+    "citationCount": 3,
+    "type": "feature_specs"
+  }
+]
