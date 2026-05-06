@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 
 import { ChunkCard } from "@/components/rag-xray/chunk-card";
 import { ChunkDetailModal } from "@/components/rag-xray/chunk-detail-modal";
@@ -449,6 +449,7 @@ function BuildPanelLayout(props: BuildPanelLayoutProps) {
   } = props;
 
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const prefersReducedMotion = useReducedMotion();
 
   // Compute SVG path coords from the hovered chunk card to its matching badge.
   const guideLinePath = useMemo(() => {
@@ -503,9 +504,13 @@ function BuildPanelLayout(props: BuildPanelLayoutProps) {
             stroke="rgb(37,99,235)"
             strokeWidth={1}
             fill="none"
-            initial={{ pathLength: 0, opacity: 0 }}
+            initial={
+              prefersReducedMotion ? false : { pathLength: 0, opacity: 0 }
+            }
             animate={{ pathLength: 1, opacity: 0.6 }}
-            transition={{ ...springs.snappy }}
+            transition={
+              prefersReducedMotion ? { duration: 0 } : { ...springs.snappy }
+            }
           />
         </svg>
       )}

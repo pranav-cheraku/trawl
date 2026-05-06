@@ -69,6 +69,7 @@ export default function FilterBar({
             active={filters.type === opt.value}
             onClick={() => setField("type", opt.value)}
             ariaLabel={`Filter type ${opt.label}`}
+            layoutGroup="filter-type"
           />
         ))}
       </FilterGroup>
@@ -81,6 +82,7 @@ export default function FilterBar({
             onClick={() => setField("status", opt.value)}
             accent="signal"
             ariaLabel={`Filter status ${opt.label}`}
+            layoutGroup="filter-status"
           />
         ))}
       </FilterGroup>
@@ -92,6 +94,7 @@ export default function FilterBar({
             active={filters.priority === opt.value}
             onClick={() => setField("priority", opt.value)}
             ariaLabel={`Filter priority ${opt.label}`}
+            layoutGroup="filter-priority"
           />
         ))}
       </FilterGroup>
