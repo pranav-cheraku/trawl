@@ -1,5 +1,6 @@
 import Navbar from "@/components/landing/navbar";
 import HeroSection from "@/components/landing/hero-section";
+import { ConnectDemoSection } from "@/components/landing/connect-demo-section";
 import HowItWorksSection from "@/components/landing/how-it-works-section";
 import LiveConnectorSection from "@/components/landing/live-connector-section";
 import RagTransparencySection from "@/components/landing/rag-transparency-section";
@@ -13,6 +14,7 @@ export default async function LandingPage() {
     <div className="min-h-screen bg-surface font-sans text-on-surface">
       <Navbar session={session} />
       <HeroSection session={session} />
+      <ConnectDemoSection />
       <HowItWorksSection />
       <LiveConnectorSection />
       <RagTransparencySection />
