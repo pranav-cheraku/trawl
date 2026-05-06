@@ -10,7 +10,7 @@ import FailureState from "@/components/build-next/failure-state";
 import RunningState from "@/components/build-next/running-state";
 import RunSwitcher from "@/components/build-next/run-switcher";
 import ThemeCard from "@/components/build-next/theme-card";
-import ThemeDistributionChart from "@/components/build-next/theme-distribution-chart";
+import RadialThemeChart from "@/components/build-next/radial-theme-chart";
 import { SourceScopeMenu } from "@/components/sources/source-scope-menu";
 import WorkspaceHeader, {
   type WorkspaceStat,
@@ -362,7 +362,7 @@ export default function BuildNextPage() {
                   partialFailure={report.partialFailure}
                 />
               ) : null}
-              <ThemeDistributionChart
+              <RadialThemeChart
                 themes={report.themes}
                 onThemeClick={(themeId) => {
                   const el = document.getElementById(`theme-${themeId}`);
