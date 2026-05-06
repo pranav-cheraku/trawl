@@ -217,14 +217,22 @@ export function ChunkGridDemo() {
                     }
                   }}
                   className="mx-0.5 inline-flex cursor-pointer items-center rounded-[2px] bg-secondary/15 px-1 py-0.5 font-mono text-[10px] text-secondary"
-                  animate={{
-                    boxShadow: [
-                      "0 0 0 0 rgba(37,99,235,0)",
-                      "0 0 0 4px rgba(37,99,235,0.15)",
-                      "0 0 0 0 rgba(37,99,235,0)",
-                    ],
-                  }}
-                  transition={{ duration: 2, repeat: Infinity }}
+                  animate={
+                    prefersReducedMotion
+                      ? undefined
+                      : {
+                          boxShadow: [
+                            "0 0 0 0 rgba(37,99,235,0)",
+                            "0 0 0 4px rgba(37,99,235,0.15)",
+                            "0 0 0 0 rgba(37,99,235,0)",
+                          ],
+                        }
+                  }
+                  transition={
+                    prefersReducedMotion
+                      ? undefined
+                      : { duration: 2, repeat: Infinity }
+                  }
                   onMouseEnter={() => setHoveredChunkId(seg.chunkId ?? null)}
                   onMouseLeave={() => setHoveredChunkId(null)}
                 >
