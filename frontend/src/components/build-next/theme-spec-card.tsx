@@ -1,5 +1,8 @@
 "use client";
 
+import { motion, useReducedMotion } from "framer-motion";
+
+import { springs } from "@/lib/motion";
 import type { BuildReportSpec } from "@/types";
 
 type Props = {
@@ -8,6 +11,7 @@ type Props = {
   onClick: () => void;
   onPromote: () => void;
   isPromoting: boolean;
+  delay?: number;
 };
 
 export default function ThemeSpecCard({
@@ -16,7 +20,9 @@ export default function ThemeSpecCard({
   onClick,
   onPromote,
   isPromoting,
+  delay = 0,
 }: Props) {
+  const prefersReducedMotion = useReducedMotion();
   const priority = String(spec.content.priority ?? "medium").toLowerCase();
   const effort = String(spec.content.effort_estimate ?? "");
   const supportingRaw = (spec.content.supporting_feedback_indices ?? []) as unknown[];
@@ -29,7 +35,12 @@ export default function ThemeSpecCard({
   const isPromoted = spec.promotedSpecId !== null;
 
   return (
-    <article className="flex items-stretch gap-3 rounded-[4px] bg-surface-container-lowest px-4 py-3 transition-colors hover:bg-surface-container-high">
+    <motion.article
+      initial={prefersReducedMotion ? false : { opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ ...springs.gentle, delay }}
+      className="flex items-stretch gap-3 rounded-[4px] bg-surface-container-lowest px-4 py-3 transition-colors hover:bg-surface-container-high"
+    >
       <button
         type="button"
         onClick={onClick}
@@ -68,6 +79,6 @@ export default function ThemeSpecCard({
           </button>
         )}
       </div>
-    </article>
+    </motion.article>
   );
 }
