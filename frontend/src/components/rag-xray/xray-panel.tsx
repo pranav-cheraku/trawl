@@ -1,10 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { motion } from "framer-motion";
 
 import { ChunkCard } from "@/components/rag-xray/chunk-card";
 import { ChunkDetailModal } from "@/components/rag-xray/chunk-detail-modal";
+import { QAttributionRow } from "@/components/rag-xray/q-attribution-row";
 import { XrayEmpty } from "@/components/rag-xray/xray-empty";
+import { queryIndexFromText } from "@/lib/build-next-queries";
+import { springs } from "@/lib/motion";
 import type {
   BuildReportChunk,
   BuildRetrievalMetadata,
@@ -51,6 +55,54 @@ export function XrayPanel(props: XrayPanelProps) {
   const [detailChunk, setDetailChunk] = useState<TransparencyChunk | null>(
     null,
   );
+
+  // Build variant: hover state for guide-line drawing + badge refs
+  const [hoveredBuildChunkId, setHoveredBuildChunkId] = useState<string | null>(null);
+  const attributionBadgeRefs = useRef<Map<number, HTMLDivElement | null>>(
+    new Map(),
+  );
+  const attributionRowRef = useRef<HTMLDivElement | null>(null);
+
+  // Memoize build-variant derivations at the top level so they don't reallocate
+  // on every parent re-render (e.g. when the hover state changes). Hooks can't
+  // be called conditionally, so we hoist the source data via a stable dep and
+  // gate the computation inside the memo.
+  const buildVariantChunks =
+    props.variant === "build" ? props.reportChunks : null;
+  const buildChunks = useMemo<TransparencyChunk[]>(() => {
+    if (!buildVariantChunks) return [];
+    return buildVariantChunks.map((c) => ({
+      chunkId: c.chunkId,
+      feedbackItemId: c.feedbackItemId,
+      chunkTextPreview:
+        c.chunkText.length > 280
+          ? c.chunkText.slice(0, 280) + "…"
+          : c.chunkText,
+      chunkText: c.chunkText,
+      similarityScore: c.similarity,
+      retrievalRank: c.retrievalRank,
+      sourceType: "",
+      sourceName: c.sourceName,
+    }));
+  }, [buildVariantChunks]);
+  const chunkQueryIndex = useMemo<Map<string, number>>(() => {
+    if (!buildVariantChunks) return new Map();
+    return new Map(
+      buildVariantChunks.map((c) => [c.chunkId, queryIndexFromText(c.sourceQuery)]),
+    );
+  }, [buildVariantChunks]);
+  const highestSimilarityChunkId = useMemo<string | null>(() => {
+    if (buildChunks.length === 0) return null;
+    let bestId: string | null = null;
+    let bestScore = -Infinity;
+    for (const c of buildChunks) {
+      if (c.similarityScore > bestScore) {
+        bestScore = c.similarityScore;
+        bestId = c.chunkId;
+      }
+    }
+    return bestId;
+  }, [buildChunks]);
 
   // Scroll + highlight when the parent changes focus. Depending on both the
   // id AND the tick means re-clicking the same badge still triggers the
@@ -102,35 +154,42 @@ export function XrayPanel(props: XrayPanelProps) {
 
   // ── Build variant: derive chunks from a Build Next report ─────────────
   if (props.variant === "build") {
-    const { reportChunks, reportMetadata } = props;
-    // TODO(post-v1): per-chunk Q-attribution badge requires extending ChunkCard.
-    const buildChunks: TransparencyChunk[] = reportChunks.map((c) => ({
-      chunkId: c.chunkId,
-      feedbackItemId: c.feedbackItemId,
-      chunkTextPreview:
-        c.chunkText.length > 280
-          ? c.chunkText.slice(0, 280) + "…"
-          : c.chunkText,
-      chunkText: c.chunkText,
-      similarityScore: c.similarity,
-      retrievalRank: c.retrievalRank,
-      sourceType: "",
-      sourceName: c.sourceName,
-    }));
+    const { reportMetadata } = props;
+    const activeQueryIndex =
+      hoveredBuildChunkId !== null
+        ? chunkQueryIndex.get(hoveredBuildChunkId) ?? null
+        : null;
 
     return (
-      <PanelShell
+      <BuildPanelLayout
         header={
           <XrayBuildHeader
             metadata={reportMetadata}
             retrievedCount={buildChunks.length}
           />
         }
+        attributionRow={
+          <QAttributionRow
+            ref={attributionRowRef}
+            activeIndex={
+              activeQueryIndex !== null && activeQueryIndex >= 0
+                ? activeQueryIndex
+                : null
+            }
+            setBadgeRef={(idx) => (el) => {
+              attributionBadgeRefs.current.set(idx, el);
+            }}
+          />
+        }
         chunks={buildChunks}
-        threshold={null}
+        chunkQueryIndex={chunkQueryIndex}
+        highestSimilarityChunkId={highestSimilarityChunkId}
         highlightedChunkId={highlightedChunkId}
-        onChunkClick={setDetailChunk}
         cardRefs={cardRefs}
+        attributionBadgeRefs={attributionBadgeRefs}
+        hoveredChunkId={hoveredBuildChunkId}
+        onChunkHover={setHoveredBuildChunkId}
+        onChunkClick={setDetailChunk}
         detailChunk={detailChunk}
         closeDetail={() => setDetailChunk(null)}
         projectId={projectId}
@@ -346,6 +405,117 @@ function XraySpecHeader({ specSources }: XraySpecHeaderProps) {
           );
         })()}
       </div>
+    </div>
+  );
+}
+
+// ── BuildPanelLayout ──────────────────────────────────────────────────────────
+// Replaces PanelShell for the build variant — has a Q-attribution row above the
+// chunk list and renders an SVG guide-line from the hovered chunk to its badge.
+
+interface BuildPanelLayoutProps {
+  header: React.ReactNode;
+  attributionRow: React.ReactNode;
+  chunks: TransparencyChunk[];
+  chunkQueryIndex: Map<string, number>;
+  highestSimilarityChunkId: string | null;
+  highlightedChunkId: string | null;
+  cardRefs: React.MutableRefObject<Map<string, HTMLDivElement>>;
+  attributionBadgeRefs: React.MutableRefObject<Map<number, HTMLDivElement | null>>;
+  hoveredChunkId: string | null;
+  onChunkHover: (chunkId: string | null) => void;
+  onChunkClick: (chunk: TransparencyChunk) => void;
+  detailChunk: TransparencyChunk | null;
+  closeDetail: () => void;
+  projectId: string;
+}
+
+function BuildPanelLayout(props: BuildPanelLayoutProps) {
+  const {
+    header,
+    attributionRow,
+    chunks,
+    chunkQueryIndex,
+    highestSimilarityChunkId,
+    highlightedChunkId,
+    cardRefs,
+    attributionBadgeRefs,
+    hoveredChunkId,
+    onChunkHover,
+    onChunkClick,
+    detailChunk,
+    closeDetail,
+    projectId,
+  } = props;
+
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  // Compute SVG path coords from the hovered chunk card to its matching badge.
+  const guideLinePath = useMemo(() => {
+    if (!hoveredChunkId) return null;
+    const queryIndex = chunkQueryIndex.get(hoveredChunkId);
+    if (queryIndex === undefined || queryIndex < 0) return null;
+    const container = containerRef.current;
+    const cardEl = cardRefs.current.get(hoveredChunkId);
+    const badgeEl = attributionBadgeRefs.current.get(queryIndex);
+    if (!container || !cardEl || !badgeEl) return null;
+    const cBox = container.getBoundingClientRect();
+    const cardBox = cardEl.getBoundingClientRect();
+    const badgeBox = badgeEl.getBoundingClientRect();
+    const x1 = cardBox.left - cBox.left + 8; // anchor on the left edge of the card
+    const y1 = cardBox.top - cBox.top + cardBox.height / 2;
+    const x2 = badgeBox.left - cBox.left + badgeBox.width / 2;
+    const y2 = badgeBox.top - cBox.top + badgeBox.height;
+    return `M ${x1} ${y1} L ${x2} ${y2}`;
+  }, [hoveredChunkId, chunkQueryIndex, cardRefs, attributionBadgeRefs]);
+
+  return (
+    <div
+      ref={containerRef}
+      className="relative flex h-full flex-col rounded-[4px] bg-surface-container-low"
+    >
+      {header}
+      {attributionRow}
+      <ul className="flex-1 space-y-2 overflow-y-auto px-4 pb-4 pt-1">
+        {chunks.map((chunk) => (
+          <li key={chunk.chunkId}>
+            <ChunkCard
+              chunk={chunk}
+              isHighlighted={highlightedChunkId === chunk.chunkId}
+              onClick={onChunkClick}
+              pulse={chunk.chunkId === highestSimilarityChunkId}
+              onHoverChange={onChunkHover}
+              ref={(el) => {
+                if (el) cardRefs.current.set(chunk.chunkId, el);
+                else cardRefs.current.delete(chunk.chunkId);
+              }}
+            />
+          </li>
+        ))}
+      </ul>
+      {guideLinePath && (
+        <svg
+          aria-hidden
+          className="pointer-events-none absolute inset-0 h-full w-full"
+        >
+          <motion.path
+            d={guideLinePath}
+            stroke="rgb(37,99,235)"
+            strokeWidth={1}
+            fill="none"
+            initial={{ pathLength: 0, opacity: 0 }}
+            animate={{ pathLength: 1, opacity: 0.6 }}
+            transition={{ ...springs.snappy }}
+          />
+        </svg>
+      )}
+      {detailChunk && (
+        <ChunkDetailModal
+          chunk={detailChunk}
+          projectId={projectId}
+          onClose={closeDetail}
+        />
+      )}
     </div>
   );
 }
