@@ -48,6 +48,8 @@ export default function SpecCard({ spec, onClick, isDragging }: Props) {
       aria-label={`Open spec ${spec.title}`}
       className={`group relative flex w-full flex-col gap-2.5 rounded-[4px] bg-surface-container-lowest p-3 pl-4 text-left transition-colors hover:bg-surface-container-high focus:outline-none focus:ring-2 focus:ring-secondary/30 ${
         isDragging ? "opacity-40" : ""
+      } ${
+        isDragging ? "shadow-[0_8px_24px_rgba(15,23,42,0.04)]" : ""
       }`}
     >
       {/* Priority bar — architectural ruler mark on left edge */}
