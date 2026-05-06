@@ -161,6 +161,7 @@ export default function SpecsPage() {
     () => (activeId ? (specs ?? []).find((s) => s.id === activeId) ?? null : null),
     [activeId, specs]
   );
+  const dragActive = activeSpec !== null;
 
   // ── Data fetching ──────────────────────────────────────────────────
   const clearPoll = useCallback(() => {
@@ -550,6 +551,7 @@ export default function SpecsPage() {
             grouped={grouped}
             totalsByStatus={totalsByStatus}
             isFilterActive={isFilterActive}
+            dragActive={dragActive}
             onCardClick={handleCardClick}
           />
           <DragOverlay>

@@ -8,6 +8,7 @@ interface Props {
   onCardClick?: (spec: Spec) => void;
   totalsByStatus?: Record<SpecStatus, number>;
   isFilterActive?: boolean;
+  dragActive?: boolean;
 }
 
 const COLUMNS: { status: SpecStatus; label: string }[] = [
@@ -22,6 +23,7 @@ export default function KanbanBoard({
   onCardClick,
   totalsByStatus,
   isFilterActive,
+  dragActive,
 }: Props) {
   return (
     <div
@@ -39,6 +41,7 @@ export default function KanbanBoard({
           onCardClick={onCardClick}
           totalCount={totalsByStatus?.[status]}
           isFilterActive={isFilterActive}
+          dragActive={dragActive}
         />
       ))}
     </div>

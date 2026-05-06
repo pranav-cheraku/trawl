@@ -6,23 +6,25 @@ import {
   SortableContext,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
+import { motion, useReducedMotion } from "framer-motion";
+
+import { durations, easings } from "@/lib/motion";
 import type { Spec, SpecStatus } from "@/types";
+
 import SortableSpecCard from "./sortable-spec-card";
 
 interface Props {
-  /** Column index, 1-indexed, rendered as "01 / BACKLOG" label. */
   index: number;
   status: SpecStatus;
   label: string;
   specs: Spec[];
   onCardClick?: (spec: Spec) => void;
-  /** Optional footer / empty-state slot. */
   emptyState?: ReactNode;
-  /** Total count across all filter states (unfiltered). When provided and
-   *  different from specs.length, shows "N / totalCount" in the header. */
   totalCount?: number;
-  /** When true, dragging is disabled on all cards in this column. */
   isFilterActive?: boolean;
+  /** True when ANY card on the board is currently being dragged. Drives the
+   *  "+" hint in empty columns and brightens the column body for legibility. */
+  dragActive?: boolean;
 }
 
 export default function KanbanColumn({
@@ -34,28 +36,47 @@ export default function KanbanColumn({
   emptyState,
   totalCount,
   isFilterActive,
+  dragActive,
 }: Props) {
+  const prefersReducedMotion = useReducedMotion();
   const paddedIndex = String(index).padStart(2, "0");
-
-  // The droppable id is "col:<status>" so handleDragEnd in the page can
-  // distinguish "dropped on a column" from "dropped on a specific card".
   const { setNodeRef, isOver } = useDroppable({ id: `col:${status}` });
 
-  // Dim the column when filter hid everything in it (totalCount > 0 but specs is empty).
   const isHiddenByFilter =
     specs.length === 0 &&
     typeof totalCount === "number" &&
     totalCount > 0;
 
+  // Body background:
+  //   - default: surface-container-low
+  //   - hovered by drag: brighter surface-container
+  //   - hidden by filter: dim
+  const bodyBg = isOver
+    ? "bg-surface-container"
+    : "bg-surface-container-low";
+
   return (
     <section
-      className={`flex min-h-[280px] flex-col rounded-[4px] transition-colors ${
-        isOver
-          ? "bg-surface-container"
-          : "bg-surface-container-low"
-      }${isHiddenByFilter ? " opacity-40" : ""}`}
+      className={`relative flex min-h-[280px] flex-col rounded-[4px] transition-colors ${bodyBg}${
+        isHiddenByFilter ? " opacity-40" : ""
+      }`}
     >
-      {/* Header — architectural label + count badge */}
+      {/* Drop-zone top accent line — draws in left-to-right when isOver flips true */}
+      {isOver && !prefersReducedMotion ? (
+        <motion.div
+          aria-hidden
+          className="absolute left-1 right-1 top-0 h-[1px] origin-left bg-secondary"
+          initial={{ scaleX: 0 }}
+          animate={{ scaleX: 1 }}
+          transition={{ duration: durations.normal, ease: easings.standard }}
+        />
+      ) : isOver ? (
+        <div
+          aria-hidden
+          className="absolute left-1 right-1 top-0 h-[1px] bg-secondary"
+        />
+      ) : null}
+
       <header className="flex items-center justify-between gap-2 px-3 pt-3 pb-2.5">
         <div className="flex items-baseline gap-1.5">
           <span className="font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-on-surface-variant/60">
@@ -77,7 +98,6 @@ export default function KanbanColumn({
         </span>
       </header>
 
-      {/* Card list — grows with content; natural page scroll handles overflow */}
       <div ref={setNodeRef} className="flex flex-1 flex-col gap-2 px-2 pb-2">
         <SortableContext
           items={specs.map((s) => s.id)}
@@ -88,6 +108,10 @@ export default function KanbanColumn({
               {isHiddenByFilter ? (
                 <div className="px-2 py-3 text-center font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-on-surface-variant/70">
                   · {totalCount} hidden ·
+                </div>
+              ) : dragActive ? (
+                <div className="flex h-full w-full items-center justify-center rounded-[2px] px-2 py-3 text-center font-mono text-[14px] font-light text-on-surface-variant/50">
+                  +
                 </div>
               ) : (
                 emptyState ?? (
