@@ -9,10 +9,7 @@ interface SignInButtonProps {
 
 export default function SignInButton({ children, className }: SignInButtonProps) {
   const handleClick = () => {
-    document.documentElement.classList.add("page-exit");
-    setTimeout(() => {
-      signIn("google", { callbackUrl: "/dashboard" });
-    }, 250);
+    signIn("google", { callbackUrl: "/dashboard" });
   };
 
   return (

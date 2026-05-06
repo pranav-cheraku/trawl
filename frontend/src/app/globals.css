@@ -20,15 +20,6 @@
   }
 }
 
-/* Page transitions */
-html {
-  transition: opacity 0.25s ease;
-}
-
-html.page-exit {
-  opacity: 0;
-}
-
 /* Landing page animations */
 @keyframes fade-in-up {
   from {
