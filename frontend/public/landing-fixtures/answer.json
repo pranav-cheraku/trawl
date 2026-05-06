@@ -1,0 +1,7 @@
+{
+  "text": "Users churn at the trial end because the cancellation flow is hidden, the auto-renew triggers without warning [3], and downloads are lost when the trial expires [7].",
+  "citations": [
+    { "marker": 3, "chunkId": "c3" },
+    { "marker": 7, "chunkId": "c4" }
+  ]
+}

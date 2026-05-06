@@ -1,0 +1,14 @@
+[
+  { "id": "c1", "snippet": "Free trial conversion nightmare", "similarity": 0.91 },
+  { "id": "c2", "snippet": "Charged $11 day after trial", "similarity": 0.88 },
+  { "id": "c3", "snippet": "No reminder, no warning", "similarity": 0.84 },
+  { "id": "c4", "snippet": "Couldn't keep my downloads", "similarity": 0.79 },
+  { "id": "c5", "snippet": "Aggressive upsell on trial end", "similarity": 0.71 },
+  { "id": "c6", "snippet": "Cancel button buried in settings", "similarity": 0.62 },
+  { "id": "c7", "snippet": "Premium features showed for free", "similarity": 0.55 },
+  { "id": "c8", "snippet": "App Store auto-renew disabled", "similarity": 0.49 },
+  { "id": "c9", "snippet": "Family plan price increase", "similarity": 0.44 },
+  { "id": "c10", "snippet": "Customer support unresponsive", "similarity": 0.40 },
+  { "id": "c11", "snippet": "Offline mode broken", "similarity": 0.37 },
+  { "id": "c12", "snippet": "Login persistence issue", "similarity": 0.34 }
+]
