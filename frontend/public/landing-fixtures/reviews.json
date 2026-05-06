@@ -1,0 +1,110 @@
+[
+  {
+    "id": "r1",
+    "rating": 1,
+    "title": "Constant crashes",
+    "snippet": "App crashes every time I try to download offline music. Premium for what?",
+    "source": "App Store",
+    "appName": "Spotify",
+    "date": "2025-12-04"
+  },
+  {
+    "id": "r2",
+    "rating": 2,
+    "title": "Bring back the old UI",
+    "snippet": "The new home screen is impossible to navigate. I just want my playlists.",
+    "source": "App Store",
+    "appName": "Spotify",
+    "date": "2025-12-03"
+  },
+  {
+    "id": "r3",
+    "rating": 5,
+    "title": "Discover Weekly is magic",
+    "snippet": "Every Monday I find 3-4 new favorites. Worth the subscription alone.",
+    "source": "App Store",
+    "appName": "Spotify",
+    "date": "2025-12-02"
+  },
+  {
+    "id": "r4",
+    "rating": 1,
+    "title": "Cancelled my subscription",
+    "snippet": "Trial ended and the upsell flow felt pretty pushy — ended up uninstalling.",
+    "source": "App Store",
+    "appName": "Spotify",
+    "date": "2025-12-02"
+  },
+  {
+    "id": "r5",
+    "rating": 3,
+    "title": "Good but expensive",
+    "snippet": "Family plan is great but Apple Music is half the price now.",
+    "source": "App Store",
+    "appName": "Spotify",
+    "date": "2025-12-01"
+  },
+  {
+    "id": "r6",
+    "rating": 2,
+    "title": "Trial-to-paid was confusing",
+    "snippet": "Wasn't clear what happens to my downloads when the trial ends. Took me a while to figure out.",
+    "source": "App Store",
+    "appName": "Spotify",
+    "date": "2025-11-30"
+  },
+  {
+    "id": "r7",
+    "rating": 4,
+    "title": "Great catalog, bad search",
+    "snippet": "Can never find specific live versions. Search is broken for niche queries.",
+    "source": "App Store",
+    "appName": "Spotify",
+    "date": "2025-11-29"
+  },
+  {
+    "id": "r8",
+    "rating": 1,
+    "title": "Login keeps logging out",
+    "snippet": "I have to sign in every other day. There's no two-factor or anything.",
+    "source": "App Store",
+    "appName": "Spotify",
+    "date": "2025-11-28"
+  },
+  {
+    "id": "r9",
+    "rating": 5,
+    "title": "Best music app",
+    "snippet": "Been using it 8 years. Daily Mix and Wrapped are the best features anywhere.",
+    "source": "App Store",
+    "appName": "Spotify",
+    "date": "2025-11-28"
+  },
+  {
+    "id": "r10",
+    "rating": 2,
+    "title": "Audiobooks ruined the app",
+    "snippet": "I came here for music. Now half the screen is podcasts and audiobooks I don't want.",
+    "source": "App Store",
+    "appName": "Spotify",
+    "date": "2025-11-27"
+  },
+  {
+    "id": "r11",
+    "rating": 3,
+    "title": "Lossless when?",
+    "snippet": "Apple, Tidal, Amazon all have HiFi. Still waiting on Spotify after years of promises.",
+    "source": "App Store",
+    "appName": "Spotify",
+    "date": "2025-11-26"
+  },
+  {
+    "id": "r12",
+    "rating": 1,
+    "title": "Trial flow needs a reminder",
+    "snippet": "Subscription kicked in right after my trial — wish there was a clearer heads-up before that.",
+    "source": "App Store",
+    "appName": "Spotify",
+    "date": "2025-11-25"
+  }
+]

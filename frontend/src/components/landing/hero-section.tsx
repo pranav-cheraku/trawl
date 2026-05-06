@@ -1,137 +1,145 @@
+// frontend/src/components/landing/hero-section.tsx
+"use client";
+
 import Link from "next/link";
 import type { Session } from "next-auth";
-import SignInButton from "@/components/sign-in-button";
+import { signIn } from "next-auth/react";
+import { motion, useReducedMotion } from "framer-motion";
 
-export default function HeroSection({ session }: { session: Session | null }) {
-  const primaryCtaLabel = session ? "Open Workspace" : "Launch Architect";
-  const primaryCtaClassName =
-    "group inline-flex items-center gap-3 rounded-[4px] bg-black px-10 py-5 text-[15px] font-semibold uppercase tracking-[0.08em] text-white transition-colors hover:bg-secondary";
-  const primaryCtaIcon = (
-    <svg
-      className="h-4 w-4 transition-transform group-hover:translate-x-0.5"
-      fill="none"
-      viewBox="0 0 14 14"
-      stroke="currentColor"
-      strokeWidth={2}
-      aria-hidden="true"
-    >
-      <path d="M1 7h12M8 2l5 5-5 5" />
-    </svg>
-  );
+import { CountUp } from "@/components/landing/count-up";
+import { LiveInputDemo } from "@/components/landing/live-input-demo";
+import { useMousePosition } from "@/lib/use-mouse-position";
+import { durations, easings } from "@/lib/motion";
+
+const PARALLAX_MAX_PX = 4;
+const CTA_CLASSES =
+  "inline-flex items-center gap-2 rounded-[4px] bg-on-surface px-6 py-3 text-sm font-semibold text-surface-container-lowest transition-colors hover:bg-secondary";
+
+interface HeroSectionProps {
+  session: Session | null;
+}
+
+export default function HeroSection({ session }: HeroSectionProps) {
+  const { x, y } = useMousePosition();
+  const prefersReducedMotion = useReducedMotion();
+
+  const parallaxX = prefersReducedMotion ? 0 : x * PARALLAX_MAX_PX;
+  const parallaxY = prefersReducedMotion ? 0 : y * PARALLAX_MAX_PX;
 
   return (
-    <section className="relative overflow-hidden bg-surface-container-lowest">
-      {/* Blueprint grid — sits behind content, fades at edges */}
-      <div
-        className="pointer-events-none absolute inset-0"
-        aria-hidden="true"
+    <section className="relative isolate min-h-[90vh] overflow-hidden bg-surface px-6 py-16 lg:px-12">
+      {/* Blueprint grid backdrop with capped parallax */}
+      <motion.div
+        aria-hidden
+        className="absolute inset-0 -z-10"
         style={{
-          backgroundImage: `
-            repeating-linear-gradient(0deg, transparent, transparent 59px, #E5EFF7 59px, #E5EFF7 60px),
-            repeating-linear-gradient(90deg, transparent, transparent 59px, #E5EFF7 59px, #E5EFF7 60px)
-          `,
-          WebkitMaskImage: "radial-gradient(ellipse 80% 70% at 50% 50%, black 40%, transparent 100%)",
-          maskImage: "radial-gradient(ellipse 80% 70% at 50% 50%, black 40%, transparent 100%)",
+          backgroundImage:
+            "linear-gradient(rgba(15,23,42,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(15,23,42,0.06) 1px, transparent 1px)",
+          backgroundSize: "32px 32px",
+          maskImage:
+            "linear-gradient(180deg, transparent 0%, #000 8%, #000 92%, transparent 100%)",
+          WebkitMaskImage:
+            "linear-gradient(180deg, transparent 0%, #000 8%, #000 92%, transparent 100%)",
+          x: parallaxX,
+          y: parallaxY,
         }}
       />
-      <div className="relative mx-auto grid w-full max-w-[1400px] grid-cols-1 items-center gap-16 px-8 pb-40 pt-40 lg:grid-cols-[1.2fr_minmax(0,580px)]">
-        {/* Left — copy */}
-        <div>
-          <h1
-            className="animate-fade-in-up text-[4rem] font-extrabold leading-[1.05] tracking-tight text-black md:text-[5.5rem] lg:text-[6.5rem]"
-            style={{ animationDelay: "0.1s" }}
-          >
-            Turn 500<br />reviews into a<br />spec in 60s.
-          </h1>
 
-          <p
-            className="animate-fade-in-up mt-10 max-w-xl text-xl font-medium leading-relaxed text-on-surface-variant md:text-2xl"
-            style={{ animationDelay: "0.2s" }}
-          >
-            Stop drowning in qualitative data. Trawl bridges the gap between
-            raw feedback and technical architecture with surgical
-            precision.
-          </p>
+      {/* Top-right live indexed badge */}
+      <div className="absolute right-6 top-6 hidden font-mono text-[10px] uppercase tracking-[0.2em] text-on-surface-variant lg:block">
+        <span className="mr-2 inline-block h-1.5 w-1.5 rounded-full bg-secondary align-middle" />
+        LIVE ·{" "}
+        <CountUp
+          to={8432}
+          from={8000}
+          duration={1200}
+          format={(n) => n.toLocaleString()}
+        />{" "}
+        reviews indexed today
+      </div>
 
-          {/* CTAs */}
-          <div
-            className="animate-fade-in-up mt-14 flex flex-wrap items-center gap-5"
-            style={{ animationDelay: "0.3s" }}
+      <div className="mx-auto grid max-w-screen-2xl items-center gap-12 lg:grid-cols-[1fr_auto] lg:gap-20">
+        {/* Headline column */}
+        <div className="max-w-3xl">
+          <motion.p
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: durations.normal, ease: easings.standard }}
+            className="font-mono text-xs uppercase tracking-[0.25em] text-secondary"
+          >
+            TRAWL · v1
+          </motion.p>
+          <motion.h1
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{
+              duration: durations.slow,
+              ease: easings.emphasis,
+              delay: 0.1,
+            }}
+            className="mt-4 text-[3rem] font-bold leading-[0.95] tracking-tight text-on-surface sm:text-[4.5rem] lg:text-[7rem]"
+          >
+            From 500 reviews
+            <br />
+            to a roadmap.
+            <br />
+            <span className="text-secondary">In 60 seconds.</span>
+          </motion.h1>
+          <motion.p
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{
+              duration: durations.normal,
+              ease: easings.standard,
+              delay: 0.25,
+            }}
+            className="mt-6 max-w-xl text-base text-on-surface-variant sm:text-lg"
+          >
+            Type an app name. Trawl pulls every review, clusters them into
+            themes, and builds a prioritized product roadmap with citations
+            you can trace.
+          </motion.p>
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{
+              duration: durations.normal,
+              ease: easings.standard,
+              delay: 0.35,
+            }}
+            className="mt-10"
           >
             {session ? (
-              <Link href="/dashboard" className={primaryCtaClassName}>
-                {primaryCtaLabel}
-                {primaryCtaIcon}
+              <Link href="/dashboard" className={CTA_CLASSES}>
+                Open dashboard
+                <span aria-hidden>→</span>
               </Link>
             ) : (
-              <SignInButton className={primaryCtaClassName}>
-                {primaryCtaLabel}
-                {primaryCtaIcon}
-              </SignInButton>
+              <button
+                type="button"
+                onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
+                className={CTA_CLASSES}
+              >
+                Try it free
+                <span aria-hidden>→</span>
+              </button>
             )}
-            <Link
-              href="#how-it-works"
-              className="inline-flex items-center gap-2 rounded-[4px] border border-outline/30 bg-white px-10 py-5 text-[15px] font-semibold uppercase tracking-[0.08em] text-on-surface transition-colors hover:bg-surface-container-low"
-            >
-              Learn More
-            </Link>
-          </div>
+          </motion.div>
         </div>
 
-        {/* Right — spec card mockup */}
-        <div
-          className="animate-slide-in-right"
-          style={{ animationDelay: "0.35s" }}
+        {/* Demo column */}
+        <motion.div
+          initial={{ opacity: 0, x: 24 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{
+            duration: durations.slow,
+            ease: easings.emphasis,
+            delay: 0.4,
+          }}
+          className="hidden lg:block"
         >
-          <div className="rounded-[4px] bg-surface-container-low p-1.5">
-            <div className="rounded-[4px] bg-surface-container-lowest p-10">
-              {/* Card header */}
-              <div className="flex items-center gap-3">
-                <svg className="h-5 w-5 text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z" />
-                </svg>
-                <span className="font-mono text-[14px] font-medium uppercase tracking-wider">
-                  Requirement_Draft_01
-                </span>
-              </div>
-
-              {/* Title skeleton */}
-              <div className="mt-8 space-y-3">
-                <div className="h-6 w-4/5 rounded-[2px] bg-surface-container" />
-                <div className="h-6 w-3/5 rounded-[2px] bg-surface-container" />
-              </div>
-
-              {/* Meta row */}
-              <div className="mt-10 flex items-center justify-between">
-                <span className="font-mono text-[14px] uppercase tracking-wider text-on-surface-variant">
-                  AI Consensus
-                </span>
-                <span className="font-mono text-[14px] font-semibold text-secondary">
-                  94% Match
-                </span>
-              </div>
-
-              {/* Content */}
-              <div className="mt-6 rounded-[4px] bg-surface-container-low p-6">
-                <p className="text-[16px] leading-relaxed text-on-surface">
-                  Deploy <span className="font-semibold text-secondary">OAuth 2.0 PKCE</span> flow
-                  for mobile clients. Resolves persistent &ldquo;Session
-                  Expired&rdquo; complaints from iOS v2.4.
-                </p>
-              </div>
-
-              {/* Footer tags */}
-              <div className="mt-6 flex items-center justify-between">
-                <span className="font-mono text-[12px] font-medium uppercase tracking-wider text-on-surface-variant/50">
-                  Linked_Data
-                </span>
-                <span className="font-mono text-[12px] font-medium uppercase tracking-wider text-on-surface-variant/50">
-                  Jira_Sync
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
+          <LiveInputDemo />
+        </motion.div>
       </div>
     </section>
   );
