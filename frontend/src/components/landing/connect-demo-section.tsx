@@ -3,6 +3,7 @@
 import { useRef } from "react";
 import { motion, useInView, useReducedMotion } from "framer-motion";
 
+import { ScrollCue } from "@/components/landing/scroll-cue";
 import { StreamingReviewsDemo } from "@/components/landing/streaming-reviews-demo";
 import { durations, easings } from "@/lib/motion";
 
@@ -14,10 +15,11 @@ export function ConnectDemoSection() {
 
   return (
     <section
+      id="connect"
       ref={ref}
-      className="relative min-h-[90vh] bg-surface-container-lowest px-6 py-24 lg:px-12"
+      className="relative flex min-h-[90vh] scroll-mt-24 items-center bg-surface-container-lowest px-6 py-24 lg:px-12"
     >
-      <div className="mx-auto grid max-w-screen-2xl items-center gap-12 lg:grid-cols-2 lg:gap-20">
+      <div className="mx-auto grid w-full max-w-screen-2xl items-center gap-12 lg:grid-cols-2 lg:gap-20">
         <div>
           <motion.p
             initial={prefersReducedMotion ? false : { opacity: 0, y: 8 }}
@@ -59,6 +61,7 @@ export function ConnectDemoSection() {
           <StreamingReviewsDemo />
         </div>
       </div>
+      <ScrollCue nextId="ask" />
     </section>
   );
 }

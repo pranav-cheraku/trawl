@@ -70,22 +70,22 @@ export function LiveInputDemo() {
 
   return (
     <div
-      className="relative w-full max-w-md"
+      className="relative w-full max-w-xl"
       role="img"
       aria-label="Demo: typing an app name and streaming reviews"
     >
-      <div className="rounded-[4px] bg-surface-container-lowest px-4 py-3 font-mono text-sm">
+      <div className="rounded-[4px] bg-surface-container-lowest px-6 py-5 font-mono text-lg">
         <span className="text-on-surface-variant">app:</span>{" "}
         <span>{typed}</span>
         <motion.span
-          className="ml-0.5 inline-block w-[2px] bg-on-surface align-middle"
+          className="ml-0.5 inline-block w-[3px] bg-on-surface align-middle"
           style={{ height: "1em" }}
           animate={{ opacity: [1, 0, 1] }}
           transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
         />
       </div>
 
-      <div className="mt-3 flex flex-col gap-2">
+      <div className="mt-4 flex flex-col gap-3">
         {reviews.slice(0, REVIEWS_TO_SHOW).map((review, idx) => (
           <motion.div
             key={review.id}
@@ -101,21 +101,21 @@ export function LiveInputDemo() {
               ...springs.gentle,
               delay: showCards ? idx * staggers.list : 0,
             }}
-            className="rounded-[4px] bg-surface-container-lowest px-3 py-2 text-xs"
-            style={{ marginLeft: idx * 4 }}
+            className="rounded-[4px] bg-surface-container-lowest px-5 py-3.5 text-sm"
+            style={{ marginLeft: idx * 6 }}
           >
             <div className="flex items-center justify-between">
-              <span className="font-mono text-[10px] uppercase tracking-[0.15em] text-on-surface-variant">
+              <span className="font-mono text-[11px] uppercase tracking-[0.15em] text-on-surface-variant">
                 {"★".repeat(review.rating)}
                 <span className="text-outline-variant">
                   {"★".repeat(5 - review.rating)}
                 </span>
               </span>
-              <span className="font-mono text-[10px] text-on-surface-variant">
+              <span className="font-mono text-[11px] text-on-surface-variant">
                 {review.date}
               </span>
             </div>
-            <div className="mt-1 line-clamp-1 text-on-surface">
+            <div className="mt-1.5 line-clamp-1 text-on-surface">
               {review.title}
             </div>
           </motion.div>

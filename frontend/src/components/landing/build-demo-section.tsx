@@ -5,6 +5,7 @@ import { useRef } from "react";
 import { motion, useInView, useReducedMotion } from "framer-motion";
 
 import { MiniKanbanDemo } from "@/components/landing/mini-kanban-demo";
+import { ScrollCue } from "@/components/landing/scroll-cue";
 import { durations, easings } from "@/lib/motion";
 
 export function BuildDemoSection() {
@@ -15,10 +16,11 @@ export function BuildDemoSection() {
 
   return (
     <section
+      id="build"
       ref={ref}
-      className="relative min-h-[90vh] bg-surface-container-lowest px-6 py-24 lg:px-12"
+      className="relative flex min-h-[90vh] scroll-mt-24 items-center bg-surface-container-lowest px-6 py-24 lg:px-12"
     >
-      <div className="mx-auto max-w-screen-2xl">
+      <div className="mx-auto w-full max-w-screen-2xl">
         <div>
           <motion.p
             initial={prefersReducedMotion ? false : { opacity: 0, y: 8 }}
@@ -60,6 +62,7 @@ export function BuildDemoSection() {
           <MiniKanbanDemo />
         </div>
       </div>
+      <ScrollCue nextId="cta" />
     </section>
   );
 }

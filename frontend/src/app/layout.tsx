@@ -16,7 +16,7 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "Trawl — RAG-Powered Product Spec Generator",
   description:
-    "Type an app name, pull 500 reviews, and get a prioritized product roadmap in 60 seconds.",
+    "Type an app name, pull 500 reviews, and get a prioritized product roadmap in minutes.",
 };
 
 export default function RootLayout({

@@ -24,8 +24,9 @@ export function CtaSection({ session }: CtaSectionProps) {
 
   return (
     <section
+      id="cta"
       ref={ref}
-      className="relative flex min-h-[80vh] items-center justify-center bg-surface px-6 py-32 lg:px-12"
+      className="relative flex min-h-[80vh] scroll-mt-24 items-center justify-center bg-surface px-6 py-32 lg:px-12"
     >
       <div className="mx-auto max-w-4xl text-center">
         <motion.h2
