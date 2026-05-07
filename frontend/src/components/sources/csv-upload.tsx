@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
+import { motion, useReducedMotion } from "framer-motion";
 import { uploadCsv } from "@/lib/api";
+import { springs } from "@/lib/motion";
 
 interface Props {
   projectId: string;
@@ -56,6 +58,8 @@ export default function CsvUpload({ projectId, onSourceCreated }: Props) {
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
+
+  const prefersReducedMotion = useReducedMotion();
 
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -135,7 +139,7 @@ export default function CsvUpload({ projectId, onSourceCreated }: Props) {
 
       {!preview ? (
         /* Drop zone */
-        <div
+        <motion.div
           onDragOver={(e) => {
             e.preventDefault();
             setIsDragOver(true);
@@ -145,9 +149,17 @@ export default function CsvUpload({ projectId, onSourceCreated }: Props) {
           onClick={() => inputRef.current?.click()}
           className={`mt-3 flex cursor-pointer flex-col items-center justify-center rounded-[4px] border border-dashed px-4 py-8 transition-colors ${
             isDragOver
-              ? "border-secondary bg-secondary/5"
+              ? "border-secondary bg-surface-container-high"
               : "border-outline-variant bg-surface-container-low"
           }`}
+          animate={
+            prefersReducedMotion
+              ? undefined
+              : isDragOver
+              ? { scale: 1.02 }
+              : { scale: 1 }
+          }
+          transition={prefersReducedMotion ? undefined : { ...springs.gentle }}
         >
           <svg
             className="h-6 w-6 text-on-surface-variant"
@@ -173,7 +185,7 @@ export default function CsvUpload({ projectId, onSourceCreated }: Props) {
             onChange={handleInputChange}
             className="hidden"
           />
-        </div>
+        </motion.div>
       ) : (
         /* Preview + column mapping */
         <div className="mt-3 space-y-3">

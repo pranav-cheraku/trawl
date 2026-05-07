@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { motion, useReducedMotion } from "framer-motion";
 import { deleteSource, getSource, listSources } from "@/lib/api";
+import { durations, easings, staggers } from "@/lib/motion";
 import type { Source } from "@/types";
 import InlineConfirm from "@/components/ui/inline-confirm";
 import FeedbackItemPanel from "./feedback-item-panel";
@@ -84,6 +86,7 @@ function SourceTypeIcon({ sourceType }: { sourceType: string }) {
 }
 
 export default function SourceList({ projectId, refreshKey }: Props) {
+  const prefersReducedMotion = useReducedMotion();
   const [sources, setSources] = useState<Source[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -254,8 +257,14 @@ export default function SourceList({ projectId, refreshKey }: Props) {
           Connected Sources · {sources.length}
         </span>
         {sources.some((s) => !TERMINAL_STATUSES.has(s.status)) ? (
-          <span className="font-mono text-[9px] font-medium uppercase tracking-[0.18em] text-on-surface-variant/50">
-            Polling every 3s
+          <span className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-on-surface-variant/60">
+            <motion.span
+              aria-hidden
+              className="h-1.5 w-1.5 rounded-full bg-secondary"
+              animate={prefersReducedMotion ? undefined : { opacity: [0.4, 1, 0.4] }}
+              transition={prefersReducedMotion ? undefined : { duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
+            />
+            Polling
           </span>
         ) : null}
       </div>
@@ -300,8 +309,19 @@ export default function SourceList({ projectId, refreshKey }: Props) {
               </div>
 
               {/* Rows */}
-              {sources.map((source, idx) => (
-                <div key={source.id}>
+              {sources.map((source, idx) => {
+                const cumulativeDelay = Math.min(idx * staggers.list, 0.8);
+                return (
+                <motion.div
+                  key={source.id}
+                  initial={prefersReducedMotion ? false : { opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{
+                    duration: durations.normal,
+                    ease: easings.standard,
+                    delay: cumulativeDelay,
+                  }}
+                >
                   <div
                     className={`grid ${columnTemplate} cursor-pointer items-center gap-3 px-3 py-2.5 transition-colors hover:bg-surface-container-low ${
                       expandedId === source.id ? "bg-surface-container-low" : ""
@@ -417,16 +437,26 @@ export default function SourceList({ projectId, refreshKey }: Props) {
                       </p>
                     </div>
                   )}
-                </div>
-              ))}
+                </motion.div>
+                );
+              })}
             </div>
           </div>
 
           {/* ── <md card list ── */}
           <div className="mt-3 flex flex-col gap-2 md:hidden">
-            {sources.map((source) => (
-              <div
+            {sources.map((source, idx) => {
+              const cumulativeDelay = Math.min(idx * staggers.list, 0.8);
+              return (
+              <motion.div
                 key={source.id}
+                initial={prefersReducedMotion ? false : { opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{
+                  duration: durations.normal,
+                  ease: easings.standard,
+                  delay: cumulativeDelay,
+                }}
                 className={`flex flex-col rounded-[4px] transition-colors ${
                   expandedId === source.id
                     ? "bg-surface-container-low"
@@ -540,8 +570,9 @@ export default function SourceList({ projectId, refreshKey }: Props) {
                     </p>
                   </div>
                 )}
-              </div>
-            ))}
+              </motion.div>
+              );
+            })}
           </div>
         </>
       )}
