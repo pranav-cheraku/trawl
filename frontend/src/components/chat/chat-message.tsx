@@ -2,7 +2,10 @@
 
 import type { ReactNode } from "react";
 
+import { motion, useReducedMotion } from "framer-motion";
+
 import { CitationBadge } from "@/components/chat/citation-badge";
+import { durations, easings } from "@/lib/motion";
 import type { Message } from "@/types";
 
 interface ChatMessageProps {
@@ -92,13 +95,20 @@ export function ChatMessage({
   onSelect,
   onCitationClick,
 }: ChatMessageProps) {
+  const prefersReducedMotion = useReducedMotion();
+
   if (message.role === "user") {
     return (
-      <div className="flex justify-end">
+      <motion.div
+        className="flex justify-end"
+        initial={prefersReducedMotion ? false : { opacity: 0, y: 4 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: durations.normal, ease: easings.standard }}
+      >
         <div className="max-w-[80%] rounded-[4px] bg-surface-container px-4 py-3 text-[14px] leading-relaxed text-on-surface">
           {message.content}
         </div>
-      </div>
+      </motion.div>
     );
   }
 
@@ -124,7 +134,12 @@ export function ChatMessage({
   }
 
   return (
-    <div className="flex justify-start">
+    <motion.div
+      className="flex justify-start"
+      initial={prefersReducedMotion ? false : { opacity: 0, y: 4 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: durations.normal, ease: easings.standard }}
+    >
       <div
         role={isInteractive ? "button" : undefined}
         tabIndex={isInteractive ? 0 : undefined}
@@ -149,6 +164,6 @@ export function ChatMessage({
           {renderAssistantContent(message.content, message, handleBadgeClick)}
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }

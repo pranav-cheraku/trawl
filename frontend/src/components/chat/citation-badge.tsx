@@ -1,5 +1,7 @@
 "use client";
 
+import { motion, useReducedMotion } from "framer-motion";
+
 import type { TransparencyChunk } from "@/types";
 
 interface CitationBadgeProps {
@@ -17,7 +19,16 @@ interface CitationBadgeProps {
  * can't click to nowhere.
  */
 export function CitationBadge({ index, chunk, onClick }: CitationBadgeProps) {
+  const prefersReducedMotion = useReducedMotion();
   const isClickable = Boolean(chunk && onClick);
+
+  const motionInitial = prefersReducedMotion ? false : { opacity: 0, scale: 0.95 };
+  const motionAnimate = prefersReducedMotion
+    ? { opacity: 1, scale: 1 }
+    : { opacity: 1, scale: [0.95, 1.05, 1] as number[] };
+  const motionTransition = prefersReducedMotion
+    ? { duration: 0 }
+    : { duration: 0.6, ease: "easeOut" };
 
   function handleClick(e: React.MouseEvent<HTMLButtonElement>) {
     // Stop propagation so the badge click doesn't also trigger the
@@ -36,23 +47,29 @@ export function CitationBadge({ index, chunk, onClick }: CitationBadgeProps) {
 
   if (!isClickable) {
     return (
-      <span
+      <motion.span
+        initial={motionInitial}
+        animate={motionAnimate}
+        transition={motionTransition}
         className={`${baseClasses} bg-surface-container-high text-on-surface-variant opacity-40 cursor-not-allowed`}
         title="Citation target missing"
       >
         F#{index}
-      </span>
+      </motion.span>
     );
   }
 
   return (
-    <button
+    <motion.button
+      initial={motionInitial}
+      animate={motionAnimate}
+      transition={motionTransition}
       type="button"
       onClick={handleClick}
       className={`${baseClasses} bg-surface-container-high text-on-surface hover:bg-secondary hover:text-white`}
       title={chunk ? `${chunk.sourceName} · ${chunk.similarityScore.toFixed(2)}` : ""}
     >
       F#{index}
-    </button>
+    </motion.button>
   );
 }
