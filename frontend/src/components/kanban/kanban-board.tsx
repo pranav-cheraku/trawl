@@ -9,6 +9,7 @@ interface Props {
   totalsByStatus?: Record<SpecStatus, number>;
   isFilterActive?: boolean;
   dragActive?: boolean;
+  cascadeIds?: Set<string>;
 }
 
 const COLUMNS: { status: SpecStatus; label: string }[] = [
@@ -24,6 +25,7 @@ export default function KanbanBoard({
   totalsByStatus,
   isFilterActive,
   dragActive,
+  cascadeIds,
 }: Props) {
   return (
     <div
@@ -42,6 +44,7 @@ export default function KanbanBoard({
           totalCount={totalsByStatus?.[status]}
           isFilterActive={isFilterActive}
           dragActive={dragActive}
+          cascadeIds={cascadeIds}
         />
       ))}
     </div>

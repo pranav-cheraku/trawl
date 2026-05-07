@@ -25,6 +25,7 @@ interface Props {
   /** True when ANY card on the board is currently being dragged. Drives the
    *  "+" hint in empty columns and brightens the column body for legibility. */
   dragActive?: boolean;
+  cascadeIds?: Set<string>;
 }
 
 export default function KanbanColumn({
@@ -37,6 +38,7 @@ export default function KanbanColumn({
   totalCount,
   isFilterActive,
   dragActive,
+  cascadeIds,
 }: Props) {
   const prefersReducedMotion = useReducedMotion();
   const paddedIndex = String(index).padStart(2, "0");
@@ -122,12 +124,13 @@ export default function KanbanColumn({
               )}
             </div>
           ) : (
-            specs.map((spec) => (
+            specs.map((spec, idx) => (
               <SortableSpecCard
                 key={spec.id}
                 spec={spec}
                 onClick={onCardClick}
                 disabled={isFilterActive}
+                cascadeFromIndex={cascadeIds?.has(spec.id) ? idx : undefined}
               />
             ))
           )}

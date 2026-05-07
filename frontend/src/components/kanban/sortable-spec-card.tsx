@@ -1,10 +1,11 @@
+// frontend/src/components/kanban/sortable-spec-card.tsx
 "use client";
 
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { motion, useReducedMotion } from "framer-motion";
 
-import { springs } from "@/lib/motion";
+import { springs, staggers } from "@/lib/motion";
 import type { Spec } from "@/types";
 
 import SpecCard from "./spec-card";
@@ -13,12 +14,21 @@ interface Props {
   spec: Spec;
   onClick?: (spec: Spec) => void;
   disabled?: boolean;
+  /** When set (a non-negative integer), the card animates in with a staggered
+   *  delay computed as `cascadeFromIndex * staggers.cards` seconds. Used by
+   *  the parent to flag newly-generated specs (post `generateSpecs` poll). */
+  cascadeFromIndex?: number;
 }
 
 const TILT_DEGREES = 1.5;
-const TILT_SCALE_MAX_PX = 80; // tilt is at full ±TILT_DEGREES once vertical drag delta exceeds this
+const TILT_SCALE_MAX_PX = 80;
 
-export default function SortableSpecCard({ spec, onClick, disabled }: Props) {
+export default function SortableSpecCard({
+  spec,
+  onClick,
+  disabled,
+  cascadeFromIndex,
+}: Props) {
   const prefersReducedMotion = useReducedMotion();
   const {
     attributes,
@@ -29,14 +39,11 @@ export default function SortableSpecCard({ spec, onClick, disabled }: Props) {
     isDragging,
   } = useSortable({ id: spec.id, disabled });
 
-  // Compute tilt from vertical drag delta.
-  // -y means dragging up — tilt forward (negative degrees).
   const dy = transform?.y ?? 0;
   const tiltDeg = isDragging
     ? -Math.max(-1, Math.min(1, dy / TILT_SCALE_MAX_PX)) * TILT_DEGREES
     : 0;
 
-  // Compose transform: dnd-kit's translate + our visual lift + scale + tilt.
   const dndTransform = CSS.Transform.toString(transform);
   const visualTransform =
     isDragging && !prefersReducedMotion
@@ -54,11 +61,32 @@ export default function SortableSpecCard({ spec, onClick, disabled }: Props) {
     transformOrigin: "center center",
   };
 
+  const isCascading = typeof cascadeFromIndex === "number";
+  const cascadeDelay = isCascading
+    ? (cascadeFromIndex ?? 0) * staggers.cards
+    : 0;
+
   return (
     <motion.div
       ref={setNodeRef}
       layout
-      transition={{ ...springs.gentle }}
+      initial={
+        prefersReducedMotion
+          ? false
+          : isCascading
+          ? { opacity: 0, y: 12, scale: 0.96 }
+          : undefined
+      }
+      animate={
+        isCascading
+          ? { opacity: 1, y: 0, scale: 1 }
+          : undefined
+      }
+      transition={
+        isCascading
+          ? { ...springs.bouncy, delay: cascadeDelay }
+          : { ...springs.gentle }
+      }
       style={style}
       {...attributes}
       {...listeners}

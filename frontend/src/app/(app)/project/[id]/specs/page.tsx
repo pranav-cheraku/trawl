@@ -28,6 +28,7 @@ import {
 import type { Source, Spec, SpecStatus, SpecType, TaskStatus } from "@/types";
 import { SourceScopeMenu } from "@/components/sources/source-scope-menu";
 import { useSourceScope } from "@/lib/use-source-scope";
+import { useSpecCascade } from "@/lib/use-spec-cascade";
 import KanbanBoard from "@/components/kanban/kanban-board";
 import SpecCard from "@/components/kanban/spec-card";
 import SpecDetailModal from "@/components/kanban/spec-detail-modal";
@@ -61,6 +62,8 @@ export default function SpecsPage() {
   const projectId = params.id as string;
 
   const [specs, setSpecs] = useState<Spec[] | null>(null);
+  const specIds = useMemo(() => (specs ?? []).map((s) => s.id), [specs]);
+  const cascadeIds = useSpecCascade(specIds);
   const [selectedSpec, setSelectedSpec] = useState<Spec | null>(null);
   const [sources, setSources] = useState<Source[]>([]);
   const sourceScope = useSourceScope(projectId, "specs");
@@ -553,6 +556,7 @@ export default function SpecsPage() {
             isFilterActive={isFilterActive}
             dragActive={dragActive}
             onCardClick={handleCardClick}
+            cascadeIds={cascadeIds}
           />
           <DragOverlay>
             {activeSpec ? (
