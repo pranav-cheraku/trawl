@@ -1,16 +1,16 @@
 "use client";
 
 import { useState } from "react";
+import { motion, useReducedMotion } from "framer-motion";
 import { createProject } from "@/lib/api";
+import { springs } from "@/lib/motion";
 
 interface NewProjectModalProps {
-  isOpen: boolean;
   onClose: () => void;
   onCreated: () => void;
 }
 
 export default function NewProjectModal({
-  isOpen,
   onClose,
   onCreated,
 }: NewProjectModalProps) {
@@ -18,8 +18,7 @@ export default function NewProjectModal({
   const [description, setDescription] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  if (!isOpen) return null;
+  const prefersReducedMotion = useReducedMotion();
 
   function resetForm() {
     setName("");
@@ -66,7 +65,11 @@ export default function NewProjectModal({
       onClick={handleClose}
     >
       {/* Modal panel — frosted glass */}
-      <div
+      <motion.div
+        initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.96 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.96 }}
+        transition={prefersReducedMotion ? { duration: 0.15 } : { ...springs.bouncy }}
         className="relative w-full max-w-md rounded-[4px] bg-surface-container-lowest/85 shadow-[0_8px_24px_rgba(15,23,42,0.04)] backdrop-blur-[12px]"
         onClick={(e) => e.stopPropagation()}
       >
@@ -224,7 +227,7 @@ export default function NewProjectModal({
             </button>
           </div>
         </form>
-      </div>
+      </motion.div>
     </div>
   );
 }

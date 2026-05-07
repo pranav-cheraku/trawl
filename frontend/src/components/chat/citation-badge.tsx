@@ -1,7 +1,9 @@
 "use client";
 
+import { useRef } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 
+import { useCitationLink } from "@/lib/citation-link-context";
 import type { TransparencyChunk } from "@/types";
 
 interface CitationBadgeProps {
@@ -21,6 +23,8 @@ interface CitationBadgeProps {
 export function CitationBadge({ index, chunk, onClick }: CitationBadgeProps) {
   const prefersReducedMotion = useReducedMotion();
   const isClickable = Boolean(chunk && onClick);
+  const { setHoveredCitation, getChunkRect } = useCitationLink();
+  const buttonRef = useRef<HTMLButtonElement>(null);
 
   const motionInitial = prefersReducedMotion ? false : { opacity: 0, scale: 0.95 };
   const motionAnimate = prefersReducedMotion
@@ -39,6 +43,23 @@ export function CitationBadge({ index, chunk, onClick }: CitationBadgeProps) {
     if (chunk && onClick) {
       onClick(chunk.chunkId);
     }
+  }
+
+  function handleMouseEnter() {
+    if (!buttonRef.current) return;
+    if (!chunk) return; // disabled badge — no chunk to link to
+    const chunkRect = getChunkRect(chunk.chunkId);
+    if (!chunkRect) return; // chunk not registered (e.g., chat variant not mounted)
+    const badgeRect = buttonRef.current.getBoundingClientRect();
+    setHoveredCitation({
+      key: chunk.chunkId,
+      badgeRect,
+      chunkRect,
+    });
+  }
+
+  function handleMouseLeave() {
+    setHoveredCitation(null);
   }
 
   const baseClasses =
@@ -61,11 +82,14 @@ export function CitationBadge({ index, chunk, onClick }: CitationBadgeProps) {
 
   return (
     <motion.button
+      ref={buttonRef}
       initial={motionInitial}
       animate={motionAnimate}
       transition={motionTransition}
       type="button"
       onClick={handleClick}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
       className={`${baseClasses} bg-surface-container-high text-on-surface hover:bg-secondary hover:text-white`}
       title={chunk ? `${chunk.sourceName} · ${chunk.similarityScore.toFixed(2)}` : ""}
     >

@@ -2,10 +2,12 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { listProjects, deleteProject } from "@/lib/api";
 import type { Project } from "@/types";
 import NewProjectModal from "@/components/new-project-modal";
 import InlineConfirm from "@/components/ui/inline-confirm";
+import { durations, easings, staggers } from "@/lib/motion";
 
 function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString("en-US", {
@@ -146,6 +148,7 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const prefersReducedMotion = useReducedMotion();
 
   const fetchProjects = useCallback(async () => {
     setIsLoading(true);
@@ -270,12 +273,23 @@ export default function DashboardPage() {
           {/* Project grid */}
           {!isLoading && !error && projects.length > 0 && (
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
-              {projects.map((project) => (
-                <ProjectCard
+              {projects.map((project, idx) => (
+                <motion.div
                   key={project.id}
-                  project={project}
-                  onDelete={handleProjectDeleted}
-                />
+                  initial={prefersReducedMotion ? false : { opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{
+                    duration: durations.normal,
+                    ease: easings.standard,
+                    delay: Math.min(idx * staggers.list, 0.6),
+                  }}
+                  whileHover={prefersReducedMotion ? undefined : { scale: 1.01 }}
+                >
+                  <ProjectCard
+                    project={project}
+                    onDelete={handleProjectDeleted}
+                  />
+                </motion.div>
               ))}
             </div>
           )}
@@ -283,11 +297,14 @@ export default function DashboardPage() {
       </div>
 
       {/* New Project Modal */}
-      <NewProjectModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onCreated={handleProjectCreated}
-      />
+      <AnimatePresence>
+        {isModalOpen ? (
+          <NewProjectModal
+            onClose={() => setIsModalOpen(false)}
+            onCreated={handleProjectCreated}
+          />
+        ) : null}
+      </AnimatePresence>
     </>
   );
 }

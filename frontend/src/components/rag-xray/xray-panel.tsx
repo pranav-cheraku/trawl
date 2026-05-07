@@ -148,6 +148,7 @@ export function XrayPanel(props: XrayPanelProps) {
         detailChunk={detailChunk}
         closeDetail={() => setDetailChunk(null)}
         projectId={projectId}
+        registerInCitationLinkContext
       />
     );
   }
@@ -234,6 +235,10 @@ interface PanelShellProps {
   detailChunk: TransparencyChunk | null;
   closeDetail: () => void;
   projectId: string;
+  /** When true, each ChunkCard registers its bounding-rect into the
+   *  CitationLinkContext so chat citation badge hovers can draw a guide-line.
+   *  Pass only for the chat variant. */
+  registerInCitationLinkContext?: boolean;
 }
 
 function PanelShell({
@@ -246,6 +251,7 @@ function PanelShell({
   detailChunk,
   closeDetail,
   projectId,
+  registerInCitationLinkContext,
 }: PanelShellProps) {
   return (
     <>
@@ -273,6 +279,7 @@ function PanelShell({
                   chunk={chunk}
                   isHighlighted={highlightedChunkId === chunk.chunkId}
                   onClick={onChunkClick}
+                  registerInCitationLinkContext={registerInCitationLinkContext}
                   ref={(node) => {
                     if (node) {
                       cardRefs.current.set(chunk.chunkId, node);

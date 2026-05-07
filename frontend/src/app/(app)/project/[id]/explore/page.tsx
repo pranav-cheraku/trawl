@@ -5,11 +5,13 @@ import { useParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ChatInput, type ChatInputHandle } from "@/components/chat/chat-input";
+import { CitationLinkOverlay } from "@/components/chat/citation-link-overlay";
 import { ConversationRail } from "@/components/chat/conversation-rail";
 import { EmptyState } from "@/components/chat/empty-state";
 import { MessageList } from "@/components/chat/message-list";
 import { XrayPanel } from "@/components/rag-xray/xray-panel";
 import { SourceScopeMenu } from "@/components/sources/source-scope-menu";
+import { CitationLinkProvider } from "@/lib/citation-link-context";
 import {
   createConversation,
   deleteConversation,
@@ -394,6 +396,7 @@ export default function ExplorePage() {
   );
 
   return (
+    <CitationLinkProvider>
     <div className="flex h-[calc(100vh-12rem)] flex-col gap-3">
       {errorMessage && (
         <div className="flex items-center justify-between gap-3 rounded-[4px] bg-error/10 px-4 py-3 text-[13px] text-error">
@@ -596,6 +599,8 @@ export default function ExplorePage() {
         </div>
       )}
     </div>
+    <CitationLinkOverlay />
+    </CitationLinkProvider>
   );
 }
 
