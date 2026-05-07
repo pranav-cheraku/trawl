@@ -12,7 +12,7 @@ import SpecCard from "./spec-card";
 
 interface Props {
   spec: Spec;
-  onClick?: (spec: Spec) => void;
+  onClick?: (spec: Spec, originRect?: DOMRect) => void;
   disabled?: boolean;
   /** When set (a non-negative integer), the card animates in with a staggered
    *  delay computed as `cascadeFromIndex * staggers.cards` seconds. Used by

@@ -5,7 +5,7 @@ import KanbanColumn from "./kanban-column";
 
 interface Props {
   grouped: Record<SpecStatus, Spec[]>;
-  onCardClick?: (spec: Spec) => void;
+  onCardClick?: (spec: Spec, originRect?: DOMRect) => void;
   totalsByStatus?: Record<SpecStatus, number>;
   isFilterActive?: boolean;
   dragActive?: boolean;

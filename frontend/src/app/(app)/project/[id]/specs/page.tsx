@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "next/navigation";
+import { AnimatePresence } from "framer-motion";
 import {
   DndContext,
   DragOverlay,
@@ -65,6 +66,7 @@ export default function SpecsPage() {
   const specIds = useMemo(() => (specs ?? []).map((s) => s.id), [specs]);
   const cascadeIds = useSpecCascade(specIds);
   const [selectedSpec, setSelectedSpec] = useState<Spec | null>(null);
+  const [modalOriginRect, setModalOriginRect] = useState<DOMRect | null>(null);
   const [sources, setSources] = useState<Source[]>([]);
   const sourceScope = useSourceScope(projectId, "specs");
   const [isLoading, setIsLoading] = useState(true);
@@ -273,8 +275,9 @@ export default function SpecsPage() {
     [generatingType, projectId, pollTask, activeIds]
   );
 
-  const handleCardClick = useCallback((spec: Spec) => {
+  const handleCardClick = useCallback((spec: Spec, originRect?: DOMRect) => {
     setSelectedSpec(spec);
+    setModalOriginRect(originRect ?? null);
   }, []);
 
   const handleSpecUpdated = useCallback((updated: Spec) => {
@@ -571,15 +574,21 @@ export default function SpecsPage() {
         />
       )}
     </div>
-    {selectedSpec ? (
-      <SpecDetailModal
-        spec={selectedSpec}
-        projectId={projectId}
-        onClose={() => setSelectedSpec(null)}
-        onSpecUpdated={handleSpecUpdated}
-        onSpecDeleted={handleSpecDeleted}
-      />
-    ) : null}
+    <AnimatePresence>
+      {selectedSpec ? (
+        <SpecDetailModal
+          spec={selectedSpec}
+          projectId={projectId}
+          originRect={modalOriginRect}
+          onClose={() => {
+            setSelectedSpec(null);
+            setModalOriginRect(null);
+          }}
+          onSpecUpdated={handleSpecUpdated}
+          onSpecDeleted={handleSpecDeleted}
+        />
+      ) : null}
+    </AnimatePresence>
     </>
   );
 }

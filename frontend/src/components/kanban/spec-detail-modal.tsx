@@ -1,6 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { motion, useReducedMotion } from "framer-motion";
+
+import { springs } from "@/lib/motion";
 
 import EditableText from "@/components/kanban/editable-text";
 import EditableTextArea from "@/components/kanban/editable-textarea";
@@ -21,6 +24,7 @@ import type {
 interface SpecDetailModalProps {
   spec: Spec;
   projectId: string;
+  originRect?: DOMRect | null;
   onClose: () => void;
   onSpecUpdated: (next: Spec) => void;
   onSpecDeleted: (specId: string) => void;
@@ -37,11 +41,33 @@ function formatTs(iso: string): string {
 export default function SpecDetailModal({
   spec,
   projectId,
+  originRect,
   onClose,
   onSpecUpdated,
   onSpecDeleted,
 }: SpecDetailModalProps) {
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const prefersReducedMotion = useReducedMotion();
+
+  const fromTransform = useMemo(() => {
+    if (!originRect || prefersReducedMotion) return null;
+    if (typeof window === "undefined") return null;
+    const targetCenterX = window.innerWidth / 2;
+    const targetCenterY = window.innerHeight / 2;
+    const fromCenterX = originRect.left + originRect.width / 2;
+    const fromCenterY = originRect.top + originRect.height / 2;
+    // Match the panel's rendered size: w-[95vw] max-w-[1200px] / h-[90vh]
+    const modalWidth = Math.min(window.innerWidth * 0.95, 1200);
+    const modalHeight = window.innerHeight * 0.9;
+    const cardScaleX = originRect.width / modalWidth;
+    const cardScaleY = originRect.height / modalHeight;
+    return {
+      x: fromCenterX - targetCenterX,
+      y: fromCenterY - targetCenterY,
+      scaleX: cardScaleX,
+      scaleY: cardScaleY,
+    };
+  }, [originRect, prefersReducedMotion]);
 
   const [specSources, setSpecSources] = useState<SpecSources | null>(null);
   const [sourcesError, setSourcesError] = useState<string | null>(null);
@@ -190,10 +216,26 @@ export default function SpecDetailModal({
       />
 
       {/* Frame */}
-      <div
+      <motion.div
         role="dialog"
         aria-modal="true"
         aria-labelledby="spec-modal-title"
+        initial={
+          prefersReducedMotion
+            ? { opacity: 0 }
+            : fromTransform
+            ? { ...fromTransform, opacity: 0 }
+            : { opacity: 0, scale: 0.96 }
+        }
+        animate={{ x: 0, y: 0, scaleX: 1, scaleY: 1, opacity: 1 }}
+        exit={
+          prefersReducedMotion
+            ? { opacity: 0 }
+            : fromTransform
+            ? { ...fromTransform, opacity: 0 }
+            : { opacity: 0, scale: 0.96 }
+        }
+        transition={prefersReducedMotion ? { duration: 0.15 } : { ...springs.bouncy }}
         className="relative flex h-[90vh] w-[95vw] max-w-[1200px] flex-col overflow-hidden rounded-[4px] bg-surface-container-lowest"
       >
         {/* Header (spans both panes) */}
@@ -412,7 +454,7 @@ export default function SpecDetailModal({
             )}
           </div>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }

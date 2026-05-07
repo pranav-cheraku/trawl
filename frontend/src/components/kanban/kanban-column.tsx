@@ -18,7 +18,7 @@ interface Props {
   status: SpecStatus;
   label: string;
   specs: Spec[];
-  onCardClick?: (spec: Spec) => void;
+  onCardClick?: (spec: Spec, originRect?: DOMRect) => void;
   emptyState?: ReactNode;
   totalCount?: number;
   isFilterActive?: boolean;

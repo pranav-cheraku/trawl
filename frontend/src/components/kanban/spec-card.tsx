@@ -4,7 +4,7 @@ import type { Spec, SpecPriority } from "@/types";
 
 interface Props {
   spec: Spec;
-  onClick?: (spec: Spec) => void;
+  onClick?: (spec: Spec, originRect?: DOMRect) => void;
   isDragging?: boolean;
 }
 
@@ -44,7 +44,11 @@ export default function SpecCard({ spec, onClick, isDragging }: Props) {
   return (
     <button
       type="button"
-      onClick={() => onClick?.(spec)}
+      onClick={(e: React.MouseEvent<HTMLElement>) => {
+        if (!onClick) return;
+        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+        onClick(spec, rect);
+      }}
       aria-label={`Open spec ${spec.title}`}
       className={`group relative flex w-full flex-col gap-2.5 rounded-[4px] bg-surface-container-lowest p-3 pl-4 text-left transition-colors hover:bg-surface-container-high focus:outline-none focus:ring-2 focus:ring-secondary/30 ${
         isDragging ? "opacity-40" : ""
