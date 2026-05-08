@@ -50,11 +50,11 @@ function SkeletonCard() {
 function SkeletonRow() {
   return (
     <div
-      className="grid grid-cols-[1.6fr_1.4fr_120px_56px_28px] items-center gap-4 px-4 py-3 animate-pulse"
+      className="grid grid-cols-[minmax(0,1.6fr)_120px_56px_28px] items-center gap-4 px-4 py-3 animate-pulse sm:grid-cols-[minmax(0,1.6fr)_minmax(0,1.4fr)_120px_56px_28px]"
       style={{ boxShadow: "inset 0 -1px 0 rgba(15,23,42,0.04)" }}
     >
       <div className="h-3.5 w-3/5 rounded-[2px] bg-surface-container" />
-      <div className="h-3 w-4/5 rounded-[2px] bg-surface-container" />
+      <div className="hidden h-3 w-4/5 rounded-[2px] bg-surface-container sm:block" />
       <div className="h-3 w-16 justify-self-end rounded-[2px] bg-surface-container" />
       <div />
       <div className="h-3.5 w-3.5 justify-self-end rounded-[2px] bg-surface-container" />

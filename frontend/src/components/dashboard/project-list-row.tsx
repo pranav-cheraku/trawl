@@ -55,7 +55,7 @@ export default function ProjectListRow({
       aria-label={`Open project ${project.name}`}
     >
       <div
-        className="grid grid-cols-[1.6fr_1.4fr_120px_56px_28px] items-center gap-4 px-4 py-3"
+        className="grid grid-cols-[minmax(0,1.6fr)_120px_56px_28px] items-center gap-4 px-4 py-3 sm:grid-cols-[minmax(0,1.6fr)_minmax(0,1.4fr)_120px_56px_28px]"
         style={{ boxShadow: "inset 0 -1px 0 rgba(15,23,42,0.04)" }}
       >
         {/* Name */}
@@ -63,8 +63,8 @@ export default function ProjectListRow({
           {project.name}
         </div>
 
-        {/* Description */}
-        <div className="truncate text-[12px] text-on-surface-variant">
+        {/* Description (hidden at <sm to save horizontal space) */}
+        <div className="hidden truncate text-[12px] text-on-surface-variant sm:block">
           {project.description ?? (
             <span className="italic text-on-surface-variant/50">
               No description
