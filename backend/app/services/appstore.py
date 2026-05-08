@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import asyncio
 import logging
+from typing import cast
 
 import httpx
 
@@ -134,3 +136,76 @@ def _get_next_page_url(feed: dict) -> str | None:
                 href = href.replace("/xml", "/json")
             return href
     return None
+
+
+# Default storefronts: 5 English-speaking markets that share Voyage/Claude
+# language compatibility for the RAG pipeline. Apple uses globally-unique
+# review IDs across countries, so dedup by external_id is byte-clean.
+DEFAULT_STOREFRONTS: list[str] = ["us", "gb", "ca", "au", "ie"]
+
+
+async def fetch_reviews_multi_country(
+    app_id: str,
+    countries: list[str] | None = None,
+) -> tuple[list[dict], list[str]]:
+    """Fetch App Store reviews from multiple country storefronts in parallel,
+    deduped by external_id.
+
+    Returns (reviews, succeeded_countries). The succeeded list is what should
+    be persisted to connector_config — countries that returned at least one
+    review without raising.
+
+    Per-country failures are logged and skipped. If ALL countries fail the
+    function raises RuntimeError so the caller can mark the source as errored.
+    """
+    selected = countries or DEFAULT_STOREFRONTS
+
+    raw_results = await asyncio.gather(
+        *(fetch_reviews(app_id, country) for country in selected),
+        return_exceptions=True,
+    )
+    results = cast("list[list[dict] | BaseException]", raw_results)
+
+    seen: set[str] = set()
+    merged: list[dict] = []
+    succeeded: list[str] = []
+    for country, result in zip(selected, results):
+        if isinstance(result, BaseException):
+            logger.warning(
+                "App Store storefront %s failed for app %s: %s",
+                country,
+                app_id,
+                result,
+            )
+            continue
+        reviews_list = cast("list[dict]", result)
+        country_added = 0
+        for review in reviews_list:
+            ext_id = review.get("external_id")
+            if not ext_id or ext_id in seen:
+                continue
+            seen.add(ext_id)
+            merged.append(review)
+            country_added += 1
+        if country_added > 0:
+            succeeded.append(country)
+            logger.info(
+                "App Store storefront %s contributed %d unique reviews for app %s",
+                country,
+                country_added,
+                app_id,
+            )
+
+    if not merged:
+        raise RuntimeError(
+            f"All {len(selected)} App Store storefronts failed for app {app_id}"
+        )
+
+    logger.info(
+        "Fetched %d unique reviews for app %s across %d storefronts (%s)",
+        len(merged),
+        app_id,
+        len(succeeded),
+        ", ".join(succeeded),
+    )
+    return merged, succeeded

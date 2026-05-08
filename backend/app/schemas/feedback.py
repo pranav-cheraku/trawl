@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
@@ -30,6 +31,58 @@ class AppStoreConnectRequest(BaseModel):
     country: str = Field(default="us", max_length=10)
 
 
+class ManualPasteRequest(BaseModel):
+    """Request body for creating a source from manually pasted text."""
+
+    title: str | None = None
+    content: str
+
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )
+
+
+class GooglePlaySearchResult(BaseModel):
+    """Response shape for a single Google Play app search result."""
+
+    package_name: str
+    track_name: str
+    artwork_url: str = ""
+    average_rating: float | None = None
+    rating_count: int = 0
+    genre: str = ""
+
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )
+
+
+class GooglePlayConnectRequest(BaseModel):
+    """Request body for connecting a Google Play source."""
+
+    package_name: str
+    app_name: str
+
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )
+
+
+class RedditConnectRequest(BaseModel):
+    """Request body for connecting a Reddit source (subreddit or keyword)."""
+
+    mode: Literal["subreddit", "keyword"]
+    value: str
+
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )
+
+
 class SourceResponse(BaseModel):
     """Response shape for a feedback source."""
 
@@ -43,6 +96,7 @@ class SourceResponse(BaseModel):
     app_store_id: str | None
     app_store_name: str | None
     app_store_country: str | None
+    connector_config: dict | None = None
     record_count: int
     status: str
     created_at: datetime

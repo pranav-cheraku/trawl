@@ -30,8 +30,9 @@ def ingest_appstore_source(self: object, source_id: str) -> None:
             session.commit()
 
             app_id = source.app_store_id or ""
-            country = source.app_store_country or "us"
-            reviews = asyncio.run(appstore.fetch_reviews(app_id, country))
+            reviews, succeeded_countries = asyncio.run(
+                appstore.fetch_reviews_multi_country(app_id)
+            )
 
             items = []
             for review in reviews:
@@ -51,6 +52,7 @@ def ingest_appstore_source(self: object, source_id: str) -> None:
             session.add_all(items)
             source.record_count = len(items)
             source.last_scraped_at = datetime.utcnow()
+            source.connector_config = {"countries": succeeded_countries}
             source.status = "chunking"
             session.commit()
 
@@ -206,3 +208,163 @@ def embed_source(self: object, source_id: str) -> None:
             if source is not None:
                 source.status = "error"
                 session.commit()
+
+
+@celery_app.task(bind=True, max_retries=2)  # type: ignore[misc]
+def ingest_manual_task(self: object, source_id: str, items: list) -> None:
+    """Persist parsed manual-paste items as feedback_items, then chain to chunk.
+
+    `items` is the output of services.manual_parser.parse_paste() — a list of
+    {content, external_id} dicts already split client-side at the route layer.
+    """
+    with SyncSessionLocal() as session:
+        try:
+            source = session.get(FeedbackSource, uuid.UUID(source_id))
+            if source is None:
+                logger.error("ingest_manual_task: source %s not found", source_id)
+                return
+
+            source.status = "ingesting"
+            session.add(source)
+            session.commit()
+
+            feedback_items = []
+            for item in items:
+                fi = FeedbackItem(
+                    source_id=source.id,
+                    project_id=source.project_id,
+                    content=item["content"],
+                    item_metadata={},
+                    external_id=item.get("external_id"),
+                )
+                feedback_items.append(fi)
+
+            session.add_all(feedback_items)
+            source.record_count = len(items)
+            source.status = "chunking"
+            session.add(source)
+            session.commit()
+
+        except Exception:
+            logger.exception("ingest_manual_task failed for source %s", source_id)
+            session.rollback()
+            source = session.get(FeedbackSource, uuid.UUID(source_id))
+            if source is not None:
+                source.status = "error"
+                session.commit()
+            return
+
+    chunk_source.delay(source_id)
+
+
+@celery_app.task(bind=True, max_retries=2)  # type: ignore[misc]
+def ingest_google_play_task(self: object, source_id: str, package_name: str) -> None:
+    """Fetch Google Play reviews for `package_name` and persist as feedback_items."""
+    from app.services import google_play  # local import to avoid eager-load cost
+
+    with SyncSessionLocal() as db:
+        try:
+            source = db.get(FeedbackSource, uuid.UUID(source_id))
+            if source is None:
+                logger.error(
+                    "ingest_google_play_task: source %s not found", source_id
+                )
+                return
+            source.status = "ingesting"
+            db.add(source)
+            db.commit()
+
+            reviews_data = asyncio.run(google_play.fetch_reviews(package_name))
+
+            for r in reviews_data:
+                fi = FeedbackItem(
+                    source_id=source.id,
+                    project_id=source.project_id,
+                    content=r["content"],
+                    item_metadata={
+                        "rating": r["rating"],
+                        "author": r["author"],
+                    },
+                    external_id=r["external_id"],
+                )
+                db.add(fi)
+            source.record_count = len(reviews_data)
+            source.status = "chunking"
+            db.add(source)
+            db.commit()
+        except Exception:
+            db.rollback()
+            logger.exception(
+                "ingest_google_play_task failed for source %s", source_id
+            )
+            src = db.get(FeedbackSource, uuid.UUID(source_id))
+            if src is not None:
+                src.status = "error"
+                db.add(src)
+                db.commit()
+            raise
+
+    chunk_source.delay(source_id)
+
+
+@celery_app.task(bind=True, max_retries=2)  # type: ignore[misc]
+def ingest_reddit_task(
+    self: object,
+    source_id: str,
+    mode: str,
+    value: str,
+) -> None:
+    """Fetch Reddit posts + comments and persist as feedback_items."""
+    from app.services import reddit  # local import
+
+    with SyncSessionLocal() as db:
+        try:
+            source = db.get(FeedbackSource, uuid.UUID(source_id))
+            if source is None:
+                logger.error(
+                    "ingest_reddit_task: source %s not found", source_id
+                )
+                return
+            source.status = "ingesting"
+            db.add(source)
+            db.commit()
+
+            if mode == "subreddit":
+                items = asyncio.run(reddit.fetch_subreddit(value))
+            elif mode == "keyword":
+                items = asyncio.run(reddit.fetch_keyword_search(value))
+            else:
+                raise ValueError(f"Unknown Reddit mode: {mode}")
+
+            for r in items:
+                metadata: dict = {
+                    "rating": r.get("rating", 0),
+                    "author": r.get("author", ""),
+                }
+                if r.get("title"):
+                    metadata["title"] = r["title"]
+                fi = FeedbackItem(
+                    source_id=source.id,
+                    project_id=source.project_id,
+                    content=r["content"],
+                    item_metadata=metadata,
+                    external_id=r.get("external_id"),
+                )
+                db.add(fi)
+            source.record_count = len(items)
+            source.status = "chunking"
+            db.add(source)
+            db.commit()
+        except Exception:
+            db.rollback()
+            logger.exception(
+                "ingest_reddit_task failed for source %s", source_id
+            )
+            src = db.get(FeedbackSource, uuid.UUID(source_id))
+            if src is not None:
+                src.status = "error"
+                db.add(src)
+                db.commit()
+            raise
+
+    chunk_source.delay(source_id)
