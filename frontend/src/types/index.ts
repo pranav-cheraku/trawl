@@ -17,10 +17,17 @@ export interface AppSearchResult {
   genre: string;
 }
 
+export type SourceType =
+  | "app_store"
+  | "google_play"
+  | "reddit"
+  | "csv"
+  | "manual";
+
 /** Feedback source from GET /api/projects/{id}/sources. */
 export interface Source {
   id: string;
-  sourceType: string;
+  sourceType: SourceType;
   filename: string | null;
   appStoreId: string | null;
   appStoreName: string | null;
@@ -28,6 +35,12 @@ export interface Source {
   recordCount: number;
   status: string;
   createdAt: string;
+  /**
+   * Per-type connector metadata. App Store sources still use the legacy
+   * `appStoreId/Name/Country` columns; new source types (google_play, reddit,
+   * manual) populate this JSONB blob. Shape varies by sourceType.
+   */
+  connectorConfig: Record<string, unknown> | null;
 }
 
 /** Single feedback item from GET /api/projects/{id}/sources/{id}/items. */

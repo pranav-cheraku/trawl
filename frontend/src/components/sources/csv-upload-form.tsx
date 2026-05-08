@@ -4,11 +4,7 @@ import { useCallback, useRef, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { uploadCsv } from "@/lib/api";
 import { springs } from "@/lib/motion";
-
-interface Props {
-  projectId: string;
-  onSourceCreated: () => void;
-}
+import type { ConnectorFormProps } from "@/lib/connector-registry";
 
 interface CsvPreview {
   columns: string[];
@@ -51,7 +47,10 @@ function parseCsvPreview(text: string): CsvPreview {
   return { columns, rows };
 }
 
-export default function CsvUpload({ projectId, onSourceCreated }: Props) {
+export default function CsvUploadForm({
+  projectId,
+  onSourceCreated,
+}: ConnectorFormProps) {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<CsvPreview | null>(null);
   const [contentColumn, setContentColumn] = useState("");
@@ -60,7 +59,6 @@ export default function CsvUpload({ projectId, onSourceCreated }: Props) {
   const [isDragOver, setIsDragOver] = useState(false);
 
   const prefersReducedMotion = useReducedMotion();
-
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleFile = useCallback((f: File) => {
@@ -72,9 +70,8 @@ export default function CsvUpload({ projectId, onSourceCreated }: Props) {
       const parsed = parseCsvPreview(text);
       setPreview(parsed);
       if (parsed.columns.length > 0) {
-        // Auto-select "content" column if it exists, else first column
         const contentIdx = parsed.columns.findIndex(
-          (c) => c.toLowerCase() === "content"
+          (c) => c.toLowerCase() === "content",
         );
         setContentColumn(parsed.columns[contentIdx >= 0 ? contentIdx : 0]);
       }
@@ -93,7 +90,7 @@ export default function CsvUpload({ projectId, onSourceCreated }: Props) {
         setError("Please drop a .csv file");
       }
     },
-    [handleFile]
+    [handleFile],
   );
 
   const handleInputChange = useCallback(
@@ -101,7 +98,7 @@ export default function CsvUpload({ projectId, onSourceCreated }: Props) {
       const f = e.target.files?.[0];
       if (f) handleFile(f);
     },
-    [handleFile]
+    [handleFile],
   );
 
   const handleUpload = useCallback(async () => {
@@ -131,14 +128,8 @@ export default function CsvUpload({ projectId, onSourceCreated }: Props) {
   }, []);
 
   return (
-    <div className="flex flex-col rounded-[4px] bg-surface-container-lowest p-6">
-      {/* Section label */}
-      <span className="font-mono text-[11px] font-medium uppercase tracking-[0.2em] text-on-surface-variant">
-        Upload a File
-      </span>
-
+    <div className="flex flex-col">
       {!preview ? (
-        /* Drop zone */
         <motion.div
           onDragOver={(e) => {
             e.preventDefault();
@@ -147,7 +138,7 @@ export default function CsvUpload({ projectId, onSourceCreated }: Props) {
           onDragLeave={() => setIsDragOver(false)}
           onDrop={handleDrop}
           onClick={() => inputRef.current?.click()}
-          className={`mt-3 flex cursor-pointer flex-col items-center justify-center rounded-[4px] border border-dashed px-4 py-8 transition-colors ${
+          className={`flex cursor-pointer flex-col items-center justify-center rounded-[4px] border border-dashed px-4 py-8 transition-colors ${
             isDragOver
               ? "border-secondary bg-surface-container-high"
               : "border-outline-variant bg-surface-container-low"
@@ -187,9 +178,7 @@ export default function CsvUpload({ projectId, onSourceCreated }: Props) {
           />
         </motion.div>
       ) : (
-        /* Preview + column mapping */
-        <div className="mt-3 space-y-3">
-          {/* File info */}
+        <div className="space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <svg
@@ -217,7 +206,6 @@ export default function CsvUpload({ projectId, onSourceCreated }: Props) {
             </button>
           </div>
 
-          {/* Preview table */}
           <div className="overflow-x-auto rounded-[4px] bg-surface-container-low">
             <table className="w-full text-left">
               <thead>
@@ -257,7 +245,6 @@ export default function CsvUpload({ projectId, onSourceCreated }: Props) {
             </table>
           </div>
 
-          {/* Column selector */}
           <div className="flex items-center gap-2">
             <label className="text-[12px] text-on-surface-variant">
               Content column:
@@ -275,7 +262,6 @@ export default function CsvUpload({ projectId, onSourceCreated }: Props) {
             </select>
           </div>
 
-          {/* Upload button */}
           <button
             onClick={handleUpload}
             disabled={isUploading || !contentColumn}
@@ -307,7 +293,6 @@ export default function CsvUpload({ projectId, onSourceCreated }: Props) {
         </div>
       )}
 
-      {/* Error */}
       {error && (
         <p className="mt-2 text-[12px] text-error" role="alert">
           {error}

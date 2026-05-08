@@ -4,6 +4,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { deleteSource, getSource, listSources } from "@/lib/api";
 import { durations, easings, staggers } from "@/lib/motion";
+import {
+  getSourceTypeIcon,
+  getSourceTypeLabel,
+  getSourceDedupeKey,
+  getSourceBaseName,
+} from "@/lib/source-display";
 import type { Source } from "@/types";
 import InlineConfirm from "@/components/ui/inline-confirm";
 import FeedbackItemPanel from "./feedback-item-panel";
@@ -50,40 +56,6 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-function SourceTypeIcon({ sourceType }: { sourceType: string }) {
-  if (sourceType === "app_store") {
-    return (
-      <svg
-        className="h-4 w-4 text-on-surface-variant"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        strokeWidth={1.5}
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M10.5 1.5H8.25A2.25 2.25 0 0 0 6 3.75v16.5a2.25 2.25 0 0 0 2.25 2.25h7.5A2.25 2.25 0 0 0 18 20.25V3.75a2.25 2.25 0 0 0-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3"
-        />
-      </svg>
-    );
-  }
-  return (
-    <svg
-      className="h-4 w-4 text-on-surface-variant"
-      fill="none"
-      viewBox="0 0 24 24"
-      stroke="currentColor"
-      strokeWidth={1.5}
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"
-      />
-    </svg>
-  );
-}
 
 export default function SourceList({ projectId, refreshKey }: Props) {
   const prefersReducedMotion = useReducedMotion();
@@ -187,38 +159,24 @@ export default function SourceList({ projectId, refreshKey }: Props) {
   // has been added more than once.
   const displayNames = useMemo(() => {
     const sorted = [...sources].sort((a, b) =>
-      a.createdAt.localeCompare(b.createdAt)
+      a.createdAt.localeCompare(b.createdAt),
     );
 
-    // Count totals per (type, key) so we can tell whether a suffix is needed.
     const totals = new Map<string, number>();
-    const keyFor = (s: Source): string => {
-      if (s.sourceType === "app_store") {
-        return `appstore::${s.appStoreName ?? s.appStoreId ?? ""}`;
-      }
-      return `csv::${s.filename ?? "CSV Upload"}`;
-    };
     for (const s of sorted) {
-      const k = keyFor(s);
+      const k = getSourceDedupeKey(s);
       totals.set(k, (totals.get(k) ?? 0) + 1);
     }
 
     const seen = new Map<string, number>();
     const result = new Map<string, string>();
     for (const s of sorted) {
-      const k = keyFor(s);
+      const k = getSourceDedupeKey(s);
       const index = (seen.get(k) ?? 0) + 1;
       seen.set(k, index);
       const total = totals.get(k) ?? 1;
       const suffix = total > 1 ? ` (${index})` : "";
-
-      if (s.sourceType === "app_store") {
-        const label = s.appStoreName ?? `#${s.appStoreId}`;
-        result.set(s.id, `App Store - ${label}${suffix}`);
-      } else {
-        const label = s.filename ?? "CSV Upload";
-        result.set(s.id, `${label}${suffix}`);
-      }
+      result.set(s.id, `${getSourceBaseName(s)}${suffix}`);
     }
     return result;
   }, [sources]);
@@ -288,7 +246,7 @@ export default function SourceList({ projectId, refreshKey }: Props) {
 
       {sources.length === 0 ? (
         <p className="mt-4 px-1 text-[13px] text-on-surface-variant">
-          No sources connected yet. Use the connectors above to add feedback.
+          No sources connected yet. Click &ldquo;Add Source&rdquo; to connect feedback.
         </p>
       ) : (
         <>
@@ -335,7 +293,7 @@ export default function SourceList({ projectId, refreshKey }: Props) {
                     }
                   >
                     <div className="flex items-center justify-center">
-                      <SourceTypeIcon sourceType={source.sourceType} />
+                      {getSourceTypeIcon(source.sourceType)}
                     </div>
 
                     {/* Source name column */}
@@ -347,7 +305,7 @@ export default function SourceList({ projectId, refreshKey }: Props) {
 
                     {/* Type column */}
                     <span className="font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-on-surface-variant">
-                      {source.sourceType === "app_store" ? "App Store" : "CSV"}
+                      {getSourceTypeLabel(source.sourceType)}
                     </span>
 
                     {/* Records column */}
@@ -472,7 +430,7 @@ export default function SourceList({ projectId, refreshKey }: Props) {
                   className="flex items-start gap-3 px-3 py-2.5 text-left"
                 >
                   <div className="mt-0.5 flex-shrink-0">
-                    <SourceTypeIcon sourceType={source.sourceType} />
+                    {getSourceTypeIcon(source.sourceType)}
                   </div>
                   <div className="min-w-0 flex-1">
                     {/* Top row: name + chevron */}
@@ -500,7 +458,7 @@ export default function SourceList({ projectId, refreshKey }: Props) {
                     {/* Meta row: type · records · status · added */}
                     <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
                       <span className="font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-on-surface-variant">
-                        {source.sourceType === "app_store" ? "App Store" : "CSV"}
+                        {getSourceTypeLabel(source.sourceType)}
                       </span>
                       <span className="font-mono text-[11px] text-on-surface">
                         {source.recordCount.toLocaleString()} records

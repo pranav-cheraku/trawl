@@ -3,13 +3,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { connectAppStore, searchApps } from "@/lib/api";
 import type { AppSearchResult } from "@/types";
+import type { ConnectorFormProps } from "@/lib/connector-registry";
 
-interface Props {
-  projectId: string;
-  onSourceCreated: () => void;
-}
-
-export default function AppStoreConnector({ projectId, onSourceCreated }: Props) {
+export default function AppStoreForm({
+  projectId,
+  onSourceCreated,
+}: ConnectorFormProps) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<AppSearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -53,15 +52,16 @@ export default function AppStoreConnector({ projectId, onSourceCreated }: Props)
       }
     }, 300);
 
-    return () => {
-      clearTimeout(timeout);
-    };
+    return () => clearTimeout(timeout);
   }, [query]);
 
   // Click outside to dismiss
   useEffect(() => {
     function handleClick(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(e.target as Node)
+      ) {
         setShowDropdown(false);
       }
     }
@@ -85,21 +85,13 @@ export default function AppStoreConnector({ projectId, onSourceCreated }: Props)
         setConnectingId(null);
       }
     },
-    [projectId, onSourceCreated]
+    [projectId, onSourceCreated],
   );
 
   return (
-    <div
-      ref={containerRef}
-      className="relative flex flex-col rounded-[4px] bg-surface-container-lowest p-6"
-    >
-      {/* Section label */}
-      <span className="font-mono text-[11px] font-medium uppercase tracking-[0.2em] text-on-surface-variant">
-        Connect an App
-      </span>
-
+    <div ref={containerRef} className="relative flex flex-col">
       {/* Search input */}
-      <div className="relative mt-3">
+      <div className="relative">
         <input
           type="text"
           value={query}
@@ -141,7 +133,6 @@ export default function AppStoreConnector({ projectId, onSourceCreated }: Props)
               key={app.trackId}
               className="flex items-center gap-3 rounded-[4px] px-3 py-2 hover:bg-surface-container-high"
             >
-              {/* App icon */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={app.artworkUrl}
@@ -151,13 +142,11 @@ export default function AppStoreConnector({ projectId, onSourceCreated }: Props)
                 className="h-8 w-8 shrink-0 rounded-[4px]"
               />
 
-              {/* App info */}
               <div className="min-w-0 flex-1">
                 <p className="truncate text-[13px] font-medium text-on-surface">
                   {app.trackName}
                 </p>
                 <div className="flex items-center gap-2">
-                  {/* Star rating */}
                   {app.averageRating != null && (
                     <span className="flex items-center gap-0.5">
                       {Array.from({ length: 5 }).map((_, i) => (
@@ -185,7 +174,6 @@ export default function AppStoreConnector({ projectId, onSourceCreated }: Props)
                 </div>
               </div>
 
-              {/* Connect button */}
               <button
                 onClick={() => handleConnect(app)}
                 disabled={connectingId !== null}
@@ -220,7 +208,6 @@ export default function AppStoreConnector({ projectId, onSourceCreated }: Props)
         </div>
       )}
 
-      {/* Error message */}
       {error && (
         <p className="mt-2 text-[12px] text-error" role="alert">
           {error}
