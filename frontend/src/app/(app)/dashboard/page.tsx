@@ -14,6 +14,9 @@ import { durations, easings, staggers } from "@/lib/motion";
 import { friendlyAgo, parseUtcIso } from "@/lib/time";
 import PinButton from "@/components/dashboard/pin-button";
 import { useDashboardPins } from "@/lib/use-dashboard-pins";
+import DashboardToolbar, {
+  type ToolbarChip,
+} from "@/components/dashboard/dashboard-toolbar";
 
 function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString("en-US", {
@@ -181,6 +184,9 @@ export default function DashboardPage() {
   const prefersReducedMotion = useReducedMotion();
   const pins = useDashboardPins();
 
+  const [query, setQuery] = useState("");
+  const [activeChip, setActiveChip] = useState<ToolbarChip>("all");
+
   const fetchProjects = useCallback(async () => {
     setIsLoading(true);
     setError(null);
@@ -220,14 +226,53 @@ export default function DashboardPage() {
     ];
   }, [projects]);
 
-  const orderedProjects = useMemo(() => {
+  const RECENT_THRESHOLD_MS = 7 * 24 * 60 * 60 * 1000;
+
+  const { filteredProjects, counts } = useMemo(() => {
+    const now = Date.now();
+    const trimmed = query.trim().toLowerCase();
+    const searchMatched = trimmed
+      ? projects.filter(
+          (p) =>
+            p.name.toLowerCase().includes(trimmed) ||
+            (p.description?.toLowerCase().includes(trimmed) ?? false),
+        )
+      : projects;
+
+    const recent = searchMatched.filter(
+      (p) =>
+        now - parseUtcIso(p.updatedAt).getTime() <= RECENT_THRESHOLD_MS,
+    );
+    const pinned = searchMatched.filter((p) => pins.isPinned(p.id));
+
+    const counts = {
+      all: searchMatched.length,
+      recent: recent.length,
+      pinned: pinned.length,
+    };
+
+    let filtered: Project[];
+    if (activeChip === "recent") filtered = recent;
+    else if (activeChip === "pinned") filtered = pinned;
+    else filtered = searchMatched;
+
+    // Pinned-first ordering, then update-time desc within pinned.
     const ts = (p: Project) => parseUtcIso(p.updatedAt).getTime();
-    const pinned = projects
+    const pinnedSegment = filtered
       .filter((p) => pins.isPinned(p.id))
       .sort((a, b) => ts(b) - ts(a));
-    const rest = projects.filter((p) => !pins.isPinned(p.id));
-    return [...pinned, ...rest];
-  }, [projects, pins]);
+    const restSegment = filtered.filter((p) => !pins.isPinned(p.id));
+
+    return {
+      filteredProjects: [...pinnedSegment, ...restSegment],
+      counts,
+    };
+  }, [projects, query, activeChip, pins, RECENT_THRESHOLD_MS]);
+
+  function handleClearFilters() {
+    setQuery("");
+    setActiveChip("all");
+  }
 
   return (
     <>
@@ -257,8 +302,18 @@ export default function DashboardPage() {
           }
         />
 
+        <div className="mt-4">
+          <DashboardToolbar
+            query={query}
+            onQueryChange={setQuery}
+            activeChip={activeChip}
+            onChipChange={setActiveChip}
+            counts={counts}
+          />
+        </div>
+
         {/* Content area */}
-        <div className="mt-6">
+        <div className="mt-4">
           {/* Loading state — skeleton cards */}
           {isLoading && (
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -336,10 +391,37 @@ export default function DashboardPage() {
             </div>
           )}
 
+          {/* Filtered empty (search/chip excludes everything) */}
+          {!isLoading &&
+            !error &&
+            projects.length > 0 &&
+            filteredProjects.length === 0 && (
+              <div className="flex flex-col items-start gap-3 rounded-[4px] bg-surface-container-lowest px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-[13px] text-on-surface-variant">
+                  No projects match{" "}
+                  {query.trim() ? (
+                    <span className="font-mono text-on-surface">
+                      &ldquo;{query.trim()}&rdquo;
+                    </span>
+                  ) : (
+                    "the current filter"
+                  )}
+                  .
+                </p>
+                <button
+                  type="button"
+                  onClick={handleClearFilters}
+                  className="rounded-[4px] px-3 py-1.5 text-[12px] font-medium text-secondary transition-colors hover:bg-surface-container-low"
+                >
+                  Clear filters
+                </button>
+              </div>
+            )}
+
           {/* Project grid */}
-          {!isLoading && !error && projects.length > 0 && (
+          {!isLoading && !error && filteredProjects.length > 0 && (
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {orderedProjects.map((project, idx) => (
+              {filteredProjects.map((project, idx) => (
                 <motion.div
                   key={project.id}
                   initial={prefersReducedMotion ? false : { opacity: 0, y: 8 }}
