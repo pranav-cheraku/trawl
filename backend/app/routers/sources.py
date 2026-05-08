@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 import tempfile
 import uuid
@@ -15,12 +16,43 @@ from app.schemas.feedback import (
     AppStoreConnectRequest,
     ChunkDetailResponse,
     FeedbackItemResponse,
+    GooglePlayConnectRequest,
+    GooglePlaySearchResult,
+    ManualPasteRequest,
+    RedditConnectRequest,
     SourceResponse,
 )
+from app.services import google_play
 from app.services.appstore import search_app
+from app.services.manual_parser import parse_paste
 from app.tasks.ingestion import ingest_appstore_source, ingest_csv_source
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(tags=["sources"])
+
+
+@router.get(
+    "/play/search",
+    response_model=list[GooglePlaySearchResult],
+)
+async def search_google_play(
+    q: str,
+    user_id: uuid.UUID = Depends(get_current_user),
+) -> list[dict]:
+    """Proxy to Google Play search. Auth-required so we don't expose a public
+    free-rate-limit-spending search endpoint.
+    """
+    if len(q.strip()) < 2:
+        return []
+    try:
+        return await google_play.search_apps(q.strip(), limit=8)
+    except Exception as e:
+        logger.exception("Google Play search failed for %s", q)
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Google Play search failed: {e}",
+        )
 
 
 async def _get_project_for_user(
@@ -138,6 +170,140 @@ async def upload_csv(
     # Kick off async ingestion pipeline (must be after commit so worker can read the row)
     ingest_csv_source.delay(str(source.id), tmp.name, content_column)
 
+    return source
+
+
+@router.post(
+    "/projects/{project_id}/sources/manual",
+    response_model=SourceResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_manual_paste_source(
+    project_id: uuid.UUID,
+    body: ManualPasteRequest,
+    db: AsyncSession = Depends(get_db),
+    user_id: uuid.UUID = Depends(get_current_user),
+) -> FeedbackSource:
+    """Create a new feedback source from a manual paste.
+
+    Splits the paste into items (paragraph-first, line fallback), persists the
+    source row, then enqueues ingest_manual_task which inserts items + chains
+    to chunk -> embed.
+    """
+    project = await _get_project_for_user(project_id, db, user_id)
+
+    items = parse_paste(body.content)
+    if not items:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Paste was empty after trimming.",
+        )
+
+    source = FeedbackSource(
+        project_id=project.id,
+        source_type="manual",
+        status="pending",
+        record_count=0,
+        connector_config={"title": (body.title or "").strip() or None},
+    )
+    db.add(source)
+    await db.commit()
+    await db.refresh(source)
+
+    from app.tasks.ingestion import ingest_manual_task
+
+    ingest_manual_task.delay(str(source.id), items)
+    return source
+
+
+@router.post(
+    "/projects/{project_id}/sources/google_play",
+    response_model=SourceResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_google_play_source(
+    project_id: uuid.UUID,
+    body: GooglePlayConnectRequest,
+    db: AsyncSession = Depends(get_db),
+    user_id: uuid.UUID = Depends(get_current_user),
+) -> FeedbackSource:
+    """Create a Google Play feedback source and enqueue review ingestion.
+
+    Returns the new source immediately with status 'pending'.
+    Poll GET /sources/{id} to track ingestion progress.
+    """
+    project = await _get_project_for_user(project_id, db, user_id)
+
+    source = FeedbackSource(
+        project_id=project.id,
+        source_type="google_play",
+        status="pending",
+        record_count=0,
+        connector_config={
+            "package_name": body.package_name,
+            "app_name": body.app_name,
+        },
+    )
+    db.add(source)
+    await db.commit()
+    await db.refresh(source)
+
+    from app.tasks.ingestion import ingest_google_play_task
+
+    ingest_google_play_task.delay(str(source.id), body.package_name)
+    return source
+
+
+@router.post(
+    "/projects/{project_id}/sources/reddit",
+    response_model=SourceResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_reddit_source(
+    project_id: uuid.UUID,
+    body: RedditConnectRequest,
+    db: AsyncSession = Depends(get_db),
+    user_id: uuid.UUID = Depends(get_current_user),
+) -> FeedbackSource:
+    """Create a Reddit feedback source and enqueue ingestion.
+
+    Accepts a subreddit name or keyword search term. For subreddit mode,
+    strips a leading 'r/' so users can type either 'spotify' or 'r/spotify'.
+    Returns the new source immediately with status 'pending'.
+    Poll GET /sources/{id} to track ingestion progress.
+    """
+    project = await _get_project_for_user(project_id, db, user_id)
+
+    value = body.value.strip()
+    if not value:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Reddit value cannot be empty.",
+        )
+
+    # Strip leading 'r/' for subreddit mode
+    if body.mode == "subreddit":
+        value = value.lstrip("r/").strip()
+        if not value:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Subreddit name cannot be empty.",
+            )
+
+    source = FeedbackSource(
+        project_id=project.id,
+        source_type="reddit",
+        status="pending",
+        record_count=0,
+        connector_config={"mode": body.mode, "value": value},
+    )
+    db.add(source)
+    await db.commit()
+    await db.refresh(source)
+
+    from app.tasks.ingestion import ingest_reddit_task
+
+    ingest_reddit_task.delay(str(source.id), body.mode, value)
     return source
 
 

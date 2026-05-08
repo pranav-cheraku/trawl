@@ -9,6 +9,7 @@ import type {
   ConversationDetail,
   FeedbackItem,
   GenerateSpecsResponse,
+  GooglePlaySearchResult,
   Message,
   Project,
   PromoteBuildSpecResponse,
@@ -168,6 +169,36 @@ export async function connectAppStore(
   });
 }
 
+export async function searchGooglePlay(
+  query: string,
+): Promise<GooglePlaySearchResult[]> {
+  const params = new URLSearchParams({ q: query });
+  return apiFetch<GooglePlaySearchResult[]>(`/api/play/search?${params}`);
+}
+
+export async function connectGooglePlay(
+  projectId: string,
+  body: { packageName: string; appName: string },
+): Promise<Source> {
+  return apiFetch<Source>(
+    `/api/projects/${projectId}/sources/google_play`,
+    {
+      method: "POST",
+      body: JSON.stringify(body),
+    },
+  );
+}
+
+export async function connectReddit(
+  projectId: string,
+  body: { mode: "subreddit" | "keyword"; value: string },
+): Promise<Source> {
+  return apiFetch<Source>(`/api/projects/${projectId}/sources/reddit`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
 export async function uploadCsv(
   projectId: string,
   file: File,
@@ -177,6 +208,16 @@ export async function uploadCsv(
   form.append("file", file);
   form.append("content_column", contentColumn);
   return apiUpload<Source>(`/api/projects/${projectId}/sources/csv`, form);
+}
+
+export async function connectManualPaste(
+  projectId: string,
+  body: { title?: string | null; content: string },
+): Promise<Source> {
+  return apiFetch<Source>(`/api/projects/${projectId}/sources/manual`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
 }
 
 export async function listSources(projectId: string): Promise<Source[]> {
