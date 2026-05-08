@@ -1,6 +1,7 @@
 "use client";
 
 import FilterChip from "@/components/kanban/filter-chip";
+import type { DashboardView } from "@/lib/use-dashboard-view";
 
 export type ToolbarChip = "all" | "recent" | "pinned";
 
@@ -16,6 +17,8 @@ interface DashboardToolbarProps {
   activeChip: ToolbarChip;
   onChipChange: (chip: ToolbarChip) => void;
   counts: ToolbarCounts;
+  view: DashboardView;
+  onViewChange: (view: DashboardView) => void;
 }
 
 export default function DashboardToolbar({
@@ -24,6 +27,8 @@ export default function DashboardToolbar({
   activeChip,
   onChipChange,
   counts,
+  view,
+  onViewChange,
 }: DashboardToolbarProps) {
   function handleChipClick(chip: ToolbarChip) {
     // Re-click active chip resets to "all" (matches Kanban FilterBar pattern).
@@ -75,32 +80,89 @@ export default function DashboardToolbar({
           />
         </div>
 
-        {/* Filter chips */}
-        <div className="flex flex-wrap gap-1.5">
-          <FilterChip
-            label={`All · ${counts.all}`}
-            active={activeChip === "all"}
-            onClick={() => handleChipClick("all")}
-            accent="ink"
-            ariaLabel="Show all projects"
-            layoutGroup="dashboard-filter"
-          />
-          <FilterChip
-            label={`Recent · ${counts.recent}`}
-            active={activeChip === "recent"}
-            onClick={() => handleChipClick("recent")}
-            accent="ink"
-            ariaLabel="Show projects updated in the last 7 days"
-            layoutGroup="dashboard-filter"
-          />
-          <FilterChip
-            label={`Pinned · ${counts.pinned}`}
-            active={activeChip === "pinned"}
-            onClick={() => handleChipClick("pinned")}
-            accent="ink"
-            ariaLabel="Show pinned projects only"
-            layoutGroup="dashboard-filter"
-          />
+        {/* Chips + view toggle */}
+        <div className="flex items-center gap-3">
+          <div className="flex flex-wrap gap-1.5">
+            <FilterChip
+              label={`All · ${counts.all}`}
+              active={activeChip === "all"}
+              onClick={() => handleChipClick("all")}
+              accent="ink"
+              ariaLabel="Show all projects"
+              layoutGroup="dashboard-filter"
+            />
+            <FilterChip
+              label={`Recent · ${counts.recent}`}
+              active={activeChip === "recent"}
+              onClick={() => handleChipClick("recent")}
+              accent="ink"
+              ariaLabel="Show projects updated in the last 7 days"
+              layoutGroup="dashboard-filter"
+            />
+            <FilterChip
+              label={`Pinned · ${counts.pinned}`}
+              active={activeChip === "pinned"}
+              onClick={() => handleChipClick("pinned")}
+              accent="ink"
+              ariaLabel="Show pinned projects only"
+              layoutGroup="dashboard-filter"
+            />
+          </div>
+
+          {/* View toggle */}
+          <div
+            role="group"
+            aria-label="View"
+            className="flex gap-0.5 rounded-[4px] bg-surface-container-low p-0.5"
+          >
+            <button
+              type="button"
+              onClick={() => onViewChange("grid")}
+              aria-pressed={view === "grid"}
+              aria-label="Grid view"
+              className={`flex h-6 w-7 items-center justify-center rounded-[3px] transition-colors ${
+                view === "grid"
+                  ? "bg-surface-container-lowest text-on-surface"
+                  : "text-on-surface-variant hover:text-on-surface"
+              }`}
+            >
+              <svg
+                className="h-3.5 w-3.5"
+                fill="none"
+                viewBox="0 0 14 14"
+                stroke="currentColor"
+                strokeWidth={1.5}
+              >
+                <rect x="1" y="1" width="5" height="5" />
+                <rect x="8" y="1" width="5" height="5" />
+                <rect x="1" y="8" width="5" height="5" />
+                <rect x="8" y="8" width="5" height="5" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              onClick={() => onViewChange("list")}
+              aria-pressed={view === "list"}
+              aria-label="List view"
+              className={`flex h-6 w-7 items-center justify-center rounded-[3px] transition-colors ${
+                view === "list"
+                  ? "bg-surface-container-lowest text-on-surface"
+                  : "text-on-surface-variant hover:text-on-surface"
+              }`}
+            >
+              <svg
+                className="h-3.5 w-3.5"
+                fill="none"
+                viewBox="0 0 14 14"
+                stroke="currentColor"
+                strokeWidth={1.5}
+              >
+                <line x1="1" y1="3" x2="13" y2="3" />
+                <line x1="1" y1="7" x2="13" y2="7" />
+                <line x1="1" y1="11" x2="13" y2="11" />
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
     </div>

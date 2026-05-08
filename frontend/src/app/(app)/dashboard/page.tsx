@@ -17,6 +17,8 @@ import { useDashboardPins } from "@/lib/use-dashboard-pins";
 import DashboardToolbar, {
   type ToolbarChip,
 } from "@/components/dashboard/dashboard-toolbar";
+import ProjectListRow from "@/components/dashboard/project-list-row";
+import { useDashboardView } from "@/lib/use-dashboard-view";
 
 function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString("en-US", {
@@ -41,6 +43,21 @@ function SkeletonCard() {
       <div className="mt-6 pt-4">
         <div className="h-3 w-20 rounded-[2px] bg-surface-container" />
       </div>
+    </div>
+  );
+}
+
+function SkeletonRow() {
+  return (
+    <div
+      className="grid grid-cols-[1.6fr_1.4fr_120px_56px_28px] items-center gap-4 px-4 py-3 animate-pulse"
+      style={{ boxShadow: "inset 0 -1px 0 rgba(15,23,42,0.04)" }}
+    >
+      <div className="h-3.5 w-3/5 rounded-[2px] bg-surface-container" />
+      <div className="h-3 w-4/5 rounded-[2px] bg-surface-container" />
+      <div className="h-3 w-16 justify-self-end rounded-[2px] bg-surface-container" />
+      <div />
+      <div className="h-3.5 w-3.5 justify-self-end rounded-[2px] bg-surface-container" />
     </div>
   );
 }
@@ -183,6 +200,7 @@ export default function DashboardPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const prefersReducedMotion = useReducedMotion();
   const pins = useDashboardPins();
+  const viewApi = useDashboardView();
 
   const [query, setQuery] = useState("");
   const [activeChip, setActiveChip] = useState<ToolbarChip>("all");
@@ -309,17 +327,28 @@ export default function DashboardPage() {
             activeChip={activeChip}
             onChipChange={setActiveChip}
             counts={counts}
+            view={viewApi.view}
+            onViewChange={viewApi.setView}
           />
         </div>
 
         {/* Content area */}
         <div className="mt-4">
-          {/* Loading state — skeleton cards */}
-          {isLoading && (
+          {/* Loading state — grid skeletons */}
+          {isLoading && viewApi.view === "grid" && (
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
               <SkeletonCard />
               <SkeletonCard />
               <SkeletonCard />
+            </div>
+          )}
+
+          {/* Loading state — list skeletons */}
+          {isLoading && viewApi.view === "list" && (
+            <div className="rounded-[4px] bg-surface-container-lowest">
+              <SkeletonRow />
+              <SkeletonRow />
+              <SkeletonRow />
             </div>
           )}
 
@@ -419,30 +448,55 @@ export default function DashboardPage() {
             )}
 
           {/* Project grid */}
-          {!isLoading && !error && filteredProjects.length > 0 && (
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {filteredProjects.map((project, idx) => (
-                <motion.div
-                  key={project.id}
-                  initial={prefersReducedMotion ? false : { opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{
-                    duration: durations.normal,
-                    ease: easings.standard,
-                    delay: Math.min(idx * staggers.list, 0.6),
-                  }}
-                  whileHover={prefersReducedMotion ? undefined : { scale: 1.01 }}
-                >
-                  <ProjectCard
+          {!isLoading &&
+            !error &&
+            filteredProjects.length > 0 &&
+            viewApi.view === "grid" && (
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {filteredProjects.map((project, idx) => (
+                  <motion.div
+                    key={project.id}
+                    initial={
+                      prefersReducedMotion ? false : { opacity: 0, y: 8 }
+                    }
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{
+                      duration: durations.normal,
+                      ease: easings.standard,
+                      delay: Math.min(idx * staggers.list, 0.6),
+                    }}
+                    whileHover={
+                      prefersReducedMotion ? undefined : { scale: 1.01 }
+                    }
+                  >
+                    <ProjectCard
+                      project={project}
+                      isPinned={pins.isPinned(project.id)}
+                      onPinToggle={pins.toggle}
+                      onDelete={handleProjectDeleted}
+                    />
+                  </motion.div>
+                ))}
+              </div>
+            )}
+
+          {/* Project list */}
+          {!isLoading &&
+            !error &&
+            filteredProjects.length > 0 &&
+            viewApi.view === "list" && (
+              <div className="overflow-hidden rounded-[4px] bg-surface-container-lowest">
+                {filteredProjects.map((project) => (
+                  <ProjectListRow
+                    key={project.id}
                     project={project}
                     isPinned={pins.isPinned(project.id)}
                     onPinToggle={pins.toggle}
                     onDelete={handleProjectDeleted}
                   />
-                </motion.div>
-              ))}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
         </div>
       </div>
 
