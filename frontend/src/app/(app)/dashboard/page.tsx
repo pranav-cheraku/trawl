@@ -11,7 +11,9 @@ import WorkspaceHeader, {
   type WorkspaceStat,
 } from "@/components/workspace/workspace-header";
 import { durations, easings, staggers } from "@/lib/motion";
-import { friendlyAgo } from "@/lib/time";
+import { friendlyAgo, parseUtcIso } from "@/lib/time";
+import PinButton from "@/components/dashboard/pin-button";
+import { useDashboardPins } from "@/lib/use-dashboard-pins";
 
 function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString("en-US", {
@@ -42,10 +44,17 @@ function SkeletonCard() {
 
 interface ProjectCardProps {
   project: Project;
+  isPinned: boolean;
+  onPinToggle: (id: string) => void;
   onDelete: (id: string) => void;
 }
 
-function ProjectCard({ project, onDelete }: ProjectCardProps) {
+function ProjectCard({
+  project,
+  isPinned,
+  onPinToggle,
+  onDelete,
+}: ProjectCardProps) {
   const [isConfirming, setIsConfirming] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -68,39 +77,59 @@ function ProjectCard({ project, onDelete }: ProjectCardProps) {
 
   return (
     <div className="group relative rounded-[4px] bg-surface-container-lowest transition-all hover:bg-surface-container-low">
-      {/* Delete controls — faint by default, full on hover */}
-      <div className="absolute right-3 top-3 z-10 opacity-40 transition-opacity group-hover:opacity-100">
-        {isConfirming ? (
-          <div className="rounded-[4px] bg-surface-container-lowest px-2 py-1">
-            <InlineConfirm
-              message="Delete?"
-              onConfirm={handleConfirmDelete}
-              onCancel={() => setIsConfirming(false)}
-              isSubmitting={isDeleting}
-            />
-          </div>
-        ) : (
-          <button
-            type="button"
-            onClick={handleDeleteClick}
-            className="flex h-6 w-6 items-center justify-center rounded-[4px] bg-surface-container-lowest text-on-surface-variant transition-colors hover:text-error"
-            aria-label={`Delete project ${project.name}`}
-          >
-            <svg
-              className="h-3.5 w-3.5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={1.5}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"
+      {/* Action cluster: pin + delete */}
+      <div className="absolute right-3 top-3 z-10 flex items-center gap-1">
+        {/* Pin: opacity-100 when pinned, fade-on-hover otherwise */}
+        <div
+          className={
+            isPinned
+              ? "opacity-100"
+              : "opacity-40 transition-opacity group-hover:opacity-100"
+          }
+        >
+          <PinButton
+            isPinned={isPinned}
+            onClick={() => onPinToggle(project.id)}
+            ariaLabel={
+              isPinned ? `Unpin ${project.name}` : `Pin ${project.name}`
+            }
+          />
+        </div>
+
+        {/* Delete: always fade-on-hover */}
+        <div className="opacity-40 transition-opacity group-hover:opacity-100">
+          {isConfirming ? (
+            <div className="rounded-[4px] bg-surface-container-lowest px-2 py-1">
+              <InlineConfirm
+                message="Delete?"
+                onConfirm={handleConfirmDelete}
+                onCancel={() => setIsConfirming(false)}
+                isSubmitting={isDeleting}
               />
-            </svg>
-          </button>
-        )}
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={handleDeleteClick}
+              className="flex h-6 w-6 items-center justify-center rounded-[4px] bg-surface-container-lowest text-on-surface-variant transition-colors hover:text-error"
+              aria-label={`Delete project ${project.name}`}
+            >
+              <svg
+                className="h-3.5 w-3.5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={1.5}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"
+                />
+              </svg>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Card body — navigates to project */}
@@ -109,25 +138,22 @@ function ProjectCard({ project, onDelete }: ProjectCardProps) {
         className="block p-6"
         aria-label={`Open project ${project.name}`}
       >
-        {/* Top row: name */}
-        <div className="flex items-start justify-between gap-3 pr-8">
+        <div className="flex items-start justify-between gap-3 pr-16">
           <h2 className="text-lg font-bold text-on-surface transition-colors group-hover:text-secondary">
             {project.name}
           </h2>
         </div>
 
-        {/* Description */}
         {project.description ? (
           <p className="mt-3 text-[13px] leading-relaxed text-on-surface-variant line-clamp-2">
             {project.description}
           </p>
         ) : (
-          <p className="mt-3 text-[13px] leading-relaxed text-on-surface-variant/50 italic">
+          <p className="mt-3 text-[13px] leading-relaxed italic text-on-surface-variant/50">
             No description
           </p>
         )}
 
-        {/* Footer */}
         <div className="mt-5 flex items-center justify-between pt-4">
           <p className="font-mono text-[11px] uppercase tracking-wider text-on-surface-variant">
             {formatDate(project.createdAt)}
@@ -153,6 +179,7 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const prefersReducedMotion = useReducedMotion();
+  const pins = useDashboardPins();
 
   const fetchProjects = useCallback(async () => {
     setIsLoading(true);
@@ -192,6 +219,15 @@ export default function DashboardPage() {
       { value: friendlyAgo(lastUpdated), key: "Last Updated" },
     ];
   }, [projects]);
+
+  const orderedProjects = useMemo(() => {
+    const ts = (p: Project) => parseUtcIso(p.updatedAt).getTime();
+    const pinned = projects
+      .filter((p) => pins.isPinned(p.id))
+      .sort((a, b) => ts(b) - ts(a));
+    const rest = projects.filter((p) => !pins.isPinned(p.id));
+    return [...pinned, ...rest];
+  }, [projects, pins]);
 
   return (
     <>
@@ -303,7 +339,7 @@ export default function DashboardPage() {
           {/* Project grid */}
           {!isLoading && !error && projects.length > 0 && (
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {projects.map((project, idx) => (
+              {orderedProjects.map((project, idx) => (
                 <motion.div
                   key={project.id}
                   initial={prefersReducedMotion ? false : { opacity: 0, y: 8 }}
@@ -317,6 +353,8 @@ export default function DashboardPage() {
                 >
                   <ProjectCard
                     project={project}
+                    isPinned={pins.isPinned(project.id)}
+                    onPinToggle={pins.toggle}
                     onDelete={handleProjectDeleted}
                   />
                 </motion.div>
