@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
-import { PageTransition } from "@/components/page-transition";
 import { useEffect, useRef, useState } from "react";
 
 const navLinks = [
@@ -223,9 +222,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </header>
 
       {/* Main content — no max-w here; each page owns its width */}
-      <main className="bg-surface">
-        <PageTransition>{children}</PageTransition>
-      </main>
+      <main className="bg-surface">{children}</main>
     </div>
   );
 }
