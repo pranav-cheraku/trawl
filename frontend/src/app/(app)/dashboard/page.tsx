@@ -1,13 +1,17 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { listProjects, deleteProject } from "@/lib/api";
 import type { Project } from "@/types";
 import NewProjectModal from "@/components/new-project-modal";
 import InlineConfirm from "@/components/ui/inline-confirm";
+import WorkspaceHeader, {
+  type WorkspaceStat,
+} from "@/components/workspace/workspace-header";
 import { durations, easings, staggers } from "@/lib/motion";
+import { friendlyAgo } from "@/lib/time";
 
 function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString("en-US", {
@@ -67,7 +71,7 @@ function ProjectCard({ project, onDelete }: ProjectCardProps) {
       {/* Delete controls — faint by default, full on hover */}
       <div className="absolute right-3 top-3 z-10 opacity-40 transition-opacity group-hover:opacity-100">
         {isConfirming ? (
-          <div className="rounded-[4px] bg-surface-container-lowest px-2 py-1 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+          <div className="rounded-[4px] bg-surface-container-lowest px-2 py-1">
             <InlineConfirm
               message="Delete?"
               onConfirm={handleConfirmDelete}
@@ -79,7 +83,7 @@ function ProjectCard({ project, onDelete }: ProjectCardProps) {
           <button
             type="button"
             onClick={handleDeleteClick}
-            className="flex h-6 w-6 items-center justify-center rounded-[4px] bg-surface-container-lowest text-on-surface-variant transition-colors hover:text-error shadow-[0_8px_24px_rgba(15,23,42,0.04)]"
+            className="flex h-6 w-6 items-center justify-center rounded-[4px] bg-surface-container-lowest text-on-surface-variant transition-colors hover:text-error"
             aria-label={`Delete project ${project.name}`}
           >
             <svg
@@ -129,7 +133,7 @@ function ProjectCard({ project, onDelete }: ProjectCardProps) {
             {formatDate(project.createdAt)}
           </p>
           <svg
-            className="h-3.5 w-3.5 text-on-surface-variant transition-all group-hover:translate-x-0.5 group-hover:text-secondary"
+            className="h-3.5 w-3.5 text-on-surface-variant transition-[transform,color] duration-200 group-hover:translate-x-0.5 group-hover:text-secondary"
             fill="none"
             viewBox="0 0 14 14"
             stroke="currentColor"
@@ -177,41 +181,51 @@ export default function DashboardPage() {
     fetchProjects();
   }
 
+  const headerStats = useMemo<WorkspaceStat[] | undefined>(() => {
+    if (projects.length === 0) return undefined;
+    const lastUpdated = projects.reduce(
+      (max, p) => (p.updatedAt > max ? p.updatedAt : max),
+      projects[0].updatedAt
+    );
+    return [
+      { value: String(projects.length), key: "Total Projects" },
+      { value: friendlyAgo(lastUpdated), key: "Last Updated" },
+    ];
+  }, [projects]);
+
   return (
     <>
       <div className="mx-auto max-w-6xl px-6 py-10">
-        {/* Header */}
-        <div className="flex items-end justify-between">
-          <div>
-            <p className="font-mono text-xs font-medium uppercase tracking-[0.2em] text-on-surface-variant">
-              Workspace
-            </p>
-            <h1 className="mt-1 text-3xl font-bold text-on-surface">Projects</h1>
-          </div>
-          <button
-            type="button"
-            onClick={() => setIsModalOpen(true)}
-            className="inline-flex items-center gap-2 rounded-[4px] bg-on-surface px-5 py-2.5 text-[13px] font-medium text-white transition-colors hover:bg-secondary"
-            aria-label="Create new project"
-          >
-            <svg
-              className="h-3.5 w-3.5"
-              fill="none"
-              viewBox="0 0 14 14"
-              stroke="currentColor"
-              strokeWidth={1.5}
+        <WorkspaceHeader
+          label="Workspace / Dashboard"
+          title="Projects"
+          stats={headerStats}
+          right={
+            <button
+              type="button"
+              onClick={() => setIsModalOpen(true)}
+              className="inline-flex items-center gap-2 rounded-[4px] bg-on-surface px-4 py-2 text-[13px] font-medium text-white transition-colors hover:bg-secondary"
+              aria-label="Create new project"
             >
-              <path d="M7 1v12M1 7h12" />
-            </svg>
-            New Project
-          </button>
-        </div>
+              <svg
+                className="h-3.5 w-3.5"
+                fill="none"
+                viewBox="0 0 14 14"
+                stroke="currentColor"
+                strokeWidth={1.5}
+              >
+                <path d="M7 1v12M1 7h12" />
+              </svg>
+              New Project
+            </button>
+          }
+        />
 
         {/* Content area */}
-        <div className="mt-8">
+        <div className="mt-6">
           {/* Loading state — skeleton cards */}
           {isLoading && (
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
               <SkeletonCard />
               <SkeletonCard />
               <SkeletonCard />
@@ -220,10 +234,26 @@ export default function DashboardPage() {
 
           {/* Error state */}
           {!isLoading && error && (
-            <div className="flex flex-col items-start gap-4 rounded-[4px] bg-surface-container-lowest px-8 py-10">
-              <p className="font-mono text-xs font-medium uppercase tracking-[0.2em] text-on-surface-variant">
-                Error
-              </p>
+            <div className="flex flex-col items-start gap-4 rounded-[4px] bg-error/[0.04] px-8 py-10">
+              <div className="flex items-center gap-2">
+                <svg
+                  className="h-3.5 w-3.5 text-error"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={1.5}
+                  aria-hidden="true"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"
+                  />
+                </svg>
+                <p className="font-mono text-xs font-medium uppercase tracking-[0.2em] text-error">
+                  Error
+                </p>
+              </div>
               <p className="text-xl font-bold text-on-surface">
                 Could not load projects
               </p>
@@ -272,7 +302,7 @@ export default function DashboardPage() {
 
           {/* Project grid */}
           {!isLoading && !error && projects.length > 0 && (
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
               {projects.map((project, idx) => (
                 <motion.div
                   key={project.id}

@@ -164,7 +164,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   {isMenuOpen && (
                     <div
                       role="menu"
-                      className="absolute right-0 top-full z-50 mt-2 w-60 rounded-[4px] bg-surface-container-lowest/95 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-[12px]"
+                      className="absolute right-0 top-full z-50 mt-2 w-60 rounded-[4px] bg-surface-container-lowest/95 shadow-[0_8px_24px_rgba(15,23,42,0.04)] backdrop-blur-[12px]"
                     >
                       {/* Identity block */}
                       <div className="flex items-center gap-3 px-4 pt-4 pb-3">
