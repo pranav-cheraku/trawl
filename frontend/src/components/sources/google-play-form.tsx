@@ -1,0 +1,227 @@
+"use client";
+
+import { useCallback, useEffect, useRef, useState } from "react";
+import { connectGooglePlay, searchGooglePlay } from "@/lib/api";
+import type { GooglePlaySearchResult } from "@/types";
+import type { ConnectorFormProps } from "@/lib/connector-registry";
+
+export default function GooglePlayForm({
+  projectId,
+  onSourceCreated,
+}: ConnectorFormProps) {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<GooglePlaySearchResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [connectingId, setConnectingId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [showDropdown, setShowDropdown] = useState(false);
+
+  const containerRef = useRef<HTMLDivElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    if (query.trim().length < 2) {
+      setResults([]);
+      setShowDropdown(false);
+      return;
+    }
+
+    const timeout = setTimeout(async () => {
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
+
+      setIsSearching(true);
+      setError(null);
+      try {
+        const data = await searchGooglePlay(query.trim());
+        if (!controller.signal.aborted) {
+          setResults(data);
+          setShowDropdown(data.length > 0);
+        }
+      } catch {
+        if (!controller.signal.aborted) {
+          setResults([]);
+          setShowDropdown(false);
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsSearching(false);
+        }
+      }
+    }, 300);
+
+    return () => clearTimeout(timeout);
+  }, [query]);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(e.target as Node)
+      ) {
+        setShowDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  const handleConnect = useCallback(
+    async (app: GooglePlaySearchResult) => {
+      setConnectingId(app.packageName);
+      setError(null);
+      try {
+        await connectGooglePlay(projectId, {
+          packageName: app.packageName,
+          appName: app.trackName,
+        });
+        setQuery("");
+        setResults([]);
+        setShowDropdown(false);
+        onSourceCreated();
+      } catch {
+        setError(`Failed to connect "${app.trackName}"`);
+      } finally {
+        setConnectingId(null);
+      }
+    },
+    [projectId, onSourceCreated],
+  );
+
+  return (
+    <div ref={containerRef} className="relative flex flex-col">
+      <div className="relative">
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onFocus={() => results.length > 0 && setShowDropdown(true)}
+          placeholder="Search Google Play..."
+          className="w-full rounded-[4px] bg-surface-container-lowest px-3 py-2 text-[13px] text-on-surface outline outline-1 outline-outline-variant placeholder:text-on-surface-variant/60 focus:outline-secondary"
+        />
+        {isSearching && (
+          <div className="absolute right-3 top-1/2 -translate-y-1/2">
+            <svg
+              className="h-4 w-4 animate-spin text-on-surface-variant"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              />
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+              />
+            </svg>
+          </div>
+        )}
+      </div>
+
+      {/* Helper hint — Google Play occasionally features the user's intended
+          app in HTML the scraper can't parse, so a name-only search may
+          omit it. Pasting the full search URL bypasses that. */}
+      <p className="mt-1.5 text-[11px] leading-relaxed text-on-surface-variant/80">
+        Don&apos;t see your app? Paste the Google Play search URL above —{" "}
+        <span className="font-mono text-[10px] text-on-surface-variant">
+          play.google.com/store/search?q=appname
+        </span>
+      </p>
+
+      {showDropdown && (
+        <div className="absolute left-0 right-0 top-full z-40 mt-1 max-h-[320px] overflow-y-auto rounded-[4px] bg-surface-container-lowest/85 p-1 shadow-[0_8px_24px_rgba(15,23,42,0.04)] backdrop-blur-[12px]">
+          {results.map((app) => (
+            <div
+              key={app.packageName}
+              className="flex items-center gap-3 rounded-[4px] px-3 py-2 hover:bg-surface-container-high"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={app.artworkUrl}
+                alt=""
+                width={32}
+                height={32}
+                className="h-8 w-8 shrink-0 rounded-[4px]"
+              />
+
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[13px] font-medium text-on-surface">
+                  {app.trackName}
+                </p>
+                <div className="flex items-center gap-2">
+                  {app.averageRating != null && (
+                    <span className="flex items-center gap-0.5">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <svg
+                          key={i}
+                          className={`h-3 w-3 ${
+                            i < Math.round(app.averageRating!)
+                              ? "text-secondary"
+                              : "text-outline-variant/40"
+                          }`}
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
+                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                        </svg>
+                      ))}
+                      <span className="ml-0.5 font-mono text-[10px] text-on-surface-variant">
+                        {app.averageRating.toFixed(1)}
+                      </span>
+                    </span>
+                  )}
+                  <span className="font-mono text-[10px] text-on-surface-variant">
+                    {app.genre}
+                  </span>
+                </div>
+              </div>
+
+              <button
+                onClick={() => handleConnect(app)}
+                disabled={connectingId !== null}
+                className="shrink-0 rounded-[4px] bg-on-surface px-3 py-1 text-[11px] font-medium text-white transition-colors hover:bg-secondary disabled:opacity-50"
+              >
+                {connectingId === app.packageName ? (
+                  <svg
+                    className="h-3.5 w-3.5 animate-spin"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                    />
+                  </svg>
+                ) : (
+                  "Connect"
+                )}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {error && (
+        <p className="mt-2 text-[12px] text-error" role="alert">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}

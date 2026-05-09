@@ -17,6 +17,16 @@ export interface AppSearchResult {
   genre: string;
 }
 
+/** Google Play app search result. */
+export interface GooglePlaySearchResult {
+  packageName: string;
+  trackName: string;
+  artworkUrl: string;
+  averageRating: number | null;
+  ratingCount: number;
+  genre: string;
+}
+
 export type SourceType =
   | "app_store"
   | "google_play"
