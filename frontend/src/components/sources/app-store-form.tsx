@@ -5,6 +5,8 @@ import { connectAppStore, searchApps } from "@/lib/api";
 import type { AppSearchResult } from "@/types";
 import type { ConnectorFormProps } from "@/lib/connector-registry";
 
+type AppStorePreset = "quick" | "standard";
+
 export default function AppStoreForm({
   projectId,
   onSourceCreated,
@@ -15,6 +17,7 @@ export default function AppStoreForm({
   const [connectingId, setConnectingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [preset, setPreset] = useState<AppStorePreset>("standard");
 
   const containerRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -74,7 +77,7 @@ export default function AppStoreForm({
       setConnectingId(app.trackId);
       setError(null);
       try {
-        await connectAppStore(projectId, app.trackName);
+        await connectAppStore(projectId, app.trackName, undefined, preset);
         setQuery("");
         setResults([]);
         setShowDropdown(false);
@@ -85,11 +88,43 @@ export default function AppStoreForm({
         setConnectingId(null);
       }
     },
-    [projectId, onSourceCreated],
+    [projectId, onSourceCreated, preset],
   );
 
   return (
     <div ref={containerRef} className="relative flex flex-col">
+      {/* Yield preset */}
+      <div
+        role="group"
+        aria-label="Yield preset"
+        className="mb-3 flex gap-0.5 self-start rounded-[4px] bg-surface-container-low p-0.5"
+      >
+        <button
+          type="button"
+          onClick={() => setPreset("quick")}
+          aria-pressed={preset === "quick"}
+          className={`rounded-[3px] px-3 py-1 text-[11px] font-medium transition-colors ${
+            preset === "quick"
+              ? "bg-surface-container-lowest text-on-surface"
+              : "text-on-surface-variant hover:text-on-surface"
+          }`}
+        >
+          Quick · ~500
+        </button>
+        <button
+          type="button"
+          onClick={() => setPreset("standard")}
+          aria-pressed={preset === "standard"}
+          className={`rounded-[3px] px-3 py-1 text-[11px] font-medium transition-colors ${
+            preset === "standard"
+              ? "bg-surface-container-lowest text-on-surface"
+              : "text-on-surface-variant hover:text-on-surface"
+          }`}
+        >
+          Standard · ~2,000
+        </button>
+      </div>
+
       {/* Search input */}
       <div className="relative">
         <input

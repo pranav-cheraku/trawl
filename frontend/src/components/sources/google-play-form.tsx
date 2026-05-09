@@ -5,6 +5,8 @@ import { connectGooglePlay, searchGooglePlay } from "@/lib/api";
 import type { GooglePlaySearchResult } from "@/types";
 import type { ConnectorFormProps } from "@/lib/connector-registry";
 
+type GooglePlayPreset = "quick" | "standard";
+
 export default function GooglePlayForm({
   projectId,
   onSourceCreated,
@@ -15,6 +17,7 @@ export default function GooglePlayForm({
   const [connectingId, setConnectingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [preset, setPreset] = useState<GooglePlayPreset>("standard");
 
   const containerRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -75,6 +78,7 @@ export default function GooglePlayForm({
         await connectGooglePlay(projectId, {
           packageName: app.packageName,
           appName: app.trackName,
+          preset,
         });
         setQuery("");
         setResults([]);
@@ -86,11 +90,43 @@ export default function GooglePlayForm({
         setConnectingId(null);
       }
     },
-    [projectId, onSourceCreated],
+    [projectId, onSourceCreated, preset],
   );
 
   return (
     <div ref={containerRef} className="relative flex flex-col">
+      {/* Yield preset */}
+      <div
+        role="group"
+        aria-label="Yield preset"
+        className="mb-3 flex gap-0.5 self-start rounded-[4px] bg-surface-container-low p-0.5"
+      >
+        <button
+          type="button"
+          onClick={() => setPreset("quick")}
+          aria-pressed={preset === "quick"}
+          className={`rounded-[3px] px-3 py-1 text-[11px] font-medium transition-colors ${
+            preset === "quick"
+              ? "bg-surface-container-lowest text-on-surface"
+              : "text-on-surface-variant hover:text-on-surface"
+          }`}
+        >
+          Quick · ~100
+        </button>
+        <button
+          type="button"
+          onClick={() => setPreset("standard")}
+          aria-pressed={preset === "standard"}
+          className={`rounded-[3px] px-3 py-1 text-[11px] font-medium transition-colors ${
+            preset === "standard"
+              ? "bg-surface-container-lowest text-on-surface"
+              : "text-on-surface-variant hover:text-on-surface"
+          }`}
+        >
+          Standard · ~500
+        </button>
+      </div>
+
       <div className="relative">
         <input
           type="text"

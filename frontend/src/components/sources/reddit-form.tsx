@@ -5,12 +5,14 @@ import { connectReddit } from "@/lib/api";
 import type { ConnectorFormProps } from "@/lib/connector-registry";
 
 type Mode = "subreddit" | "keyword";
+type RedditPreset = "quick" | "standard" | "deep";
 
 export default function RedditForm({
   projectId,
   onSourceCreated,
 }: ConnectorFormProps) {
   const [mode, setMode] = useState<Mode>("subreddit");
+  const [preset, setPreset] = useState<RedditPreset>("standard");
   const [value, setValue] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -21,7 +23,7 @@ export default function RedditForm({
     setIsSubmitting(true);
     setError(null);
     try {
-      await connectReddit(projectId, { mode, value: trimmed });
+      await connectReddit(projectId, { mode, value: trimmed, preset });
       onSourceCreated();
     } catch {
       setError(
@@ -65,6 +67,50 @@ export default function RedditForm({
           }`}
         >
           Keyword
+        </button>
+      </div>
+
+      {/* Yield preset */}
+      <div
+        role="group"
+        aria-label="Yield preset"
+        className="flex gap-0.5 self-start rounded-[4px] bg-surface-container-low p-0.5"
+      >
+        <button
+          type="button"
+          onClick={() => setPreset("quick")}
+          aria-pressed={preset === "quick"}
+          className={`rounded-[3px] px-3 py-1 text-[11px] font-medium transition-colors ${
+            preset === "quick"
+              ? "bg-surface-container-lowest text-on-surface"
+              : "text-on-surface-variant hover:text-on-surface"
+          }`}
+        >
+          Quick · ~125
+        </button>
+        <button
+          type="button"
+          onClick={() => setPreset("standard")}
+          aria-pressed={preset === "standard"}
+          className={`rounded-[3px] px-3 py-1 text-[11px] font-medium transition-colors ${
+            preset === "standard"
+              ? "bg-surface-container-lowest text-on-surface"
+              : "text-on-surface-variant hover:text-on-surface"
+          }`}
+        >
+          Standard · ~500
+        </button>
+        <button
+          type="button"
+          onClick={() => setPreset("deep")}
+          aria-pressed={preset === "deep"}
+          className={`rounded-[3px] px-3 py-1 text-[11px] font-medium transition-colors ${
+            preset === "deep"
+              ? "bg-surface-container-lowest text-on-surface"
+              : "text-on-surface-variant hover:text-on-surface"
+          }`}
+        >
+          Deep · ~1,000
         </button>
       </div>
 

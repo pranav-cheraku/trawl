@@ -161,11 +161,12 @@ export async function searchApps(
 export async function connectAppStore(
   projectId: string,
   appName: string,
-  country?: string
+  country?: string,
+  preset: "quick" | "standard" = "standard",
 ): Promise<Source> {
   return apiFetch<Source>(`/api/projects/${projectId}/sources/appstore`, {
     method: "POST",
-    body: JSON.stringify({ appName, country: country ?? "us" }),
+    body: JSON.stringify({ appName, country: country ?? "us", preset }),
   });
 }
 
@@ -178,24 +179,32 @@ export async function searchGooglePlay(
 
 export async function connectGooglePlay(
   projectId: string,
-  body: { packageName: string; appName: string },
+  body: {
+    packageName: string;
+    appName: string;
+    preset?: "quick" | "standard";
+  },
 ): Promise<Source> {
   return apiFetch<Source>(
     `/api/projects/${projectId}/sources/google_play`,
     {
       method: "POST",
-      body: JSON.stringify(body),
+      body: JSON.stringify({ ...body, preset: body.preset ?? "standard" }),
     },
   );
 }
 
 export async function connectReddit(
   projectId: string,
-  body: { mode: "subreddit" | "keyword"; value: string },
+  body: {
+    mode: "subreddit" | "keyword";
+    value: string;
+    preset?: "quick" | "standard" | "deep";
+  },
 ): Promise<Source> {
   return apiFetch<Source>(`/api/projects/${projectId}/sources/reddit`, {
     method: "POST",
-    body: JSON.stringify(body),
+    body: JSON.stringify({ ...body, preset: body.preset ?? "standard" }),
   });
 }
 
