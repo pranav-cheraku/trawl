@@ -16,8 +16,29 @@ from app.services.csv_parser import parse_csv
 logger = logging.getLogger(__name__)
 
 
+COUNTRIES_BY_PRESET: dict[str, list[str]] = {
+    "quick": ["us"],
+    "standard": ["us", "gb", "ca", "au", "ie"],
+}
+
+COUNT_BY_PRESET: dict[str, int] = {
+    "quick": 100,
+    "standard": 500,
+}
+
+REDDIT_PARAMS: dict[str, dict[str, int]] = {
+    "quick":    {"posts_limit":  25, "comments_per_post": 5},
+    "standard": {"posts_limit": 100, "comments_per_post": 5},
+    "deep":     {"posts_limit": 200, "comments_per_post": 5},
+}
+
+
 @celery_app.task(bind=True, max_retries=2)  # type: ignore[misc]
-def ingest_appstore_source(self: object, source_id: str) -> None:
+def ingest_appstore_source(
+    self: object,
+    source_id: str,
+    preset: str = "standard",
+) -> None:
     """Fetch App Store reviews and insert as FeedbackItems."""
     with SyncSessionLocal() as session:
         try:
@@ -30,8 +51,9 @@ def ingest_appstore_source(self: object, source_id: str) -> None:
             session.commit()
 
             app_id = source.app_store_id or ""
+            countries = COUNTRIES_BY_PRESET.get(preset, COUNTRIES_BY_PRESET["standard"])
             reviews, succeeded_countries = asyncio.run(
-                appstore.fetch_reviews_multi_country(app_id)
+                appstore.fetch_reviews_multi_country(app_id, countries=countries)
             )
 
             items = []
@@ -52,7 +74,8 @@ def ingest_appstore_source(self: object, source_id: str) -> None:
             session.add_all(items)
             source.record_count = len(items)
             source.last_scraped_at = datetime.utcnow()
-            source.connector_config = {"countries": succeeded_countries}
+            existing_config = source.connector_config or {}
+            source.connector_config = {**existing_config, "countries": succeeded_countries}
             source.status = "chunking"
             session.commit()
 
@@ -258,7 +281,12 @@ def ingest_manual_task(self: object, source_id: str, items: list) -> None:
 
 
 @celery_app.task(bind=True, max_retries=2)  # type: ignore[misc]
-def ingest_google_play_task(self: object, source_id: str, package_name: str) -> None:
+def ingest_google_play_task(
+    self: object,
+    source_id: str,
+    package_name: str,
+    preset: str = "standard",
+) -> None:
     """Fetch Google Play reviews for `package_name` and persist as feedback_items."""
     from app.services import google_play  # local import to avoid eager-load cost
 
@@ -274,7 +302,10 @@ def ingest_google_play_task(self: object, source_id: str, package_name: str) -> 
             db.add(source)
             db.commit()
 
-            reviews_data = asyncio.run(google_play.fetch_reviews(package_name))
+            count = COUNT_BY_PRESET.get(preset, COUNT_BY_PRESET["standard"])
+            reviews_data = asyncio.run(
+                google_play.fetch_reviews(package_name, count=count)
+            )
 
             for r in reviews_data:
                 fi = FeedbackItem(
@@ -313,6 +344,7 @@ def ingest_reddit_task(
     source_id: str,
     mode: str,
     value: str,
+    preset: str = "standard",
 ) -> None:
     """Fetch Reddit posts + comments and persist as feedback_items."""
     from app.services import reddit  # local import
@@ -329,10 +361,12 @@ def ingest_reddit_task(
             db.add(source)
             db.commit()
 
+            params = REDDIT_PARAMS.get(preset, REDDIT_PARAMS["standard"])
+
             if mode == "subreddit":
-                items = asyncio.run(reddit.fetch_subreddit(value))
+                items = asyncio.run(reddit.fetch_subreddit(value, **params))
             elif mode == "keyword":
-                items = asyncio.run(reddit.fetch_keyword_search(value))
+                items = asyncio.run(reddit.fetch_keyword_search(value, **params))
             else:
                 raise ValueError(f"Unknown Reddit mode: {mode}")
 

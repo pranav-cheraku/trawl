@@ -25,10 +25,11 @@ class AppSearchResult(BaseModel):
 class AppStoreConnectRequest(BaseModel):
     """Request body for connecting an App Store source."""
 
-    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
-
     app_name: str = Field(..., min_length=1, max_length=255)
     country: str = Field(default="us", max_length=10)
+    preset: Literal["quick", "standard"] = "standard"
+
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
 
 class ManualPasteRequest(BaseModel):
@@ -64,6 +65,7 @@ class GooglePlayConnectRequest(BaseModel):
 
     package_name: str
     app_name: str
+    preset: Literal["quick", "standard"] = "standard"
 
     model_config = ConfigDict(
         alias_generator=to_camel,
@@ -76,6 +78,7 @@ class RedditConnectRequest(BaseModel):
 
     mode: Literal["subreddit", "keyword"]
     value: str
+    preset: Literal["quick", "standard", "deep"] = "standard"
 
     model_config = ConfigDict(
         alias_generator=to_camel,

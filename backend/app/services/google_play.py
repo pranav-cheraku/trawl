@@ -3,7 +3,7 @@ asyncio.to_thread so it integrates with the surrounding async machinery.
 
 No auth required -- the package scrapes Google Play's public HTML.
 
-Yield: up to 500 reviews per app via Sort.NEWEST.
+Yield: up to `count` reviews per app via Sort.NEWEST (default 500).
 """
 
 from __future__ import annotations
@@ -59,8 +59,11 @@ async def search_apps(query: str, limit: int = 8) -> list[dict]:
     return await asyncio.to_thread(_search)
 
 
-async def fetch_reviews(package_name: str) -> list[dict]:
-    """Fetch up to 500 most-recent reviews for `package_name`.
+async def fetch_reviews(
+    package_name: str,
+    count: int = 500,
+) -> list[dict]:
+    """Fetch up to `count` most-recent reviews for `package_name`.
 
     Returns list of dicts with keys: content, title, rating, author, external_id.
     `title` is None -- Google Play reviews don't have titles.
@@ -72,7 +75,7 @@ async def fetch_reviews(package_name: str) -> list[dict]:
             country="us",
             lang="en",
             sort=Sort.NEWEST,
-            count=500,
+            count=count,
         )
         return [
             {
@@ -87,6 +90,9 @@ async def fetch_reviews(package_name: str) -> list[dict]:
 
     items = await asyncio.to_thread(_fetch)
     logger.info(
-        "Google Play: fetched %d reviews for %s", len(items), package_name
+        "Google Play: fetched %d reviews for %s (count=%d)",
+        len(items),
+        package_name,
+        count,
     )
     return items

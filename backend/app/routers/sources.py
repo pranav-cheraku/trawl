@@ -105,13 +105,14 @@ async def connect_appstore(
         app_store_name=app_info["app_name"],
         app_store_country=body.country,
         status="scraping",
+        connector_config={"preset": body.preset},
     )
     db.add(source)
     await db.commit()
     await db.refresh(source)
 
     # Kick off async ingestion pipeline (must be after commit so worker can read the row)
-    ingest_appstore_source.delay(str(source.id))
+    ingest_appstore_source.delay(str(source.id), preset=body.preset)
 
     return source
 
@@ -242,6 +243,7 @@ async def create_google_play_source(
         connector_config={
             "package_name": body.package_name,
             "app_name": body.app_name,
+            "preset": body.preset,
         },
     )
     db.add(source)
@@ -250,7 +252,9 @@ async def create_google_play_source(
 
     from app.tasks.ingestion import ingest_google_play_task
 
-    ingest_google_play_task.delay(str(source.id), body.package_name)
+    ingest_google_play_task.delay(
+        str(source.id), body.package_name, preset=body.preset
+    )
     return source
 
 
@@ -295,7 +299,11 @@ async def create_reddit_source(
         source_type="reddit",
         status="pending",
         record_count=0,
-        connector_config={"mode": body.mode, "value": value},
+        connector_config={
+            "mode": body.mode,
+            "value": value,
+            "preset": body.preset,
+        },
     )
     db.add(source)
     await db.commit()
@@ -303,7 +311,9 @@ async def create_reddit_source(
 
     from app.tasks.ingestion import ingest_reddit_task
 
-    ingest_reddit_task.delay(str(source.id), body.mode, value)
+    ingest_reddit_task.delay(
+        str(source.id), body.mode, value, preset=body.preset
+    )
     return source
 
 

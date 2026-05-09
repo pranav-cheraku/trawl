@@ -66,11 +66,8 @@ export default function AddSourceModal({
   return (
     <AnimatePresence>
       {isOpen ? (
-        <button
-          type="button"
-          tabIndex={-1}
+        <div
           onClick={onClose}
-          aria-label="Close add-source modal backdrop"
           className="fixed inset-0 z-50 flex items-center justify-center bg-on-surface/40"
         >
           <motion.div
@@ -197,7 +194,7 @@ export default function AddSourceModal({
               </AnimatePresence>
             </div>
           </motion.div>
-        </button>
+        </div>
       ) : null}
     </AnimatePresence>
   );

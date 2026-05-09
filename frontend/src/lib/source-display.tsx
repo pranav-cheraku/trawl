@@ -91,8 +91,10 @@ export function getSourceDedupeKey(source: Source): string {
       return `appstore::${source.appStoreName ?? source.appStoreId ?? ""}`;
     case "google_play": {
       const cfg = source.connectorConfig ?? {};
+      // Backend stores snake_case keys inside JSONB dict fields — Pydantic's
+      // alias_generator only transforms model fields, not dict values.
       const pkg =
-        typeof cfg.packageName === "string" ? cfg.packageName : "";
+        typeof cfg.package_name === "string" ? cfg.package_name : "";
       return `googleplay::${pkg}`;
     }
     case "reddit": {
@@ -124,7 +126,7 @@ export function getSourceBaseName(source: Source): string {
     case "google_play": {
       const cfg = source.connectorConfig ?? {};
       const appName =
-        typeof cfg.appName === "string" ? cfg.appName : "Unknown app";
+        typeof cfg.app_name === "string" ? cfg.app_name : "Unknown app";
       return `Google Play - ${appName}`;
     }
     case "reddit": {

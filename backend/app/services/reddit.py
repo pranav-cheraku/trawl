@@ -1,8 +1,8 @@
 """Reddit scraper. Public read endpoints only (no OAuth).
 
 Two modes:
-- fetch_subreddit(subreddit): top 100 hot posts from r/{sub} + top 5 comments per post
-- fetch_keyword_search(keyword): top 100 hot posts matching keyword across all subreddits
+- fetch_subreddit(subreddit): hot posts from r/{sub} + top comments per post
+- fetch_keyword_search(keyword): hot posts matching keyword across all subreddits
 
 Each post becomes one feedback item, plus its top comments as additional items.
 External IDs use Reddit's "fullname" format: t3_{post_id}, t1_{comment_id}.
@@ -21,8 +21,6 @@ import httpx
 logger = logging.getLogger(__name__)
 
 USER_AGENT = "Trawl/1.0 (https://github.com/pranav-cheraku/trawl)"
-POSTS_PER_SOURCE = 100
-COMMENTS_PER_POST = 5
 
 
 def _post_to_item(post: dict) -> dict:
@@ -50,11 +48,12 @@ async def _fetch_post_comments(
     client: httpx.AsyncClient,
     subreddit: str,
     post_id: str,
+    comments_per_post: int = 5,
 ) -> list[dict]:
     """Fetch top N comments for a post by score, skipping deleted/removed."""
     url = (
         f"https://www.reddit.com/r/{subreddit}/comments/{post_id}.json"
-        f"?limit={COMMENTS_PER_POST + 5}&sort=top"
+        f"?limit={comments_per_post + 5}&sort=top"
     )
     try:
         resp = await client.get(url)
@@ -87,80 +86,161 @@ async def _fetch_post_comments(
         if body in ("[deleted]", "[removed]", ""):
             continue
         out.append(_comment_to_item(c))
-        if len(out) >= COMMENTS_PER_POST:
+        if len(out) >= comments_per_post:
             break
     return out
 
 
-async def fetch_subreddit(subreddit: str) -> list[dict]:
+async def fetch_subreddit(
+    subreddit: str,
+    posts_limit: int = 100,
+    comments_per_post: int = 5,
+) -> list[dict]:
     """Fetch hot posts + top comments from r/{subreddit}.
 
     Strips a leading 'r/' if the user supplied one.
     Raises httpx.HTTPStatusError on 404 (subreddit doesn't exist).
+
+    For posts_limit > 100, paginates via Reddit's `after=` cursor.
+    Per-page failures break early with whatever's already collected.
     """
     sub = subreddit.lstrip("r/").strip()
-    url = (
-        f"https://www.reddit.com/r/{sub}/hot.json"
-        f"?limit={POSTS_PER_SOURCE}"
-    )
 
     items: list[dict] = []
+    cursor: str | None = None
+    remaining = posts_limit
+
     async with httpx.AsyncClient(
         timeout=30.0,
         headers={"User-Agent": USER_AGENT},
     ) as client:
-        resp = await client.get(url)
-        resp.raise_for_status()
-        data = resp.json()
+        first_page = True
+        while remaining > 0:
+            page_size = min(100, remaining)
+            url = (
+                f"https://www.reddit.com/r/{sub}/hot.json"
+                f"?limit={page_size}"
+            )
+            if cursor:
+                url += f"&after={cursor}"
 
-        children = data.get("data", {}).get("children", [])
-        for child in children:
-            if child.get("kind") != "t3":
-                continue
-            post = child.get("data", {})
-            items.append(_post_to_item(post))
-            comments = await _fetch_post_comments(client, sub, post["id"])
-            items.extend(comments)
+            try:
+                resp = await client.get(url)
+                resp.raise_for_status()
+                data = resp.json()
+            except Exception as e:
+                if first_page:
+                    raise
+                logger.warning(
+                    "Reddit: paginated fetch failed at cursor=%s: %s",
+                    cursor,
+                    e,
+                )
+                break
+
+            children = data.get("data", {}).get("children", [])
+            if not children:
+                break
+
+            for child in children:
+                if child.get("kind") != "t3":
+                    continue
+                post = child.get("data", {})
+                items.append(_post_to_item(post))
+                comments = await _fetch_post_comments(
+                    client, sub, post["id"], comments_per_post
+                )
+                items.extend(comments)
+
+            cursor = data.get("data", {}).get("after")
+            if not cursor:
+                break
+            remaining -= len(children)
+            first_page = False
 
     logger.info(
-        "Reddit: fetched %d items (posts + comments) from r/%s",
+        "Reddit: fetched %d items (posts + comments) from r/%s "
+        "(posts_limit=%d, comments_per_post=%d)",
         len(items),
         sub,
+        posts_limit,
+        comments_per_post,
     )
     return items
 
 
-async def fetch_keyword_search(keyword: str) -> list[dict]:
-    """Search Reddit-wide for `keyword`, fetch hot posts + top comments per post."""
+async def fetch_keyword_search(
+    keyword: str,
+    posts_limit: int = 100,
+    comments_per_post: int = 5,
+) -> list[dict]:
+    """Search Reddit-wide for `keyword`, fetch hot posts + top comments per post.
+
+    For posts_limit > 100, paginates via Reddit's `after=` cursor.
+    Per-page failures break early with whatever's already collected.
+    """
     encoded = quote(keyword)
-    url = (
-        f"https://www.reddit.com/search.json"
-        f"?q={encoded}&sort=hot&limit={POSTS_PER_SOURCE}"
-    )
 
     items: list[dict] = []
+    cursor: str | None = None
+    remaining = posts_limit
+
     async with httpx.AsyncClient(
         timeout=30.0,
         headers={"User-Agent": USER_AGENT},
     ) as client:
-        resp = await client.get(url)
-        resp.raise_for_status()
-        data = resp.json()
+        first_page = True
+        while remaining > 0:
+            page_size = min(100, remaining)
+            url = (
+                f"https://www.reddit.com/search.json"
+                f"?q={encoded}&sort=hot&limit={page_size}"
+            )
+            if cursor:
+                url += f"&after={cursor}"
 
-        children = data.get("data", {}).get("children", [])
-        for child in children:
-            if child.get("kind") != "t3":
-                continue
-            post = child.get("data", {})
-            sub = post.get("subreddit", "")
-            items.append(_post_to_item(post))
-            if sub:
-                comments = await _fetch_post_comments(client, sub, post["id"])
-                items.extend(comments)
+            try:
+                resp = await client.get(url)
+                resp.raise_for_status()
+                data = resp.json()
+            except Exception as e:
+                if first_page:
+                    raise
+                logger.warning(
+                    "Reddit: paginated keyword search failed at cursor=%s: %s",
+                    cursor,
+                    e,
+                )
+                break
+
+            children = data.get("data", {}).get("children", [])
+            if not children:
+                break
+
+            for child in children:
+                if child.get("kind") != "t3":
+                    continue
+                post = child.get("data", {})
+                sub = post.get("subreddit", "")
+                items.append(_post_to_item(post))
+                if sub:
+                    comments = await _fetch_post_comments(
+                        client, sub, post["id"], comments_per_post
+                    )
+                    items.extend(comments)
+
+            cursor = data.get("data", {}).get("after")
+            if not cursor:
+                break
+            remaining -= len(children)
+            first_page = False
 
     logger.info(
-        'Reddit: fetched %d items (posts + comments) for keyword "%s"',
+        'Reddit: fetched %d items (posts + comments) for keyword "%s" '
+        "(posts_limit=%d, comments_per_post=%d)",
         len(items),
         keyword,
+        posts_limit,
+        comments_per_post,
     )
     return items
