@@ -24,11 +24,12 @@ USER_AGENT = "Trawl/1.0 (https://github.com/pranav-cheraku/trawl)"
 
 
 def _post_to_item(post: dict) -> dict:
+    # Reddit's `score` (upvotes - downvotes) is NOT a 1-5 rating, so we don't
+    # surface it as `rating` (which would silently render as stars in the UI).
     body = (post.get("selftext") or "").strip()
     return {
         "content": body or post.get("title", ""),
         "title": post.get("title", ""),
-        "rating": post.get("score", 0),
         "author": post.get("author", ""),
         "external_id": f"t3_{post['id']}",
     }
@@ -38,7 +39,6 @@ def _comment_to_item(comment: dict) -> dict:
     return {
         "content": comment.get("body", ""),
         "title": None,
-        "rating": comment.get("score", 0),
         "author": comment.get("author", ""),
         "external_id": f"t1_{comment['id']}",
     }

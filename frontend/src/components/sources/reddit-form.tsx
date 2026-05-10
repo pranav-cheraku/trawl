@@ -86,7 +86,7 @@ export default function RedditForm({
               : "text-on-surface-variant hover:text-on-surface"
           }`}
         >
-          Quick · ~125
+          Quick
         </button>
         <button
           type="button"
@@ -98,7 +98,7 @@ export default function RedditForm({
               : "text-on-surface-variant hover:text-on-surface"
           }`}
         >
-          Standard · ~500
+          Standard
         </button>
         <button
           type="button"
@@ -110,7 +110,7 @@ export default function RedditForm({
               : "text-on-surface-variant hover:text-on-surface"
           }`}
         >
-          Deep · ~1,000
+          Deep
         </button>
       </div>
 
@@ -131,11 +131,6 @@ export default function RedditForm({
           maxLength={255}
           className="w-full rounded-[4px] bg-surface-container-lowest px-3 py-2 text-[13px] text-on-surface outline outline-1 outline-outline-variant placeholder:text-on-surface-variant/60 focus:outline-secondary"
         />
-        <p className="mt-1 font-mono text-[10px] uppercase tracking-wider text-on-surface-variant/70">
-          {mode === "subreddit"
-            ? "100 hot posts + top 5 comments per post"
-            : "100 matching posts + top 5 comments per post"}
-        </p>
       </div>
 
       <button

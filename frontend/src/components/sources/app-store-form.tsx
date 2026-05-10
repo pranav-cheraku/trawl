@@ -109,7 +109,7 @@ export default function AppStoreForm({
               : "text-on-surface-variant hover:text-on-surface"
           }`}
         >
-          Quick · ~500
+          Quick
         </button>
         <button
           type="button"
@@ -121,7 +121,7 @@ export default function AppStoreForm({
               : "text-on-surface-variant hover:text-on-surface"
           }`}
         >
-          Standard · ~2,000
+          Standard
         </button>
       </div>
 

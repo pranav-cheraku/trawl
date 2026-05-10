@@ -36,22 +36,30 @@ function formatDate(iso: string): string {
 }
 
 function StatusBadge({ status }: { status: string }) {
-  let classes: string;
+  let dotClass: string;
+  let textClass: string;
+  let pulse = false;
   switch (status) {
     case "ready":
-      classes = "bg-[#10B981]/10 text-[#10B981]";
+      dotClass = "bg-[#10B981]";
+      textClass = "text-on-surface";
       break;
     case "error":
-      classes = "bg-error/10 text-error";
+      dotClass = "bg-error";
+      textClass = "text-error";
       break;
     default:
-      classes = "bg-secondary/10 text-secondary animate-pulse";
+      dotClass = "bg-secondary";
+      textClass = "text-secondary";
+      pulse = true;
   }
   return (
-    <span
-      className={`inline-block rounded-[2px] px-1.5 py-0.5 font-mono text-[10px] font-medium uppercase tracking-wider ${classes}`}
-    >
-      {status}
+    <span className="inline-flex items-center gap-1.5 font-mono text-[10px] font-medium uppercase tracking-[0.14em]">
+      <span
+        aria-hidden
+        className={`h-1.5 w-1.5 rounded-full ${dotClass} ${pulse ? "animate-pulse" : ""}`}
+      />
+      <span className={textClass}>{status}</span>
     </span>
   );
 }
@@ -205,8 +213,12 @@ export default function SourceList({ projectId, refreshKey }: Props) {
     );
   }
 
+  // Column widths (left → right): icon · source · type · records · status · added · actions.
+  // Records 70px (max value "2,216" + counter padding), Status 80px (longest pill is
+  // "ingesting"), Added 138px (longest date "May 10, 2026, 10:43 AM" in JetBrains
+  // Mono is ~134px — kept just enough slack to avoid a 1-char clip).
   const columnTemplate =
-    "grid-cols-[28px_minmax(0,1.6fr)_86px_96px_100px_110px_72px]";
+    "grid-cols-[28px_minmax(0,1.6fr)_86px_70px_80px_138px_72px]";
 
   return (
     <div className="rounded-[4px] bg-surface-container-lowest p-4">
@@ -253,17 +265,21 @@ export default function SourceList({ projectId, refreshKey }: Props) {
           {/* ── md+ columnar table ── */}
           <div className="hidden md:block">
             <div className="mt-3 overflow-hidden rounded-[4px]">
-              {/* Table header */}
+              {/* Table header. SOURCE spans the icon + name columns so it
+                  reads as one logical "source" header rather than starting
+                  awkwardly indented past the icon. Actions column header
+                  ("Delete") is right-aligned with `pr-5` so the text lands
+                  above the trash icon (which sits just left of the caret
+                  inside the `justify-end gap-1` action cell). */}
               <div
                 className={`grid ${columnTemplate} items-center gap-3 bg-surface-container-low px-3 py-2 font-mono text-[9.5px] font-medium uppercase tracking-[0.15em] text-on-surface-variant/70`}
               >
-                <span className="sr-only">Type</span>
-                <span>Source</span>
+                <span className="col-span-2">Source</span>
                 <span>Type</span>
                 <span>Records</span>
                 <span>Status</span>
                 <span>Added</span>
-                <span className="sr-only">Actions</span>
+                <span className="pr-5 text-right">Delete</span>
               </div>
 
               {/* Rows */}

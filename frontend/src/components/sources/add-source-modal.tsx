@@ -91,30 +91,29 @@ export default function AddSourceModal({
           >
             {/* Header */}
             <div className="flex items-start justify-between px-6 pt-5 pb-3">
-              <div className="flex items-center gap-3">
-                {step === "form" && (
+              <div>
+                {step === "form" ? (
                   <button
                     type="button"
                     onClick={handleBack}
-                    className="font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-on-surface-variant transition-colors hover:text-on-surface"
+                    className="inline-flex items-center gap-1.5 font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-on-surface-variant transition-colors hover:text-on-surface"
                     aria-label="Back to source picker"
                   >
-                    ← Back
+                    <span aria-hidden>←</span> Workspace / New Source
                   </button>
-                )}
-                <div>
+                ) : (
                   <p className="font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-on-surface-variant">
                     Workspace / New Source
                   </p>
-                  <h2
-                    id="add-source-title"
-                    className="mt-0.5 text-[18px] font-semibold leading-tight text-on-surface"
-                  >
-                    {step === "pick"
-                      ? "Connect a source"
-                      : `Connect ${selected?.label}`}
-                  </h2>
-                </div>
+                )}
+                <h2
+                  id="add-source-title"
+                  className="mt-1 text-[18px] font-semibold leading-tight text-on-surface"
+                >
+                  {step === "pick"
+                    ? "Connect a source"
+                    : `Connect ${selected?.label}`}
+                </h2>
               </div>
               <button
                 ref={closeButtonRef}

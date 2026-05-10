@@ -111,7 +111,7 @@ export default function GooglePlayForm({
               : "text-on-surface-variant hover:text-on-surface"
           }`}
         >
-          Quick · ~100
+          Quick
         </button>
         <button
           type="button"
@@ -123,7 +123,7 @@ export default function GooglePlayForm({
               : "text-on-surface-variant hover:text-on-surface"
           }`}
         >
-          Standard · ~500
+          Standard
         </button>
       </div>
 
@@ -165,10 +165,11 @@ export default function GooglePlayForm({
           app in HTML the scraper can't parse, so a name-only search may
           omit it. Pasting the full search URL bypasses that. */}
       <p className="mt-1.5 text-[11px] leading-relaxed text-on-surface-variant/80">
-        Don&apos;t see your app? Paste the Google Play search URL above —{" "}
+        Don&apos;t see your app? Paste the Google Play search URL above{" "}
         <span className="font-mono text-[10px] text-on-surface-variant">
           play.google.com/store/search?q=appname
         </span>
+        .
       </p>
 
       {showDropdown && (

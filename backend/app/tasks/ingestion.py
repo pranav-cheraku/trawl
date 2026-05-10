@@ -372,7 +372,6 @@ def ingest_reddit_task(
 
             for r in items:
                 metadata: dict = {
-                    "rating": r.get("rating", 0),
                     "author": r.get("author", ""),
                 }
                 if r.get("title"):
