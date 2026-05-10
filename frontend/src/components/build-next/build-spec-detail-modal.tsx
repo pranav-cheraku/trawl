@@ -69,8 +69,8 @@ export default function BuildSpecDetailModal({
         className="relative m-auto flex max-h-[90vh] w-[min(960px,calc(100vw-2rem))] flex-col rounded-[4px] bg-surface-container-lowest"
       >
         <header className="px-6 py-4 shadow-[inset_0_-1px_0_rgba(15,23,42,0.04)]">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex-1">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+            <div className="order-2 min-w-0 flex-1 sm:order-1">
               <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-on-surface-variant">
                 Workspace / Spec · #{spec.id.slice(0, 4)}
               </p>
@@ -88,7 +88,7 @@ export default function BuildSpecDetailModal({
                 <span>· {citations.length} citations</span>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="order-1 flex items-center justify-end gap-3 sm:order-2">
               {isPromoted ? (
                 <a
                   href={`/project/${projectId}/specs`}

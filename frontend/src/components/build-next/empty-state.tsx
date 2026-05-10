@@ -32,8 +32,7 @@ export default function EmptyState({
       </h2>
       <p className="mx-auto mt-2 max-w-md text-[13px] leading-relaxed text-on-surface-variant">
         Trawl runs 5 exploratory queries against your feedback corpus and
-        surfaces ranked themes plus draft feature specs. Typical runtime:
-        30–60 seconds.
+        surfaces ranked themes plus draft feature specs.
       </p>
       <button
         type="button"

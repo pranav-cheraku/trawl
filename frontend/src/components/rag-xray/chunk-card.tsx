@@ -1,8 +1,6 @@
-// frontend/src/components/rag-xray/chunk-card.tsx
 "use client";
 
 import { forwardRef } from "react";
-import { motion, useReducedMotion } from "framer-motion";
 
 import type { TransparencyChunk } from "@/types";
 
@@ -10,10 +8,8 @@ interface ChunkCardProps {
   chunk: TransparencyChunk;
   isHighlighted: boolean;
   onClick?: (chunk: TransparencyChunk) => void;
-  /** When true, apply a subtle 2-second opacity loop to draw the eye (used for the highest-similarity chunk in the build variant). Reduced-motion users get a static card. */
-  pulse?: boolean;
-  /** Optional hover handler so the parent can drive guide-line state. */
-  onHoverChange?: (chunkId: string | null) => void;
+  /** Optional badge text rendered above the chunk preview — e.g. "Q2 · REQUESTS" in the build variant. */
+  queryLabel?: string;
 }
 
 /**
@@ -21,41 +17,23 @@ interface ChunkCardProps {
  * the full chunk text and full parent feedback item content. Scroll+highlight
  * orchestration lives on the parent XrayPanel, which keeps a ref map keyed
  * by chunkId.
- *
- * Optional `pulse` makes the card subtly oscillate opacity — used in the
- * Build variant on the single highest-similarity chunk.
  */
 export const ChunkCard = forwardRef<HTMLDivElement, ChunkCardProps>(
-  function ChunkCard(
-    { chunk, isHighlighted, onClick, pulse, onHoverChange },
-    ref,
-  ) {
-    const prefersReducedMotion = useReducedMotion();
+  function ChunkCard({ chunk, isHighlighted, onClick, queryLabel }, ref) {
     const rankLabel = `#${String(chunk.retrievalRank).padStart(2, "0")}`;
     const score = chunk.similarityScore.toFixed(2);
     const sourceType = chunk.sourceType.toUpperCase();
-    const shouldPulse = !!pulse && !prefersReducedMotion;
-
-    function handleClick() {
-      onClick?.(chunk);
-    }
 
     return (
-      <motion.div
+      <div
         ref={ref}
         className={`rounded-[4px] transition-shadow duration-500 ${
           isHighlighted ? "ring-2 ring-secondary" : "ring-0 ring-transparent"
         }`}
-        onMouseEnter={
-          onHoverChange ? () => onHoverChange(chunk.chunkId) : undefined
-        }
-        onMouseLeave={onHoverChange ? () => onHoverChange(null) : undefined}
-        animate={shouldPulse ? { opacity: [1, 0.7, 1] } : undefined}
-        transition={shouldPulse ? { duration: 2, repeat: 3 } : undefined}
       >
         <button
           type="button"
-          onClick={handleClick}
+          onClick={() => onClick?.(chunk)}
           className="w-full cursor-pointer rounded-[4px] bg-surface-container-lowest px-4 py-3 text-left transition-colors hover:bg-surface-container-high focus:outline-none focus-visible:ring-2 focus-visible:ring-secondary"
         >
           <div className="flex items-center justify-between gap-3 font-mono text-[10px] uppercase tracking-[0.1em]">
@@ -64,14 +42,20 @@ export const ChunkCard = forwardRef<HTMLDivElement, ChunkCardProps>(
               <span className="text-secondary">{score}</span>
             </div>
             <div className="truncate text-on-surface-variant">
-              {sourceType ? `${sourceType} · ` : ""}{chunk.sourceName}
+              {sourceType ? `${sourceType} · ` : ""}
+              {chunk.sourceName}
             </div>
           </div>
+          {queryLabel ? (
+            <div className="mt-2 inline-flex items-center rounded-[2px] bg-surface-container px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-[0.16em] text-on-surface-variant">
+              {queryLabel}
+            </div>
+          ) : null}
           <p className="mt-2 text-[13px] leading-relaxed text-on-surface">
             {chunk.chunkTextPreview}
           </p>
         </button>
-      </motion.div>
+      </div>
     );
   },
 );

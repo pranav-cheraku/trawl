@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { friendlyAgo } from "@/lib/time";
+import { useFloatingPosition } from "@/lib/use-floating-position";
 import type { BuildReportSummary } from "@/types";
 
 type Props = {
@@ -17,17 +18,21 @@ export default function RunSwitcher({
   onSelect,
 }: Props) {
   const [open, setOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement | null>(null);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const popoverRef = useRef<HTMLDivElement | null>(null);
+  const position = useFloatingPosition({
+    isOpen: open,
+    triggerRef,
+    preferredWidth: 320,
+  });
 
   useEffect(() => {
     if (!open) return;
     const onMouseDown = (e: MouseEvent) => {
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(e.target as Node)
-      ) {
-        setOpen(false);
-      }
+      const target = e.target as Node;
+      if (triggerRef.current?.contains(target)) return;
+      if (popoverRef.current?.contains(target)) return;
+      setOpen(false);
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setOpen(false);
@@ -55,8 +60,9 @@ export default function RunSwitcher({
     selectedRunId !== null && runs[0]?.id !== selectedRunId;
 
   return (
-    <div ref={containerRef} className="relative inline-block">
+    <>
       <button
+        ref={triggerRef}
         type="button"
         onClick={() => setOpen((v) => !v)}
         className="inline-flex min-w-[180px] items-center justify-between gap-2 rounded-[4px] bg-surface-container px-3 py-2 font-mono text-[10px] uppercase tracking-[0.16em] text-on-surface transition-colors hover:bg-surface-container-high"
@@ -67,8 +73,17 @@ export default function RunSwitcher({
         </span>
         <span aria-hidden>▾</span>
       </button>
-      {open ? (
-        <div className="absolute right-0 top-[calc(100%+6px)] z-20 w-[320px] max-w-[calc(100vw-2rem)] rounded-[4px] bg-surface-container-lowest/90 ring-1 ring-outline-variant/20 backdrop-blur-md">
+      {open && position ? (
+        <div
+          ref={popoverRef}
+          style={{
+            position: "fixed",
+            top: position.top,
+            left: position.left,
+            width: position.width,
+          }}
+          className="z-20 rounded-[4px] bg-surface-container-lowest/90 ring-1 ring-outline-variant/20 backdrop-blur-md"
+        >
           <ul className="max-h-[320px] overflow-y-auto py-2">
             {runs.map((run, idx) => {
               const active =
@@ -92,7 +107,7 @@ export default function RunSwitcher({
                       </span>
                       <StatusDot status={run.status} />
                     </div>
-                    <div className="flex items-center gap-2 font-mono text-[9.5px] uppercase tracking-[0.14em] text-on-surface-variant">
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 font-mono text-[9.5px] uppercase tracking-[0.14em] text-on-surface-variant">
                       <span>{friendlyAgo(run.createdAt)}</span>
                       <span>·</span>
                       <span>{run.sourceCount} sources</span>
@@ -108,7 +123,7 @@ export default function RunSwitcher({
           </ul>
         </div>
       ) : null}
-    </div>
+    </>
   );
 }
 
@@ -130,4 +145,3 @@ function StatusDot({
     />
   );
 }
-

@@ -293,7 +293,7 @@ export default function BuildNextPage() {
       />
 
       {/* Source scope strip — mirrors Specs tab */}
-      <div className="flex items-center justify-between rounded-[4px] bg-surface-container-lowest px-4 py-2">
+      <div className="flex flex-col gap-2 rounded-[4px] bg-surface-container-lowest px-4 py-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-on-surface-variant">
             Scope
@@ -353,6 +353,16 @@ export default function BuildNextPage() {
             isScopeEmpty={isScopeEmpty}
           />
         ) : report?.status === "success" ? (
+          (() => {
+            // Sort by frequency desc so the chart's Q1..QN reflect theme size
+            // (biggest = Q1). Theme cards below follow the same order so the
+            // chart and cards stay in lock-step. Backend severity_score still
+            // drives spec ranking (B1..BN); it's just not surfaced as the
+            // theme Q-number here.
+            const themesByFrequency = [...report.themes].sort(
+              (a, b) => b.frequencyPct - a.frequencyPct,
+            );
+            return (
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_380px] xl:grid-cols-[1fr_440px]">
             <div className="flex flex-col gap-4">
               {report.executiveSummary !== null ? (
@@ -363,7 +373,7 @@ export default function BuildNextPage() {
                 />
               ) : null}
               <RadialThemeChart
-                themes={report.themes}
+                themes={themesByFrequency}
                 onThemeClick={(themeId) => {
                   const el = document.getElementById(`theme-${themeId}`);
                   if (el) {
@@ -371,10 +381,11 @@ export default function BuildNextPage() {
                   }
                 }}
               />
-              {report.themes.map((theme) => (
+              {themesByFrequency.map((theme, idx) => (
                 <ThemeCard
                   key={theme.id}
                   theme={theme}
+                  displayRank={idx + 1}
                   specs={report.specs}
                   projectId={projectId}
                   onSpecClick={(spec) => setSelectedSpec(spec)}
@@ -417,6 +428,8 @@ export default function BuildNextPage() {
               )}
             </aside>
           </div>
+            );
+          })()
         ) : (
           <div className="rounded-[4px] bg-surface-container-lowest px-8 py-16 text-center text-[12px] text-on-surface-variant">
             No report.

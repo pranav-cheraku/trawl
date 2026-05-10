@@ -159,7 +159,6 @@ export function ConversationRail({
         {conversations.map((conv, idx) => {
           const isActive = conv.id === currentId;
           const title = conv.title?.trim() || "New chat";
-          const displayedAt = conv.createdAt;
 
           if (confirmingId === conv.id) {
             return (
@@ -276,7 +275,7 @@ export function ConversationRail({
                   <span className="min-w-0 flex-1 truncate">{title}</span>
                 </span>
                 <span className="mt-1 font-mono text-[9px] uppercase tracking-[0.15em] text-on-surface-variant/70">
-                  {friendlyAgo(displayedAt)}
+                  {friendlyAgo(conv.createdAt)}
                 </span>
               </button>
 

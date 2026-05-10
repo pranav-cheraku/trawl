@@ -77,7 +77,7 @@ export default function RunningState({ startedAtIso }: Props) {
         })}
       </ul>
       <p className="mt-6 text-[12px] text-on-surface-variant">
-        Estimated 30–45 seconds total. Page will refresh when complete.
+        The page will refresh when the run completes.
       </p>
     </div>
   );

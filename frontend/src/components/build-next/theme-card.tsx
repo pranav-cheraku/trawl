@@ -11,6 +11,8 @@ import ThemeSpecFailed from "./theme-spec-failed";
 
 type Props = {
   theme: BuildTheme;
+  /** 1-indexed position in the page's display order (by frequency). */
+  displayRank: number;
   specs: BuildReportSpec[];
   projectId: string;
   onSpecClick: (spec: BuildReportSpec) => void;
@@ -18,10 +20,9 @@ type Props = {
   promotingIds: Set<string>;
 };
 
-const TWO_DIGITS = (n: number) => n.toString().padStart(2, "0");
-
 export default function ThemeCard({
   theme,
+  displayRank,
   specs,
   projectId,
   onSpecClick,
@@ -54,7 +55,7 @@ export default function ThemeCard({
           transition={{ duration: durations.normal, ease: easings.standard }}
           className="font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-on-surface"
         >
-          {TWO_DIGITS(theme.rank)} / {theme.name.toUpperCase()}
+          Q{displayRank} / {theme.name.toUpperCase()}
         </motion.span>
         <motion.span
           initial={prefersReducedMotion ? false : { opacity: 0, x: -4 }}
