@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { getChunkDetail } from "@/lib/api";
 import type { ChunkDetail, TransparencyChunk } from "@/types";
@@ -40,6 +40,12 @@ export function ChunkDetailModal({
     return () => {
       document.body.style.overflow = previous;
     };
+  }, []);
+
+  // Auto-focus the close button so keyboard users land inside the dialog.
+  const closeButtonRef = useRef<HTMLButtonElement | null>(null);
+  useEffect(() => {
+    closeButtonRef.current?.focus();
   }, []);
 
   // Fetch full detail if the embedded transparency blob is missing it.
@@ -116,10 +122,11 @@ export function ChunkDetailModal({
             </h2>
           </div>
           <button
+            ref={closeButtonRef}
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[4px] text-on-surface-variant transition-colors hover:bg-surface-container-high hover:text-on-surface"
+            className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[4px] text-on-surface-variant transition-colors hover:bg-surface-container-high hover:text-on-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-secondary/40"
           >
             <svg
               className="h-4 w-4"

@@ -6,6 +6,7 @@ import { motion, useReducedMotion } from "framer-motion";
 
 import InlineConfirm from "@/components/ui/inline-confirm";
 import { durations, easings, springs, staggers } from "@/lib/motion";
+import { friendlyAgo } from "@/lib/time";
 import type { Conversation } from "@/types";
 
 interface ConversationRailProps {
@@ -16,23 +17,6 @@ interface ConversationRailProps {
   onNew: (title: string | null) => void;
   onDelete: (conversationId: string) => void;
   onRename: (conversationId: string, title: string) => void;
-}
-
-function formatRelative(iso: string): string {
-  const normalized = /[zZ]|[+-]\d{2}:?\d{2}$/.test(iso) ? iso : `${iso}Z`;
-  const ms = Date.now() - new Date(normalized).getTime();
-  const sec = Math.max(1, Math.floor(ms / 1000));
-  if (sec < 60) return `${sec}s ago`;
-  const min = Math.floor(sec / 60);
-  if (min < 60) return `${min} min ago`;
-  const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr} hr ago`;
-  const day = Math.floor(hr / 24);
-  if (day < 7) return `${day}d ago`;
-  return new Date(normalized).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-  });
 }
 
 export function ConversationRail({
@@ -274,10 +258,10 @@ export function ConversationRail({
               <button
                 type="button"
                 onClick={() => onSelect(conv.id)}
-                className="relative flex w-full min-w-0 flex-col items-start text-left"
+                className="relative flex w-full min-w-0 flex-col items-start pr-12 text-left"
               >
                 <span
-                  className={`flex items-center gap-1.5 text-[12.5px] leading-tight ${
+                  className={`flex w-full min-w-0 items-center gap-1.5 text-[12.5px] leading-tight ${
                     isActive
                       ? "font-semibold text-on-surface"
                       : "text-on-surface"
@@ -286,13 +270,13 @@ export function ConversationRail({
                   {isActive && (
                     <span
                       aria-hidden
-                      className="inline-block h-1.5 w-1.5 rounded-full bg-secondary"
+                      className="inline-block h-1.5 w-1.5 flex-shrink-0 rounded-full bg-secondary"
                     />
                   )}
-                  <span className="truncate">{title}</span>
+                  <span className="min-w-0 flex-1 truncate">{title}</span>
                 </span>
                 <span className="mt-1 font-mono text-[9px] uppercase tracking-[0.15em] text-on-surface-variant/70">
-                  {formatRelative(displayedAt)}
+                  {friendlyAgo(displayedAt)}
                 </span>
               </button>
 

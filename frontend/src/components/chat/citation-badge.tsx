@@ -26,13 +26,11 @@ export function CitationBadge({ index, chunk, onClick }: CitationBadgeProps) {
   const { setHoveredCitation, getChunkRect } = useCitationLink();
   const buttonRef = useRef<HTMLButtonElement>(null);
 
-  const motionInitial = prefersReducedMotion ? false : { opacity: 0, scale: 0.95 };
-  const motionAnimate = prefersReducedMotion
-    ? { opacity: 1, scale: 1 }
-    : { opacity: 1, scale: [0.95, 1.05, 1] as number[] };
+  const motionInitial = prefersReducedMotion ? false : { opacity: 0 };
+  const motionAnimate = { opacity: 1 };
   const motionTransition = prefersReducedMotion
     ? { duration: 0 }
-    : { duration: 0.6, ease: "easeOut" };
+    : { duration: 0.18, ease: "easeOut" };
 
   function handleClick(e: React.MouseEvent<HTMLButtonElement>) {
     // Stop propagation so the badge click doesn't also trigger the

@@ -73,8 +73,8 @@ export const ChunkCard = forwardRef<HTMLDivElement, ChunkCardProps>(
           onHoverChange ? () => onHoverChange(chunk.chunkId) : undefined
         }
         onMouseLeave={onHoverChange ? () => onHoverChange(null) : undefined}
-        animate={shouldPulse ? { opacity: [0.7, 1, 0.7] } : undefined}
-        transition={shouldPulse ? { duration: 2, repeat: Infinity } : undefined}
+        animate={shouldPulse ? { opacity: [1, 0.7, 1] } : undefined}
+        transition={shouldPulse ? { duration: 2, repeat: 3 } : undefined}
       >
         <button
           type="button"

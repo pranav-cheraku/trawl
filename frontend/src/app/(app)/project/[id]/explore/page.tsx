@@ -77,6 +77,19 @@ export default function ExplorePage() {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages.length, isPending, failedSend]);
 
+  // If the viewport widens past lg while the mobile X-Ray sheet is open
+  // (e.g. user rotates a tablet or resizes the dev window), auto-close it
+  // so the desktop X-Ray pane is the single source of truth.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(min-width: 1024px)");
+    function handleChange(e: MediaQueryListEvent) {
+      if (e.matches) setIsMobileSheetOpen(false);
+    }
+    mq.addEventListener("change", handleChange);
+    return () => mq.removeEventListener("change", handleChange);
+  }, []);
+
   // Initial mount: fetch conversation list, restore saved conversation,
   // check sources readiness. The cancelled flag handles React Strict Mode's
   // intentional double-mount.
@@ -166,7 +179,11 @@ export default function ExplorePage() {
       setErrorMessage(null);
       setFailedSend(null);
 
-      // Lazy-create the conversation on first send.
+      // Lazy-create the conversation on first send. Track this separately so
+      // we only refetch the conversation list when an auto-title may have
+      // been generated (i.e. on the very first message of a new lazy-created
+      // conversation), rather than on every send.
+      const isLazyCreating = !conversationId;
       let activeConversationId = conversationId;
       if (!activeConversationId) {
         try {
@@ -215,13 +232,16 @@ export default function ExplorePage() {
         // New reply → auto-follow latest in the X-Ray panel.
         setSelectedMessageId(null);
         setFocusedChunkId(null);
-        // Refresh the conversation list so any new title (auto-populated
-        // on first-message send) appears in the switcher.
-        listConversations(projectId)
-          .then(setConversations)
-          .catch(() => {
-            /* non-fatal */
-          });
+        // Only refresh the conversation list when we just lazy-created — that's
+        // the path where the backend may have auto-populated a title from the
+        // first message. Subsequent sends don't change titles.
+        if (isLazyCreating) {
+          listConversations(projectId)
+            .then(setConversations)
+            .catch(() => {
+              /* non-fatal */
+            });
+        }
       } catch (err) {
         // Keep the optimistic bubble on screen; show an inline retry UI.
         // Always log the raw error for devtools debugging.
@@ -387,7 +407,15 @@ export default function ExplorePage() {
   }
 
   if (mountStatus === "no-sources") {
-    return <NoSourcesState projectId={projectId} />;
+    return (
+      <NoSourcesState
+        projectId={projectId}
+        onSourcesReady={(refreshed) => {
+          setSources(refreshed);
+          setMountStatus("ready");
+        }}
+      />
+    );
   }
 
   const reviewCount = sources.reduce(
@@ -423,15 +451,6 @@ export default function ExplorePage() {
             </span>
             <span className="font-mono text-[9px] font-medium uppercase tracking-[0.15em] text-on-surface-variant/60">
               Reviews Indexed
-            </span>
-          </div>
-          <span aria-hidden className="h-4 w-px bg-on-surface/[0.08]" />
-          <div className="flex items-center gap-1.5">
-            <span className="font-mono text-[13px] font-medium text-on-surface">
-              {sourceScope.activeIds(readySources).length}/{readySources.length}
-            </span>
-            <span className="font-mono text-[9px] font-medium uppercase tracking-[0.15em] text-on-surface-variant/60">
-              Active Sources
             </span>
           </div>
           {readySources.length > 0 && (
@@ -509,7 +528,6 @@ export default function ExplorePage() {
                 <MessageList
                   messages={messages}
                   isPending={isPending}
-                  pendingChunkCount={8}
                   selectedMessageId={activeMessage?.id ?? null}
                   onMessageSelect={handleMessageSelect}
                   onCitationClick={handleCitationClick}
@@ -649,7 +667,29 @@ function FailedMessageBubble({ detail, onRetry }: FailedMessageBubbleProps) {
   );
 }
 
-function NoSourcesState({ projectId }: { projectId: string }) {
+interface NoSourcesStateProps {
+  projectId: string;
+  onSourcesReady: (sources: Source[]) => void;
+}
+
+function NoSourcesState({ projectId, onSourcesReady }: NoSourcesStateProps) {
+  // Background poll so a user who lands here while a source is still ingesting
+  // gets auto-recovered into the workspace once at least one source is ready.
+  // No visible indicator — the recovery is silent (workspace just appears).
+  useEffect(() => {
+    const id = window.setInterval(async () => {
+      try {
+        const fetched = await listSources(projectId);
+        if (fetched.some((s) => s.status === "ready")) {
+          onSourcesReady(fetched);
+        }
+      } catch {
+        // Network blips are non-fatal; keep polling.
+      }
+    }, 5000);
+    return () => window.clearInterval(id);
+  }, [projectId, onSourcesReady]);
+
   return (
     <div className="flex h-[calc(100vh-20rem)] items-center justify-center rounded-[4px] bg-surface-container-low">
       <div className="flex max-w-md flex-col items-center px-8 py-16 text-center">
