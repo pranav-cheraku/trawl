@@ -123,13 +123,13 @@ export function XrayPanel(props: XrayPanelProps) {
   // ── Chat variant: derive chunks + header from selectedMessage ─────────
   if (props.variant === "chat") {
     const transparency = props.selectedMessage?.transparency ?? null;
-    const chunks = transparency?.retrievedChunks ?? [];
+    const isAssistant =
+      props.selectedMessage?.role === "assistant" && transparency !== null;
 
-    if (
-      !props.selectedMessage ||
-      props.selectedMessage.role !== "assistant" ||
-      !transparency
-    ) {
+    if (!isAssistant) {
+      // No message yet (or non-assistant). Retrieval settings live in the
+      // page-level corpus context strip, not this panel — so just render the
+      // empty state.
       return (
         <div className="flex h-full flex-col rounded-[4px] bg-surface-container-low">
           <XrayEmpty />
@@ -137,18 +137,18 @@ export function XrayPanel(props: XrayPanelProps) {
       );
     }
 
+    const chunks = transparency!.retrievedChunks ?? [];
     return (
       <PanelShell
-        header={<XrayChatHeader transparency={transparency} />}
+        header={<XrayChatHeader transparency={transparency!} />}
         chunks={chunks}
-        threshold={transparency.threshold}
+        threshold={transparency!.threshold}
         highlightedChunkId={highlightedChunkId}
         onChunkClick={setDetailChunk}
         cardRefs={cardRefs}
         detailChunk={detailChunk}
         closeDetail={() => setDetailChunk(null)}
         projectId={projectId}
-        registerInCitationLinkContext
       />
     );
   }
@@ -235,10 +235,6 @@ interface PanelShellProps {
   detailChunk: TransparencyChunk | null;
   closeDetail: () => void;
   projectId: string;
-  /** When true, each ChunkCard registers its bounding-rect into the
-   *  CitationLinkContext so chat citation badge hovers can draw a guide-line.
-   *  Pass only for the chat variant. */
-  registerInCitationLinkContext?: boolean;
 }
 
 function PanelShell({
@@ -251,8 +247,15 @@ function PanelShell({
   detailChunk,
   closeDetail,
   projectId,
-  registerInCitationLinkContext,
 }: PanelShellProps) {
+  // Only render the modal if the stored chunk actually belongs to the
+  // currently-displayed chunk set. Prevents a stale modal from appearing
+  // when the user switches between messages while detailChunk state hasn't
+  // been cleared yet.
+  const visibleDetailChunk =
+    detailChunk && chunks.some((c) => c.chunkId === detailChunk.chunkId)
+      ? detailChunk
+      : null;
   return (
     <>
       <div className="flex h-full flex-col rounded-[4px] bg-surface-container-low">
@@ -279,7 +282,6 @@ function PanelShell({
                   chunk={chunk}
                   isHighlighted={highlightedChunkId === chunk.chunkId}
                   onClick={onChunkClick}
-                  registerInCitationLinkContext={registerInCitationLinkContext}
                   ref={(node) => {
                     if (node) {
                       cardRefs.current.set(chunk.chunkId, node);
@@ -293,10 +295,10 @@ function PanelShell({
           )}
         </div>
       </div>
-      {detailChunk && (
+      {visibleDetailChunk && (
         <ChunkDetailModal
           projectId={projectId}
-          chunk={detailChunk}
+          chunk={visibleDetailChunk}
           onClose={closeDetail}
         />
       )}
@@ -309,35 +311,26 @@ interface XrayChatHeaderProps {
 }
 
 function XrayChatHeader({ transparency }: XrayChatHeaderProps) {
-  const hasModel = transparency.modelUsed !== null;
   return (
     <div className="flex flex-col gap-1.5 px-4 pt-4 pb-3">
       <div className="font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-on-surface-variant">
         RAG X-Ray
       </div>
-      {hasModel ? (
-        <>
-          <div className="flex flex-wrap gap-x-3 gap-y-1 font-mono text-[10px] text-on-surface">
-            <span>{transparency.modelUsed}</span>
-            <span className="text-on-surface-variant">·</span>
-            <span>k={transparency.topK}</span>
-            <span className="text-on-surface-variant">·</span>
-            <span>t={transparency.threshold.toFixed(2)}</span>
-            <span className="text-on-surface-variant">·</span>
-            <span>{transparency.totalChunksSearched} candidates</span>
-          </div>
-          <div className="font-mono text-[10px] text-on-surface-variant">
-            retrieval {transparency.retrievalLatencyMs}ms · generation{" "}
-            {transparency.generationLatencyMs}ms · {transparency.inputTokens}↓
-            / {transparency.outputTokens}↑
-          </div>
-        </>
-      ) : (
-        <div className="font-mono text-[10px] text-on-surface-variant">
-          {transparency.retrievedChunks.length} chunks found · retrieval{" "}
-          {transparency.retrievalLatencyMs}ms
-        </div>
-      )}
+      <div className="flex flex-wrap gap-x-3 gap-y-1 font-mono text-[10px] text-on-surface-variant">
+        <span>k={transparency.topK}</span>
+        <span>·</span>
+        <span>t={transparency.threshold.toFixed(2)}</span>
+        <span>·</span>
+        <span>{transparency.totalChunksSearched} candidates</span>
+        <span>·</span>
+        <span>{transparency.retrievalLatencyMs}ms retrieval</span>
+        {transparency.modelUsed !== null && (
+          <>
+            <span>·</span>
+            <span>{transparency.generationLatencyMs}ms gen</span>
+          </>
+        )}
+      </div>
     </div>
   );
 }
@@ -367,7 +360,6 @@ function XrayBuildHeader({ metadata, retrievedCount }: XrayBuildHeaderProps) {
         RAG X-Ray · Build Report
       </div>
       <div className="flex flex-wrap gap-x-3 gap-y-1 font-mono text-[10px] text-on-surface-variant">
-        {metadata.model ? <span>Model · {metadata.model}</span> : null}
         {queryCount > 0 ? <span>{queryCount} queries</span> : null}
         {metadata.topKPerQuery ? (
           <span>k={metadata.topKPerQuery} per query</span>
@@ -387,7 +379,6 @@ function XraySpecHeader({ specSources }: XraySpecHeaderProps) {
   const chunksShown = specSources.retrievedChunks?.length ?? 0;
   const candidates = specSources.totalChunksSearched;
   const topK = specSources.retrievalTopK;
-  const model = specSources.modelUsed;
   return (
     <div className="flex flex-col gap-1.5 px-4 pt-4 pb-3">
       <div className="font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-on-surface-variant">
@@ -396,7 +387,6 @@ function XraySpecHeader({ specSources }: XraySpecHeaderProps) {
       <div className="flex flex-wrap gap-x-3 gap-y-1 font-mono text-[10px] text-on-surface">
         {(() => {
           const parts: string[] = [];
-          if (model) parts.push(model);
           if (topK != null) parts.push(`k=${topK}`);
           if (candidates != null) parts.push(`${candidates} candidates`);
           parts.push(`${chunksShown} retrieved`);

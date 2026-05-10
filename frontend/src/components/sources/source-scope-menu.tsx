@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { useFloatingPosition } from "@/lib/use-floating-position";
 import type { Source } from "@/types";
 
 interface SourceScopeMenuProps {
@@ -62,7 +63,13 @@ export function SourceScopeMenu({
   ariaLabel,
 }: SourceScopeMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement | null>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
+  const position = useFloatingPosition({
+    isOpen,
+    triggerRef,
+    preferredWidth: 360,
+  });
 
   const displayNames = useMemo(() => computeDisplayNames(sources), [sources]);
   const mutedSet = useMemo(() => new Set(mutedIds), [mutedIds]);
@@ -83,16 +90,16 @@ export function SourceScopeMenu({
   }, [isOpen]);
 
   // Click outside closes the popover. Register via setTimeout(0) so the
-  // click that opens the popover doesn't immediately close it.
+  // click that opens the popover doesn't immediately close it. The popover
+  // is rendered outside the trigger's DOM subtree (position: fixed) so we
+  // check both refs.
   useEffect(() => {
     if (!isOpen) return;
     function handleMouseDown(e: MouseEvent) {
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(e.target as Node)
-      ) {
-        setIsOpen(false);
-      }
+      const target = e.target as Node;
+      if (triggerRef.current?.contains(target)) return;
+      if (popoverRef.current?.contains(target)) return;
+      setIsOpen(false);
     }
     const timer = setTimeout(() => {
       window.addEventListener("mousedown", handleMouseDown);
@@ -135,8 +142,9 @@ export function SourceScopeMenu({
   }
 
   return (
-    <div ref={containerRef} className="relative inline-block">
+    <>
       <button
+        ref={triggerRef}
         type="button"
         onClick={() => setIsOpen((v) => !v)}
         aria-haspopup="menu"
@@ -170,10 +178,17 @@ export function SourceScopeMenu({
         </svg>
       </button>
 
-      {isOpen && (
+      {isOpen && position && (
         <div
+          ref={popoverRef}
           role="menu"
-          className="absolute right-0 top-[calc(100%+6px)] z-20 w-[360px] max-w-[calc(100vw-2rem)] rounded-[4px] bg-surface-container-lowest/[0.94] shadow-[0_8px_24px_rgba(15,23,42,0.04)] ring-1 ring-inset ring-outline-variant/20 backdrop-blur-md"
+          style={{
+            position: "fixed",
+            top: position.top,
+            left: position.left,
+            width: position.width,
+          }}
+          className="z-50 max-h-[80vh] overflow-y-auto rounded-[4px] bg-surface-container-lowest/[0.94] shadow-[0_8px_24px_rgba(15,23,42,0.04)] ring-1 ring-inset ring-outline-variant/20 backdrop-blur-md"
         >
           <div className="flex items-center justify-between gap-3 bg-surface-container-low/60 px-3 py-2">
             <span className="font-mono text-[9px] font-medium uppercase tracking-[0.18em] text-on-surface-variant/70">
@@ -248,6 +263,6 @@ export function SourceScopeMenu({
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

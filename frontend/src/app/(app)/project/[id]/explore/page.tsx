@@ -5,13 +5,12 @@ import { useParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ChatInput, type ChatInputHandle } from "@/components/chat/chat-input";
-import { CitationLinkOverlay } from "@/components/chat/citation-link-overlay";
 import { ConversationRail } from "@/components/chat/conversation-rail";
 import { EmptyState } from "@/components/chat/empty-state";
 import { MessageList } from "@/components/chat/message-list";
+import { RagSettingsMenu } from "@/components/rag-xray/rag-settings-menu";
 import { XrayPanel } from "@/components/rag-xray/xray-panel";
 import { SourceScopeMenu } from "@/components/sources/source-scope-menu";
-import { CitationLinkProvider } from "@/lib/citation-link-context";
 import {
   createConversation,
   deleteConversation,
@@ -21,6 +20,7 @@ import {
   sendMessage,
   updateConversation,
 } from "@/lib/api";
+import { useRagSettings } from "@/lib/use-rag-settings";
 import { useSourceScope } from "@/lib/use-source-scope";
 import type { Conversation, Message, Source } from "@/types";
 
@@ -69,6 +69,7 @@ export default function ExplorePage() {
   const chatEndRef = useRef<HTMLDivElement | null>(null);
 
   const sourceScope = useSourceScope(projectId, "explore");
+  const rag = useRagSettings(projectId);
 
   // Derived from `sources` state — computed early so callbacks can reference it.
   const readySources = sources.filter((s) => s.status === "ready");
@@ -227,6 +228,8 @@ export default function ExplorePage() {
           activeConversationId,
           content,
           sourceScope.activeIds(readySources),
+          rag.settings.topK,
+          rag.settings.threshold,
         );
         setMessages((prev) => [...prev, assistant]);
         // New reply → auto-follow latest in the X-Ray panel.
@@ -260,10 +263,10 @@ export default function ExplorePage() {
             "Your feedback sources aren't ready yet. Check the Sources tab.";
         } else if (status === 504) {
           detail =
-            "Claude took too long to respond. The model is busy — retry should work.";
+            "The model took too long to respond. Retry should work.";
         } else if (status === 500) {
           detail =
-            "The server hit an error. If this keeps happening, check the backend logs and confirm ANTHROPIC_API_KEY is set.";
+            "The server hit an error. If this keeps happening, check the backend logs.";
         } else if (status !== null) {
           detail = `The server returned ${status}. Try again.`;
         } else {
@@ -276,7 +279,7 @@ export default function ExplorePage() {
         setIsPending(false);
       }
     },
-    [conversationId, isPending, projectId, sourceScope, readySources],
+    [conversationId, isPending, projectId, sourceScope, readySources, rag.settings],
   );
 
   const handleRetry = useCallback(() => {
@@ -398,7 +401,7 @@ export default function ExplorePage() {
 
   if (mountStatus === "loading") {
     return (
-      <div className="flex h-[calc(100vh-20rem)] items-center justify-center rounded-[4px] bg-surface-container-low">
+      <div className="flex h-[calc(100vh-16rem)] items-center justify-center rounded-[4px] bg-surface-container-low">
         <div className="font-mono text-[11px] uppercase tracking-[0.2em] text-on-surface-variant">
           Loading workspace…
         </div>
@@ -418,14 +421,16 @@ export default function ExplorePage() {
     );
   }
 
-  const reviewCount = sources.reduce(
+  // Only count records from ready sources — "Reviews Indexed" implies
+  // searchable/queryable, and a still-ingesting source can have a partial
+  // count that's misleading to surface here.
+  const reviewCount = readySources.reduce(
     (acc, s) => acc + (s.recordCount ?? 0),
-    0
+    0,
   );
 
   return (
-    <CitationLinkProvider>
-    <div className="flex h-[calc(100vh-12rem)] flex-col gap-3">
+    <div className="flex h-[calc(100vh-16rem)] flex-col gap-3">
       {errorMessage && (
         <div className="flex items-center justify-between gap-3 rounded-[4px] bg-error/10 px-4 py-3 text-[13px] text-error">
           <div className="flex items-center gap-2">
@@ -465,6 +470,13 @@ export default function ExplorePage() {
               />
             </>
           )}
+          <span aria-hidden className="h-4 w-px bg-on-surface/[0.08]" />
+          <RagSettingsMenu
+            settings={rag.settings}
+            onTopKChange={rag.setTopK}
+            onThresholdChange={rag.setThreshold}
+            onReset={rag.reset}
+          />
         </div>
         <span className="font-mono text-[9px] font-medium uppercase tracking-[0.2em] text-on-surface-variant/60">
           Explore / Conversation
@@ -567,7 +579,7 @@ export default function ExplorePage() {
           </div>
         </div>
 
-        {/* X-Ray panel — desktop only, wider than before */}
+        {/* X-Ray panel — desktop only */}
         <div className="hidden overflow-hidden lg:block">
           <XrayPanel
             variant="chat"
@@ -579,7 +591,7 @@ export default function ExplorePage() {
         </div>
       </div>
 
-      {/* Mobile bottom sheet for X-Ray panel — unchanged */}
+      {/* Mobile bottom sheet for X-Ray panel */}
       {isMobileSheetOpen && (
         <div className="fixed inset-0 z-40 lg:hidden">
           <button
@@ -589,17 +601,15 @@ export default function ExplorePage() {
             className="absolute inset-0 bg-on-surface/40 backdrop-blur-[2px]"
           />
           <div className="absolute inset-x-0 bottom-0 max-h-[75vh] rounded-t-[4px] bg-surface-container-low">
-            <div className="flex items-center justify-between px-4 pt-3">
-              <div className="mx-auto h-1 w-10 rounded-full bg-surface-container-high" />
-            </div>
-            <div className="flex items-center justify-between px-4 pt-2 pb-1">
-              <div className="font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-on-surface-variant">
-                RAG X-Ray
-              </div>
+            {/* Sheet chrome — drag handle + close. The "RAG X-Ray" label and
+                Settings chip live inside <XrayPanel>'s own header below,
+                so we don't repeat them here. */}
+            <div className="relative flex items-center justify-center px-4 pt-3 pb-1">
+              <div className="h-1 w-10 rounded-full bg-surface-container-high" />
               <button
                 type="button"
                 onClick={() => setIsMobileSheetOpen(false)}
-                className="font-mono text-[10px] uppercase tracking-[0.15em] text-on-surface-variant hover:text-on-surface"
+                className="absolute right-3 top-2 font-mono text-[10px] uppercase tracking-[0.15em] text-on-surface-variant hover:text-on-surface"
               >
                 Close
               </button>
@@ -617,8 +627,6 @@ export default function ExplorePage() {
         </div>
       )}
     </div>
-    <CitationLinkOverlay />
-    </CitationLinkProvider>
   );
 }
 
@@ -691,7 +699,7 @@ function NoSourcesState({ projectId, onSourcesReady }: NoSourcesStateProps) {
   }, [projectId, onSourcesReady]);
 
   return (
-    <div className="flex h-[calc(100vh-20rem)] items-center justify-center rounded-[4px] bg-surface-container-low">
+    <div className="flex h-[calc(100vh-16rem)] items-center justify-center rounded-[4px] bg-surface-container-low">
       <div className="flex max-w-md flex-col items-center px-8 py-16 text-center">
         <div className="flex h-10 w-10 items-center justify-center rounded-[4px] bg-surface-container">
           <svg

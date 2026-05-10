@@ -276,14 +276,20 @@ async def send_message(
     history = list(reversed(history_result.scalars().all()))
 
     # --- Retrieval -----------------------------------------------------------
+    # User-tunable retrieval params from the RAG X-Ray sliders, falling back to
+    # the server defaults when the client didn't send overrides.
+    effective_top_k = body.top_k if body.top_k is not None else TOP_K
+    effective_threshold = (
+        body.threshold if body.threshold is not None else SIMILARITY_THRESHOLD
+    )
     retrieval_start = time.perf_counter()
     query_embedding = await embed_query(body.content)
     chunks, total_candidates = await retrieve_chunks(
         db,
         project_id,
         query_embedding,
-        top_k=TOP_K,
-        threshold=SIMILARITY_THRESHOLD,
+        top_k=effective_top_k,
+        threshold=effective_threshold,
         source_ids=body.source_ids,
     )
     retrieval_latency_ms = int((time.perf_counter() - retrieval_start) * 1000)
@@ -321,8 +327,8 @@ async def send_message(
         "query": body.content,
         "retrievedChunks": transparency_chunks,
         "modelUsed": model_used,
-        "topK": TOP_K,
-        "threshold": SIMILARITY_THRESHOLD,
+        "topK": effective_top_k,
+        "threshold": effective_threshold,
         "totalChunksSearched": total_candidates,
         "retrievalLatencyMs": retrieval_latency_ms,
         "generationLatencyMs": generation_latency_ms,

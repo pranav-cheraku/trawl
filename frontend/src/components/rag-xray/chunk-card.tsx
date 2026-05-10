@@ -1,10 +1,9 @@
 // frontend/src/components/rag-xray/chunk-card.tsx
 "use client";
 
-import { forwardRef, useEffect, useRef } from "react";
+import { forwardRef } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 
-import { useCitationLink } from "@/lib/citation-link-context";
 import type { TransparencyChunk } from "@/types";
 
 interface ChunkCardProps {
@@ -15,10 +14,6 @@ interface ChunkCardProps {
   pulse?: boolean;
   /** Optional hover handler so the parent can drive guide-line state. */
   onHoverChange?: (chunkId: string | null) => void;
-  /** When true, register this chunk's bounding-rect getter into the
-   *  CitationLinkContext so chat citation hovers can draw a guide-line to it.
-   *  Used only by the Explore X-Ray chat variant. */
-  registerInCitationLinkContext?: boolean;
 }
 
 /**
@@ -32,7 +27,7 @@ interface ChunkCardProps {
  */
 export const ChunkCard = forwardRef<HTMLDivElement, ChunkCardProps>(
   function ChunkCard(
-    { chunk, isHighlighted, onClick, pulse, onHoverChange, registerInCitationLinkContext },
+    { chunk, isHighlighted, onClick, pulse, onHoverChange },
     ref,
   ) {
     const prefersReducedMotion = useReducedMotion();
@@ -41,31 +36,13 @@ export const ChunkCard = forwardRef<HTMLDivElement, ChunkCardProps>(
     const sourceType = chunk.sourceType.toUpperCase();
     const shouldPulse = !!pulse && !prefersReducedMotion;
 
-    const { registerChunk } = useCitationLink();
-    const localRef = useRef<HTMLDivElement | null>(null);
-
-    useEffect(() => {
-      if (!registerInCitationLinkContext) return;
-      if (!chunk?.chunkId) return;
-      const chunkId = chunk.chunkId;
-      return registerChunk(chunkId, () => {
-        return localRef.current?.getBoundingClientRect() ?? null;
-      });
-    }, [registerInCitationLinkContext, chunk?.chunkId, registerChunk]);
-
     function handleClick() {
       onClick?.(chunk);
     }
 
     return (
       <motion.div
-        ref={(el) => {
-          // Forward to the parent ref (existing scroll-to-chunk behavior).
-          if (typeof ref === "function") ref(el);
-          else if (ref) ref.current = el;
-          // Also store locally for CitationLinkContext rect registration.
-          localRef.current = el;
-        }}
+        ref={ref}
         className={`rounded-[4px] transition-shadow duration-500 ${
           isHighlighted ? "ring-2 ring-secondary" : "ring-0 ring-transparent"
         }`}

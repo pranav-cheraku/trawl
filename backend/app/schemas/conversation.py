@@ -63,6 +63,10 @@ class SendMessageRequest(BaseModel):
     # omitted means "all sources." An explicit empty list means "user muted
     # every source" — retrieval will return no chunks.
     source_ids: list[uuid.UUID] | None = None
+    # Optional user-tuned retrieval parameters from the RAG X-Ray sliders.
+    # None / omitted means "use the server default" (TOP_K, SIMILARITY_THRESHOLD).
+    top_k: int | None = Field(default=None, ge=1, le=30)
+    threshold: float | None = Field(default=None, ge=0.0, le=1.0)
 
 
 class ConversationCreateRequest(BaseModel):

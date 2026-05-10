@@ -20,3 +20,51 @@
   }
 }
 
+@layer components {
+  /* RAG X-Ray retrieval-settings slider — architectural square thumb on a
+     thin track. No drop shadow, 2px radius, palette-matched. */
+  .rag-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    cursor: pointer;
+    outline: none;
+  }
+  .rag-slider::-webkit-slider-runnable-track {
+    height: 6px;
+    background: theme("colors.surface-container-high.DEFAULT");
+    border-radius: 2px;
+  }
+  .rag-slider::-moz-range-track {
+    height: 6px;
+    background: theme("colors.surface-container-high.DEFAULT");
+    border-radius: 2px;
+  }
+  .rag-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    margin-top: -4px;
+    border-radius: 2px;
+    background: theme("colors.on-surface.DEFAULT");
+    border: none;
+    transition: background-color 120ms ease;
+  }
+  .rag-slider::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border-radius: 2px;
+    background: theme("colors.on-surface.DEFAULT");
+    border: none;
+    transition: background-color 120ms ease;
+  }
+  .rag-slider:hover::-webkit-slider-thumb,
+  .rag-slider:focus-visible::-webkit-slider-thumb {
+    background: theme("colors.secondary.DEFAULT");
+  }
+  .rag-slider:hover::-moz-range-thumb,
+  .rag-slider:focus-visible::-moz-range-thumb {
+    background: theme("colors.secondary.DEFAULT");
+  }
+}
+

@@ -309,10 +309,19 @@ export async function sendMessage(
   projectId: string,
   conversationId: string,
   content: string,
-  sourceIds?: string[]
+  sourceIds?: string[],
+  topK?: number,
+  threshold?: number
 ): Promise<Message> {
-  const body: { content: string; sourceIds?: string[] } = { content };
+  const body: {
+    content: string;
+    sourceIds?: string[];
+    topK?: number;
+    threshold?: number;
+  } = { content };
   if (sourceIds !== undefined) body.sourceIds = sourceIds;
+  if (topK !== undefined) body.topK = topK;
+  if (threshold !== undefined) body.threshold = threshold;
   return apiFetch<Message>(
     `/api/projects/${projectId}/conversations/${conversationId}/messages`,
     {
