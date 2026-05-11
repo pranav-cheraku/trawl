@@ -721,8 +721,8 @@ function NoSourcesState({ projectId, onSourcesReady }: NoSourcesStateProps) {
           No feedback to search yet
         </h2>
         <p className="mt-2 text-[13px] leading-relaxed text-on-surface-variant">
-          Connect an App Store app or upload a CSV on the Sources tab, then come
-          back here to start asking questions.
+          Connect a feedback source on the Sources tab, then come back here to
+          start asking questions.
         </p>
         <Link
           href={`/project/${projectId}/sources`}
