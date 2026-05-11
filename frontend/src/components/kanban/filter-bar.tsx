@@ -60,7 +60,7 @@ export default function FilterBar({
   };
 
   return (
-    <div className="flex flex-wrap items-center rounded-[4px] bg-surface-container-lowest px-4 py-2.5">
+    <div className="flex flex-wrap items-center gap-y-2 rounded-[4px] bg-surface-container-lowest px-4 py-2.5">
       <FilterGroup label="Type" withDivider>
         {TYPE_OPTIONS.map((opt) => (
           <FilterChip
@@ -70,6 +70,7 @@ export default function FilterBar({
             onClick={() => setField("type", opt.value)}
             ariaLabel={`Filter type ${opt.label}`}
             layoutGroup="filter-type"
+            neutral={opt.value === null}
           />
         ))}
       </FilterGroup>
@@ -83,6 +84,7 @@ export default function FilterBar({
             accent="signal"
             ariaLabel={`Filter status ${opt.label}`}
             layoutGroup="filter-status"
+            neutral={opt.value === null}
           />
         ))}
       </FilterGroup>
@@ -95,11 +97,12 @@ export default function FilterBar({
             onClick={() => setField("priority", opt.value)}
             ariaLabel={`Filter priority ${opt.label}`}
             layoutGroup="filter-priority"
+            neutral={opt.value === null}
           />
         ))}
       </FilterGroup>
 
-      <div className="ml-auto flex items-center gap-3 pl-4">
+      <div className="flex w-full items-center gap-3 sm:ml-auto sm:w-auto sm:pl-4">
         <span className="font-mono text-[11px] text-on-surface-variant">
           <b className="font-mono font-medium text-on-surface">
             {filteredCount}
@@ -117,7 +120,7 @@ export default function FilterBar({
             Clear
           </button>
         ) : null}
-        {right}
+        <span className="ml-auto sm:ml-0">{right}</span>
       </div>
     </div>
   );
@@ -134,15 +137,17 @@ function FilterGroup({
 }) {
   // Architectural vertical seam between groups (No-Line rule — inset shadow,
   // not a border). Equal pr/mr keep both sides of the seam visually balanced.
+  // Hidden below sm: groups stack vertically there, so a vertical seam at the
+  // right edge of each stacked row would be a stray ornament.
   const divider = withDivider
-    ? "pr-4 mr-4 shadow-[inset_-1px_0_0_rgba(15,23,42,0.1)]"
+    ? "sm:pr-4 sm:mr-4 sm:shadow-[inset_-1px_0_0_rgba(15,23,42,0.1)]"
     : "";
   return (
-    <div className={`flex items-center gap-2.5 py-0.5 ${divider}`}>
-      <span className="font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-on-surface-variant/70">
+    <div className={`flex w-full items-center gap-2.5 py-0.5 sm:w-auto ${divider}`}>
+      <span className="w-[60px] shrink-0 font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-on-surface-variant/70 sm:w-auto">
         {label}
       </span>
-      <div className="flex items-center gap-1.5">{children}</div>
+      <div className="flex flex-1 flex-wrap items-center gap-1.5 sm:flex-none sm:flex-nowrap">{children}</div>
     </div>
   );
 }

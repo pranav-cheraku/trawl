@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 
-import { springs } from "@/lib/motion";
+import { durations, easings, springs } from "@/lib/motion";
 
 import EditableText from "@/components/kanban/editable-text";
 import EditableTextArea from "@/components/kanban/editable-textarea";
@@ -228,12 +228,23 @@ export default function SpecDetailModal({
             : { opacity: 0, scale: 0.96 }
         }
         animate={{ x: 0, y: 0, scaleX: 1, scaleY: 1, opacity: 1 }}
+        // Exit gets its own fast tween (transition nested in the variant so it
+        // overrides the bouncy entrance spring). A bouncy spring on exit would
+        // oscillate before settling, delaying unmount by 400-600ms.
         exit={
           prefersReducedMotion
-            ? { opacity: 0 }
+            ? { opacity: 0, transition: { duration: durations.fast } }
             : fromTransform
-            ? { ...fromTransform, opacity: 0 }
-            : { opacity: 0, scale: 0.96 }
+            ? {
+                ...fromTransform,
+                opacity: 0,
+                transition: { duration: durations.fast, ease: easings.standard },
+              }
+            : {
+                opacity: 0,
+                scale: 0.96,
+                transition: { duration: durations.fast, ease: easings.standard },
+              }
         }
         transition={prefersReducedMotion ? { duration: 0.15 } : { ...springs.bouncy }}
         className="relative flex h-[90vh] w-[95vw] max-w-[1200px] flex-col overflow-hidden rounded-[4px] bg-surface-container-lowest"

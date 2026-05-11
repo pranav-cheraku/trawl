@@ -9,8 +9,11 @@ import {
   PointerSensor,
   KeyboardSensor,
   closestCorners,
+  pointerWithin,
+  rectIntersection,
   useSensor,
   useSensors,
+  type CollisionDetection,
   type DragStartEvent,
   type DragEndEvent,
 } from "@dnd-kit/core";
@@ -92,6 +95,21 @@ export default function SpecsPage() {
       coordinateGetter: sortableKeyboardCoordinates,
     })
   );
+
+  // Collision detection: prefer pointerWithin so the column under the pointer
+  // wins regardless of the dragged card's width. closestCorners (the old
+  // default) measured corner-to-corner distances — a card dragged into Planned
+  // had its right edge extending into In Progress's column, and the right-edge
+  // corner pair was closer than the left-edge pair, so In Progress would
+  // wrongly win. Fall back to rectIntersection then closestCorners when the
+  // pointer is in a gutter between droppables.
+  const collisionDetection = useCallback<CollisionDetection>((args) => {
+    const within = pointerWithin(args);
+    if (within.length > 0) return within;
+    const intersecting = rectIntersection(args);
+    if (intersecting.length > 0) return intersecting;
+    return closestCorners(args);
+  }, []);
 
   // ── Filter + derived values ────────────────────────────────────────
   const filteredSpecs = useMemo(() => {
@@ -298,6 +316,14 @@ export default function SpecsPage() {
     setActiveId(String(event.active.id));
   }, []);
 
+  // @dnd-kit fires onDragCancel (NOT onDragEnd) when a drag is aborted —
+  // released outside any droppable, Esc, or sensor cancellation. Without
+  // this, activeId stays set, the board stays in dragActive state (the +
+  // hint chips persist in empty columns), and subsequent drags misbehave.
+  const handleDragCancel = useCallback(() => {
+    setActiveId(null);
+  }, []);
+
   const handleDragEnd = useCallback(
     async (event: DragEndEvent) => {
       setActiveId(null);
@@ -413,7 +439,7 @@ export default function SpecsPage() {
         title="Specs"
         stats={hasSpecs ? statsForHeader : undefined}
         right={
-          <div className="flex items-center gap-2">
+          <div className="flex w-full flex-col items-stretch gap-2 sm:w-auto sm:flex-row sm:items-center">
             <SplitGenerateButton
               label="Feature specs"
               type="feature_specs"
@@ -467,8 +493,8 @@ export default function SpecsPage() {
       ) : null}
 
       {/* Source scope strip — controls which sources future generations use */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-[4px] bg-surface-container-lowest px-4 py-2.5">
-        <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-col gap-2 rounded-[4px] bg-surface-container-lowest px-4 py-2.5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3">
+        <div className="flex items-center gap-3">
           <span className="font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-on-surface-variant/70">
             Scope
           </span>
@@ -549,8 +575,9 @@ export default function SpecsPage() {
       ) : hasSpecs ? (
         <DndContext
           sensors={sensors}
-          collisionDetection={closestCorners}
+          collisionDetection={collisionDetection}
           onDragStart={handleDragStart}
+          onDragCancel={handleDragCancel}
           onDragEnd={handleDragEnd}
         >
           <KanbanBoard

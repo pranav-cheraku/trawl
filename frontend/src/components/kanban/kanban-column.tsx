@@ -59,7 +59,7 @@ export default function KanbanColumn({
 
   return (
     <section
-      className={`relative flex min-h-[280px] flex-col rounded-[4px] transition-colors ${bodyBg}${
+      className={`relative flex min-h-[120px] flex-col rounded-[4px] transition-colors md:min-h-[280px] ${bodyBg}${
         isHiddenByFilter ? " opacity-40" : ""
       }`}
     >

@@ -35,15 +35,15 @@ export default function SplitGenerateButton({
       : "bg-surface-container-lowest text-on-surface hover:bg-surface-container-high ring-[rgba(110,125,134,0.3)]";
 
   return (
-    <div className="relative inline-flex">
+    <div className="relative inline-flex w-full sm:w-auto">
       <button
         type="button"
         onClick={() => onGenerate(type)}
         disabled={disabled}
-        className={`inline-flex items-center gap-1.5 rounded-l-[4px] px-3 py-1.5 font-mono text-[10px] font-medium uppercase tracking-[0.18em] transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${primaryStyles}`}
+        className={`inline-flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-l-[4px] px-3 py-1.5 font-mono text-[10px] font-medium uppercase tracking-[0.18em] transition-colors disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none sm:justify-start ${primaryStyles}`}
       >
         <svg
-          className="h-3 w-3"
+          className="h-3 w-3 shrink-0"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -61,7 +61,7 @@ export default function SplitGenerateButton({
         aria-expanded={popoverOpen}
         onClick={() => setPopoverOpen((v) => !v)}
         disabled={disabled}
-        className={`inline-flex items-center rounded-r-[4px] px-2 py-1.5 font-mono text-[10px] font-medium uppercase tracking-[0.18em] transition-colors ring-1 ring-inset disabled:cursor-not-allowed disabled:opacity-50 ${caretStyles}`}
+        className={`inline-flex shrink-0 items-center rounded-r-[4px] px-2 py-1.5 font-mono text-[10px] font-medium uppercase tracking-[0.18em] transition-colors ring-1 ring-inset disabled:cursor-not-allowed disabled:opacity-50 ${caretStyles}`}
       >
         <svg
           className="h-3 w-3"
