@@ -60,8 +60,8 @@ export default function FilterBar({
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-4 rounded-[4px] bg-surface-container-lowest px-4 py-2.5">
-      <FilterGroup label="Type">
+    <div className="flex flex-wrap items-center rounded-[4px] bg-surface-container-lowest px-4 py-2.5">
+      <FilterGroup label="Type" withDivider>
         {TYPE_OPTIONS.map((opt) => (
           <FilterChip
             key={String(opt.value)}
@@ -73,7 +73,7 @@ export default function FilterBar({
           />
         ))}
       </FilterGroup>
-      <FilterGroup label="Status">
+      <FilterGroup label="Status" withDivider>
         {STATUS_OPTIONS.map((opt) => (
           <FilterChip
             key={String(opt.value)}
@@ -99,7 +99,7 @@ export default function FilterBar({
         ))}
       </FilterGroup>
 
-      <div className="ml-auto flex items-center gap-3">
+      <div className="ml-auto flex items-center gap-3 pl-4">
         <span className="font-mono text-[11px] text-on-surface-variant">
           <b className="font-mono font-medium text-on-surface">
             {filteredCount}
@@ -126,16 +126,23 @@ export default function FilterBar({
 function FilterGroup({
   label,
   children,
+  withDivider,
 }: {
   label: string;
   children: ReactNode;
+  withDivider?: boolean;
 }) {
+  // Architectural vertical seam between groups (No-Line rule — inset shadow,
+  // not a border). Equal pr/mr keep both sides of the seam visually balanced.
+  const divider = withDivider
+    ? "pr-4 mr-4 shadow-[inset_-1px_0_0_rgba(15,23,42,0.1)]"
+    : "";
   return (
-    <div className="flex items-center gap-2">
+    <div className={`flex items-center gap-2.5 py-0.5 ${divider}`}>
       <span className="font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-on-surface-variant/70">
         {label}
       </span>
-      <div className="flex items-center gap-1">{children}</div>
+      <div className="flex items-center gap-1.5">{children}</div>
     </div>
   );
 }
