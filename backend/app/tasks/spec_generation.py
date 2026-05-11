@@ -7,9 +7,9 @@ import uuid
 from sqlalchemy import func, select
 
 from app.celery_app import celery_app
-from app.database import AsyncSessionLocal, SyncSessionLocal
+from app.database import AsyncSessionLocal, SyncSessionLocal, engine
 from app.models.spec import Spec, SpecTransparency
-from app.services.embedding import embed_query
+from app.services.embedding import close_redis, embed_query
 from app.services.generation import (
     SpecGenerationResult,
     generate_feature_specs,
@@ -38,30 +38,40 @@ async def _async_generate_specs(
     via a single ``asyncio.run()`` to avoid event-loop conflicts between
     the Redis-backed embedding cache, the async DB session, and the
     Anthropic client.
+
+    The ``finally`` block disposes per-loop resources (Redis client,
+    asyncpg engine pool) inside the SAME event loop so the next task
+    in this worker process starts fresh. Without this, module-level
+    singletons leak loop-bound state across tasks → "got Future
+    attached to a different loop" on the 2nd+ task.
     """
-    query_text = focus if focus else DEFAULT_QUERY
+    try:
+        query_text = focus if focus else DEFAULT_QUERY
 
-    query_embedding = await embed_query(query_text)
+        query_embedding = await embed_query(query_text)
 
-    async with AsyncSessionLocal() as db:
-        chunks, total_candidates = await retrieve_chunks(
-            db,
-            project_id,
-            query_embedding,
-            SPEC_TOP_K,
-            SPEC_THRESHOLD,
-            source_ids=source_ids,
-        )
+        async with AsyncSessionLocal() as db:
+            chunks, total_candidates = await retrieve_chunks(
+                db,
+                project_id,
+                query_embedding,
+                SPEC_TOP_K,
+                SPEC_THRESHOLD,
+                source_ids=source_ids,
+            )
 
-    if not chunks:
-        return None, [], 0
+        if not chunks:
+            return None, [], 0
 
-    if spec_type == "user_stories":
-        result = await generate_user_stories(chunks, focus)
-    else:
-        result = await generate_feature_specs(chunks, focus)
+        if spec_type == "user_stories":
+            result = await generate_user_stories(chunks, focus)
+        else:
+            result = await generate_feature_specs(chunks, focus)
 
-    return result, chunks, total_candidates
+        return result, chunks, total_candidates
+    finally:
+        await close_redis()
+        await engine.dispose()
 
 
 def _chunk_to_transparency_dict(chunk: RetrievedChunk) -> dict:

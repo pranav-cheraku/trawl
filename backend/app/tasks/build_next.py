@@ -9,7 +9,7 @@ from typing import Any
 from sqlalchemy import update
 
 from app.celery_app import celery_app
-from app.database import AsyncSessionLocal
+from app.database import AsyncSessionLocal, engine
 from app.models.build_next import (
     BuildReport,
     BuildReportChunk,
@@ -17,6 +17,7 @@ from app.models.build_next import (
     BuildTheme,
 )
 from app.services.build_next import run_build_next
+from app.services.embedding import close_redis
 
 logger = logging.getLogger(__name__)
 
@@ -223,11 +224,21 @@ def run_build_next_task(
         )
         return {"status": "failure", "reason": "invalid arguments"}
 
-    return asyncio.run(
-        _async_run_and_persist(
-            report_uuid,
-            project_uuid,
-            source_uuids,
-            self.request.id,
-        )
-    )
+    async def _run_and_dispose() -> dict[str, Any]:
+        # Dispose per-loop singletons (Redis client, asyncpg engine pool)
+        # inside the same event loop so the next task in this worker
+        # process starts fresh. Without this, module-level singletons
+        # leak loop-bound state across tasks → "got Future attached to
+        # a different loop" on the 2nd+ task.
+        try:
+            return await _async_run_and_persist(
+                report_uuid,
+                project_uuid,
+                source_uuids,
+                self.request.id,
+            )
+        finally:
+            await close_redis()
+            await engine.dispose()
+
+    return asyncio.run(_run_and_dispose())

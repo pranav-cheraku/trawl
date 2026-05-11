@@ -40,6 +40,26 @@ def _get_redis() -> aioredis.Redis | None:  # type: ignore[type-arg]
     return _redis_client
 
 
+async def close_redis() -> None:
+    """Close the cached Redis client and clear the singleton.
+
+    Celery tasks must call this from inside their ``asyncio.run()`` body
+    so the per-loop Redis client is disposed before the loop closes.
+    Without this, the singleton survives across tasks holding Futures
+    bound to a now-dead loop, raising "attached to a different loop"
+    on the next task. FastAPI does not need to call this — its event
+    loop lives for the worker's entire lifetime.
+    """
+    global _redis_client
+    client = _redis_client
+    _redis_client = None
+    if client is not None:
+        try:
+            await client.aclose()
+        except Exception:
+            logger.warning("Failed to close Redis client", exc_info=True)
+
+
 async def embed_texts(
     texts: list[str],
     input_type: str = "document",
