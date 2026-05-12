@@ -96,6 +96,16 @@ export default function ExplorePage() {
     return () => mq.removeEventListener("change", handleChange);
   }, []);
 
+  // Esc closes the mobile X-Ray bottom sheet (standard modal/sheet UX).
+  useEffect(() => {
+    if (!isMobileSheetOpen) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setIsMobileSheetOpen(false);
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isMobileSheetOpen]);
+
   // Initial mount: fetch conversation list, restore saved conversation,
   // check sources readiness. The cancelled flag handles React Strict Mode's
   // intentional double-mount.
@@ -453,8 +463,8 @@ export default function ExplorePage() {
       )}
 
       {/* Corpus context strip — spans the full width of the workspace */}
-      <div className="flex flex-wrap items-center justify-between gap-4 rounded-[4px] bg-surface-container-lowest px-4 py-2.5">
-        <div className="flex flex-wrap items-center gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-[4px] bg-surface-container-lowest px-4 py-2.5">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 sm:gap-x-4">
           <div className="flex items-center gap-1.5">
             <span className="font-mono text-[13px] font-medium text-on-surface">
               {reviewCount.toLocaleString()}
@@ -483,7 +493,10 @@ export default function ExplorePage() {
             onReset={rag.reset}
           />
         </div>
-        <span className="font-mono text-[9px] font-medium uppercase tracking-[0.2em] text-on-surface-variant/60">
+        {/* "Explore / Conversation" label is mostly redundant breadcrumb on
+         *  mobile — the tab bar above already conveys we're on Explore. Hide
+         *  below sm so the strip stays one tight row on phones. */}
+        <span className="hidden font-mono text-[9px] font-medium uppercase tracking-[0.2em] text-on-surface-variant/60 sm:inline">
           Explore / Conversation
         </span>
       </div>

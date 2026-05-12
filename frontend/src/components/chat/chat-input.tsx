@@ -100,9 +100,18 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(function Ch
           )}
         </button>
       </div>
-      <div className="mt-1.5 flex items-center justify-between px-2">
+      <div className="mt-1.5 flex items-center justify-between gap-3 px-2">
         <div className="font-mono text-[10px] text-on-surface-variant">
-          {isPending ? "Sending…" : "Enter to send · Shift+Enter for newline"}
+          {isPending ? (
+            "Sending…"
+          ) : (
+            <>
+              <span className="sm:hidden">Enter to send</span>
+              <span className="hidden sm:inline">
+                Enter to send · Shift+Enter for newline
+              </span>
+            </>
+          )}
         </div>
         <div className="font-mono text-[10px] text-on-surface-variant">
           {draft.length}/{MAX_CHARS}

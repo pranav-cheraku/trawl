@@ -103,8 +103,11 @@ export default function ProjectLayout({
         )}
       </div>
 
-      {/* Workspace tabs — unchanged markup */}
-      <nav className="mt-4 flex gap-1" aria-label="Project tabs">
+      {/* Workspace tabs — horizontal scroll on mobile if needed. */}
+      <nav
+        className="mt-4 flex gap-1 overflow-x-auto"
+        aria-label="Project tabs"
+      >
         {tabs.map((tab) => {
           const href = `/project/${projectId}/${tab.segment}`;
           const isActive = pathname === href || pathname.startsWith(href + "/");
@@ -112,7 +115,7 @@ export default function ProjectLayout({
             <Link
               key={tab.segment}
               href={href}
-              className={`inline-flex items-center gap-1.5 rounded-[4px] px-4 py-2.5 text-[13px] font-medium transition-colors ${
+              className={`inline-flex flex-shrink-0 items-center gap-1.5 whitespace-nowrap rounded-[4px] px-3 py-2 text-[13px] font-medium transition-colors sm:px-4 sm:py-2.5 ${
                 isActive
                   ? "border-t-2 border-secondary bg-surface-container-lowest text-on-surface"
                   : "bg-surface-container-low text-on-surface-variant hover:bg-surface-container-lowest hover:text-on-surface"
