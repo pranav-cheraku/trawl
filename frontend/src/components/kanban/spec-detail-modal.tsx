@@ -288,10 +288,17 @@ export default function SpecDetailModal({
           </button>
         </header>
 
-        {/* ── Body (content + inspector) ─────────────────────────── */}
-        <div className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden lg:grid-cols-[1fr_340px]">
+        {/* ── Body (content + inspector) ──────────────────────────
+         *  Mobile (<lg): the WRAPPER scrolls; both panes flow naturally as one
+         *  long page (content first, then Properties + Sources). Without this,
+         *  CSS grid auto-sizes each row to content and clips with overflow —
+         *  user would see only the top of the left pane AND the top of the
+         *  right pane simultaneously, with Properties appearing mid-body which
+         *  is very confusing.
+         *  Desktop (lg+): two side-by-side panes, each with its own scroll. */}
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto lg:grid lg:grid-cols-[1fr_340px] lg:overflow-hidden">
           {/* Left — content */}
-          <div className="min-h-0 overflow-y-auto px-6 pt-6 pb-8">
+          <div className="px-6 pt-6 pb-6 lg:min-h-0 lg:overflow-y-auto lg:pb-8">
             <div className="mx-auto max-w-[680px]">
               {/* Type chip */}
               <div className="mb-2">
@@ -418,7 +425,7 @@ export default function SpecDetailModal({
 
           {/* Right — inspector */}
           <aside
-            className="flex min-h-0 flex-col overflow-hidden bg-surface-container-low shadow-[inset_1px_0_0_rgba(15,23,42,0.06)]"
+            className="flex flex-col bg-surface-container-low shadow-[inset_0_1px_0_rgba(15,23,42,0.06)] lg:min-h-0 lg:overflow-hidden lg:shadow-[inset_1px_0_0_rgba(15,23,42,0.06)]"
             aria-label="Spec inspector"
           >
             {/* Properties panel */}
@@ -456,8 +463,10 @@ export default function SpecDetailModal({
               </div>
             </div>
 
-            {/* Sources panel — RAG X-Ray */}
-            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            {/* Sources panel — RAG X-Ray. Flow naturally on mobile (parent
+             *  modal handles the scroll); on lg+ take remaining flex space and
+             *  let the panel's own internal scroll work. */}
+            <div className="flex flex-col lg:min-h-0 lg:flex-1 lg:overflow-hidden">
               {sourcesError ? (
                 <div className="flex flex-1 flex-col items-center justify-center px-6 py-10 text-center">
                   <PanelHeader>Sources</PanelHeader>
