@@ -1,6 +1,6 @@
 "use client";
 
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 
 export interface ChatInputHandle {
   focus: () => void;
@@ -10,8 +10,10 @@ interface ChatInputProps {
   onSend: (content: string) => void;
   isPending: boolean;
   placeholder?: string;
-  draft?: string;
-  onDraftChange?: (value: string) => void;
+  /** Controlled draft value. The parent owns the state so example-chip
+   *  pre-fills (and any other programmatic updates) work cleanly. */
+  draft: string;
+  onDraftChange: (value: string) => void;
 }
 
 const MAX_CHARS = 2000;
@@ -22,10 +24,6 @@ const MAX_ROWS = 6;
  *
  * Enter submits, Shift+Enter inserts a newline. Auto-resizes up to
  * MAX_ROWS. Disabled while a request is pending to prevent double-sends.
- *
- * Can operate either fully uncontrolled (own local draft state) or as
- * a controlled component when both `draft` and `onDraftChange` are
- * supplied — the latter is how EmptyState's example chips pre-fill.
  *
  * Exposes an imperative `focus()` handle via forwardRef so callers can
  * focus the textarea after programmatically populating the draft (e.g.,
@@ -38,17 +36,6 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(function Ch
   draft,
   onDraftChange,
 }: ChatInputProps, ref) {
-  const isControlled = draft !== undefined && onDraftChange !== undefined;
-  const [localDraft, setLocalDraft] = useState("");
-  const value = isControlled ? draft : localDraft;
-  const setValue = (next: string) => {
-    if (isControlled) {
-      onDraftChange!(next);
-    } else {
-      setLocalDraft(next);
-    }
-  };
-
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   useImperativeHandle(ref, () => ({
@@ -63,13 +50,13 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(function Ch
     const lineHeight = 20;
     const maxHeight = lineHeight * MAX_ROWS + 24;
     el.style.height = `${Math.min(el.scrollHeight, maxHeight)}px`;
-  }, [value]);
+  }, [draft]);
 
   function submit() {
-    const trimmed = value.trim();
+    const trimmed = draft.trim();
     if (!trimmed || isPending) return;
     onSend(trimmed);
-    setValue("");
+    onDraftChange("");
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
@@ -79,15 +66,15 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(function Ch
     }
   }
 
-  const canSend = value.trim().length > 0 && !isPending;
+  const canSend = draft.trim().length > 0 && !isPending;
 
   return (
     <div className="rounded-[4px] bg-surface-container-lowest p-3">
       <div className="flex items-end gap-2">
         <textarea
           ref={textareaRef}
-          value={value}
-          onChange={(e) => setValue(e.target.value.slice(0, MAX_CHARS))}
+          value={draft}
+          onChange={(e) => onDraftChange(e.target.value.slice(0, MAX_CHARS))}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           disabled={isPending}
@@ -118,7 +105,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(function Ch
           {isPending ? "Sending…" : "Enter to send · Shift+Enter for newline"}
         </div>
         <div className="font-mono text-[10px] text-on-surface-variant">
-          {value.length}/{MAX_CHARS}
+          {draft.length}/{MAX_CHARS}
         </div>
       </div>
     </div>

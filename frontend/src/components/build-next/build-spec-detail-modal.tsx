@@ -42,7 +42,6 @@ export default function BuildSpecDetailModal({
   const stories = (c.user_stories as string[] | undefined) ?? [];
   const criteria = (c.acceptance_criteria as string[] | undefined) ?? [];
   const priority = String(c.priority ?? "medium").toUpperCase();
-  const effort = String(c.effort_estimate ?? "");
   const supportingRaw = (c.supporting_feedback_indices ?? []) as unknown[];
   const citations = Array.isArray(supportingRaw)
     ? supportingRaw.filter(
@@ -83,7 +82,6 @@ export default function BuildSpecDetailModal({
               <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[10px] uppercase tracking-[0.16em] text-on-surface-variant">
                 <span>B{spec.buildRank}</span>
                 <span>· {priority}</span>
-                {effort ? <span>· effort {effort}</span> : null}
                 {theme ? <span>· theme · {theme.name}</span> : null}
                 <span>· {citations.length} citations</span>
               </div>

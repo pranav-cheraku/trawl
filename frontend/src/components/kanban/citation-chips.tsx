@@ -6,6 +6,9 @@ interface CitationChipsProps {
   onFocus: (idx: number) => void;
   /** Max retrieved chunk count — used to disable out-of-range chips. */
   maxIndex: number;
+  /** When true, hides the inline "CITES" label. Use when the surrounding
+   *  context (e.g. a property row) already labels the row. */
+  hideLabel?: boolean;
 }
 
 /**
@@ -19,13 +22,16 @@ export default function CitationChips({
   indices,
   onFocus,
   maxIndex,
+  hideLabel = false,
 }: CitationChipsProps) {
   if (indices.length === 0) {
     return (
       <div className="flex flex-wrap items-center gap-1.5">
-        <span className="font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-on-surface-variant/70">
-          CITES
-        </span>
+        {hideLabel ? null : (
+          <span className="font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-on-surface-variant/70">
+            CITES
+          </span>
+        )}
         <span className="font-mono text-[10px] text-on-surface-variant/60">
           None recorded
         </span>
@@ -34,9 +40,11 @@ export default function CitationChips({
   }
   return (
     <div className="flex flex-wrap items-center gap-1.5">
-      <span className="font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-on-surface/70">
-        CITES
-      </span>
+      {hideLabel ? null : (
+        <span className="font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-on-surface/70">
+          CITES
+        </span>
+      )}
       {indices.map((idx, i) => {
         const valid = idx >= 1 && idx <= maxIndex;
         return (

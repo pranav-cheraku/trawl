@@ -286,11 +286,6 @@ GENERATE_SPECS_TOOL: dict[str, Any] = {
                                 "1-indexed chunk numbers that support this spec."
                             ),
                         },
-                        "effort_estimate": {
-                            "type": "string",
-                            "enum": ["small", "medium", "large"],
-                            "description": "Rough implementation effort estimate.",
-                        },
                     },
                     "required": [
                         "title",
@@ -300,7 +295,6 @@ GENERATE_SPECS_TOOL: dict[str, Any] = {
                         "acceptance_criteria",
                         "priority",
                         "supporting_feedback_indices",
-                        "effort_estimate",
                     ],
                 },
                 "description": "List of feature specifications.",
@@ -577,7 +571,6 @@ async def generate_user_stories(
                 "acceptance_criteria": story.get("acceptance_criteria", []),
                 "priority": story.get("priority", "medium"),
                 "supporting_feedback_indices": story["supporting_feedback_indices"],
-                "effort_estimate": "medium",
             })
 
     logger.info(

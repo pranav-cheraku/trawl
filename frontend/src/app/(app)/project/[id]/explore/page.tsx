@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { ChatInput, type ChatInputHandle } from "@/components/chat/chat-input";
 import { ConversationRail } from "@/components/chat/conversation-rail";
@@ -71,8 +71,13 @@ export default function ExplorePage() {
   const sourceScope = useSourceScope(projectId, "explore");
   const rag = useRagSettings(projectId);
 
-  // Derived from `sources` state — computed early so callbacks can reference it.
-  const readySources = sources.filter((s) => s.status === "ready");
+  // Derived from `sources` state — memoized so handleSend's useCallback deps
+  // don't churn on every render (the array reference would otherwise be new
+  // every time, re-creating the callback uselessly).
+  const readySources = useMemo(
+    () => sources.filter((s) => s.status === "ready"),
+    [sources],
+  );
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });

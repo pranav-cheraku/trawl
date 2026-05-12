@@ -408,10 +408,6 @@ THEME_SPEC_TOOL: dict = {
                             "type": "string",
                             "enum": ["critical", "high", "medium", "low"],
                         },
-                        "effort_estimate": {
-                            "type": "string",
-                            "description": "Short rough estimate (e.g. 'S', 'M', 'L', '2 sprints').",
-                        },
                         "supporting_feedback_indices": {
                             "type": "array",
                             "items": {"type": "integer", "minimum": 1},
@@ -424,7 +420,6 @@ THEME_SPEC_TOOL: dict = {
                         "user_stories",
                         "acceptance_criteria",
                         "priority",
-                        "effort_estimate",
                         "supporting_feedback_indices",
                     ],
                 },
@@ -448,7 +443,6 @@ Only include chunks the spec actually relies on.
 3. Be terse but specific. PMs are busy.
 4. Priority levels: critical (safety/legal/major churn), high (significant UX \
 or revenue impact), medium (clear improvement), low (nice-to-have).
-5. effort_estimate: a short label like "S", "M", "L", or "2 sprints".
 
 Return your output via the generate_theme_specs tool — no prose."""
 
@@ -533,11 +527,6 @@ async def _generate_theme_specs(
                 "Build Next theme spec gen: priority missing for theme=%r, defaulting to 'medium'",
                 theme.name,
             )
-        if "effort_estimate" not in raw:
-            logger.warning(
-                "Build Next theme spec gen: effort_estimate missing for theme=%r, defaulting to 'M'",
-                theme.name,
-            )
 
         # Translate local 1..N indices back to global retrieval_ranks.
         # `theme_chunks` is a slice of `all_chunks`; each chunk still carries
@@ -558,7 +547,6 @@ async def _generate_theme_specs(
             "user_stories": list(raw.get("user_stories", [])),
             "acceptance_criteria": list(raw.get("acceptance_criteria", [])),
             "priority": str(raw.get("priority", "medium")),
-            "effort_estimate": str(raw.get("effort_estimate", "M")),
             "supporting_feedback_indices": global_ranks,
         }
 

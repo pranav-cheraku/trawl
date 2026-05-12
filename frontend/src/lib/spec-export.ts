@@ -40,18 +40,12 @@ export function specsToCsv(specs: Spec[]): string {
     "status",
     "kanban_column",
     "kanban_order",
-    "effort",
     "citation_count",
     "created_at",
     "updated_at",
   ].join(",");
 
   const rows = specs.map((s) => {
-    const content = s.content as Record<string, unknown>;
-    const effort =
-      typeof content["effort_estimate"] === "string"
-        ? (content["effort_estimate"] as string)
-        : "";
     return [
       s.id,
       typeLabel(s.type),
@@ -60,7 +54,6 @@ export function specsToCsv(specs: Spec[]): string {
       s.status,
       STATUS_LABEL[s.status as SpecStatus] ?? s.status,
       s.kanbanOrder,
-      csvCell(effort),
       citationCount(s),
       s.createdAt,
       s.updatedAt,
@@ -92,9 +85,8 @@ function mdList(items: unknown): string {
 function mdBody(spec: Spec): string {
   const c = spec.content as Record<string, unknown>;
   const parts: string[] = [];
-  const effort = typeof c["effort_estimate"] === "string" ? (c["effort_estimate"] as string) : "";
   parts.push(
-    `**Type:** ${typeLabel(spec.type)} · **Priority:** ${spec.priority}${effort ? ` · **Effort:** ${effort}` : ""}`
+    `**Type:** ${typeLabel(spec.type)} · **Priority:** ${spec.priority}`
   );
 
   if (spec.type === "feature_specs") {

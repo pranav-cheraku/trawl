@@ -24,7 +24,6 @@ export default function ThemeSpecCard({
 }: Props) {
   const prefersReducedMotion = useReducedMotion();
   const priority = String(spec.content.priority ?? "medium").toLowerCase();
-  const effort = String(spec.content.effort_estimate ?? "");
   const supportingRaw = (spec.content.supporting_feedback_indices ?? []) as unknown[];
   const citationCount = Array.isArray(supportingRaw)
     ? supportingRaw.filter(
@@ -56,7 +55,6 @@ export default function ThemeSpecCard({
         </div>
         <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[10px] uppercase tracking-[0.14em] text-on-surface-variant">
           <span>{priority}</span>
-          {effort ? <span>· effort {effort}</span> : null}
           <span>· {citationCount} citations</span>
         </div>
       </button>

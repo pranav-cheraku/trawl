@@ -38,8 +38,6 @@ export default function SpecCard({ spec, onClick, isDragging }: Props) {
   const priority = spec.priority as SpecPriority;
   const typeLabel = TYPE_LABELS[spec.type] ?? spec.type.toUpperCase();
   const citationCount = spec.sourceChunkIds.length;
-  const effort =
-    (spec.content as Record<string, unknown>)?.effort_estimate ?? null;
 
   return (
     <button
@@ -79,13 +77,8 @@ export default function SpecCard({ spec, onClick, isDragging }: Props) {
         {spec.title}
       </h3>
 
-      {/* Meta row — effort + citation count */}
+      {/* Meta row — citation count */}
       <div className="flex items-center gap-2 pt-0.5">
-        {effort ? (
-          <span className="rounded-[2px] bg-surface-container px-1.5 py-0.5 font-mono text-[9px] font-medium uppercase tracking-[0.15em] text-on-surface-variant">
-            {String(effort)}
-          </span>
-        ) : null}
         <span className="flex items-center gap-1 font-mono text-[10px] font-medium text-on-surface-variant">
           <svg
             className="h-2.5 w-2.5"

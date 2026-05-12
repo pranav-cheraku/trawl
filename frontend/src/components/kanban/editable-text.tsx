@@ -86,15 +86,22 @@ export default function EditableText({
       : "text-[14px] leading-relaxed";
 
   if (!isEditing) {
+    // Body variant gets a persistent bg + min-width so the editable region
+    // is obviously a clickable input-like field. Title variant stays clean
+    // (its parent surfaces a "Click to edit" hover hint on hover).
+    const isBody = variant !== "title";
+    const bodyClasses = isBody
+      ? "min-w-[72px] bg-surface-container hover:bg-surface-container-high"
+      : "w-full hover:bg-surface-container-high";
     return (
       <button
         type="button"
         onClick={() => setIsEditing(true)}
         aria-label={ariaLabel}
-        className={`w-full rounded-[4px] px-2 py-1 -mx-2 text-left transition-colors hover:bg-surface-container-high ${readClasses} ${className ?? ""}`}
+        className={`rounded-[4px] px-2 py-1 -mx-2 text-left transition-colors ${bodyClasses} ${readClasses} ${className ?? ""}`}
       >
         {value || (
-          <span className="text-on-surface/60">
+          <span className="text-on-surface-variant/70">
             {placeholder ?? "Click to edit"}
           </span>
         )}

@@ -132,7 +132,7 @@ class BuildReportSpec(Base):
 
     ``content`` mirrors the shape of ``Spec.content`` (problem,
     proposed_solution, user_stories, acceptance_criteria, priority,
-    effort_estimate, supporting_feedback_indices). ``promoted_spec_id``
+    supporting_feedback_indices). ``promoted_spec_id``
     is set when the user clicks "+ Kanban"; ``ON DELETE SET NULL`` clears
     it if the promoted Kanban spec is later deleted.
     """

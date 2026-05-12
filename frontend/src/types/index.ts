@@ -156,7 +156,6 @@ export interface FeatureSpecContent {
   acceptance_criteria: string[];
   priority: SpecPriority;
   supporting_feedback_indices: number[];
-  effort_estimate: string;
 }
 
 /** Structured body written to Spec.content for type="user_stories". */
@@ -166,7 +165,6 @@ export interface UserStoryContent {
   acceptance_criteria: string[];
   priority: SpecPriority;
   supporting_feedback_indices: number[];
-  effort_estimate: string;
 }
 
 /** A single spec returned by GET /api/projects/{id}/specs. */
@@ -252,7 +250,7 @@ export interface BuildReportSpec {
   title: string;
   // Snake_case-keyed: matches backend dict-field rule (problem,
   // proposed_solution, user_stories, acceptance_criteria, priority,
-  // effort_estimate, supporting_feedback_indices).
+  // supporting_feedback_indices).
   content: Record<string, unknown>;
   promotedSpecId: string | null;
 }

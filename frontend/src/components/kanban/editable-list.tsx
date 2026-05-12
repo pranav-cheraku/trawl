@@ -66,11 +66,13 @@ export default function EditableList({
   return (
     <ul className="flex flex-col gap-2">
       {items.map((item, index) => (
-        <li key={index} className="group flex items-start gap-2">
+        <li key={index} className="group flex items-start gap-3">
           <span
             aria-hidden
-            className="mt-2 block h-1 w-1 flex-shrink-0 rounded-full bg-on-surface/50"
-          />
+            className="mt-[10px] flex h-5 w-7 flex-shrink-0 items-center justify-center font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-on-surface-variant/60"
+          >
+            {String(index + 1).padStart(2, "0")}
+          </span>
           <div className="flex-1 min-w-0">
             <EditableTextArea
               value={item}
@@ -104,11 +106,13 @@ export default function EditableList({
         </li>
       ))}
       {pendingNew ? (
-        <li className="flex items-start gap-2">
+        <li className="flex items-start gap-3">
           <span
             aria-hidden
-            className="mt-2 block h-1 w-1 flex-shrink-0 rounded-full bg-on-surface/50"
-          />
+            className="mt-[10px] flex h-5 w-7 flex-shrink-0 items-center justify-center font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-on-surface-variant/60"
+          >
+            {String(items.length + 1).padStart(2, "0")}
+          </span>
           <div className="flex-1 min-w-0">
             <EditableTextArea
               value=""
