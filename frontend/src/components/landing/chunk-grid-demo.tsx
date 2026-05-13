@@ -264,7 +264,7 @@ export function ChunkGridDemo() {
         >
           <motion.path
             d={guideLinePath}
-            stroke="rgb(37,99,235)"
+            stroke="rgb(76,181,114)"
             strokeWidth={1}
             fill="none"
             initial={{ pathLength: 0, opacity: 0 }}

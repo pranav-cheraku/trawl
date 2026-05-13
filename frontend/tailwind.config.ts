@@ -10,26 +10,36 @@ const config: Config = {
     extend: {
       colors: {
         surface: {
-          DEFAULT: "#F6FAFE",
+          DEFAULT: "#FAFAFA",
           "container-lowest": "#FFFFFF",
-          "container-low": "#EEF4FA",
-          container: "#E5EFF7",
-          "container-high": "#DDEAF3",
-          "container-highest": "#D0E0ED",
+          "container-low": "#F5F5F5",
+          container: "#EEEEEE",
+          "container-high": "#E5E5E5",
+          "container-highest": "#D4D4D4",
         },
         "on-surface": {
-          DEFAULT: "#0F172A",
-          variant: "#475569",
+          DEFAULT: "#171717",
+          variant: "#525252",
         },
         secondary: {
-          DEFAULT: "#2563EB",
-          dim: "#0049C2",
+          DEFAULT: "#4CB572",
+          dim: "#398856",
         },
         outline: {
-          DEFAULT: "#6E7D86",
-          variant: "#A4B4BE",
+          DEFAULT: "#737373",
+          variant: "#A3A3A3",
         },
-        error: "#9F403D",
+        error: "#D97706",
+        priority: {
+          critical: "#DC2626",
+          "critical-text": "#DC2626",
+          high: "#EAB308",
+          "high-text": "#A16207",
+          medium: "#22C55E",
+          "medium-text": "#15803D",
+          low: "#A3A3A3",
+          "low-text": "#737373",
+        },
       },
       fontFamily: {
         sans: ["var(--font-inter)", "system-ui", "sans-serif"],

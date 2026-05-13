@@ -16,17 +16,17 @@ const PRIORITY_LABELS: Record<SpecPriority, string> = {
 };
 
 const PRIORITY_COLORS: Record<SpecPriority, string> = {
-  critical: "text-error",
-  high: "text-secondary",
-  medium: "text-on-surface-variant",
-  low: "text-outline-variant",
+  critical: "text-priority-critical-text",
+  high: "text-priority-high-text",
+  medium: "text-priority-medium-text",
+  low: "text-priority-low-text",
 };
 
 const PRIORITY_BARS: Record<SpecPriority, string> = {
-  critical: "bg-error",
-  high: "bg-secondary",
-  medium: "bg-on-surface-variant/40",
-  low: "bg-outline-variant/50",
+  critical: "bg-priority-critical",
+  high: "bg-priority-high",
+  medium: "bg-priority-medium",
+  low: "bg-priority-low",
 };
 
 const TYPE_LABELS: Record<string, string> = {

@@ -12,12 +12,12 @@ type Props = {
   onThemeClick: (themeId: string) => void;
 };
 
-// 4-stop ramp. All four contrast against the white card background.
+// 4-stop ramp. All four contrast against the bright neutral card background.
 const TIER_FILLS = [
-  "rgb(0, 73, 194)", // top — secondary_dim
-  "rgb(37, 99, 235)", // upper-mid — secondary
-  "rgb(96, 154, 255)", // lower-mid — light signal
-  "rgb(164, 180, 190)", // bottom — outline_variant slate
+  "rgb(57, 136, 86)", // top — secondary_dim (deep sea green)
+  "rgb(76, 181, 114)", // upper-mid — secondary (sea green)
+  "rgb(168, 220, 185)", // lower-mid — light sea green
+  "rgb(163, 163, 163)", // bottom — outline_variant neutral
 ] as const;
 
 const TIER_LABELS = ["Largest", "Major", "Minor", "Smallest"] as const;

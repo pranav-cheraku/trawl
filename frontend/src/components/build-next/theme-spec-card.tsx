@@ -5,6 +5,13 @@ import { motion, useReducedMotion } from "framer-motion";
 import { springs } from "@/lib/motion";
 import type { BuildReportSpec } from "@/types";
 
+const PRIORITY_TEXT: Record<string, string> = {
+  critical: "text-priority-critical-text",
+  high: "text-priority-high-text",
+  medium: "text-priority-medium-text",
+  low: "text-priority-low-text",
+};
+
 type Props = {
   spec: BuildReportSpec;
   projectId: string;
@@ -54,7 +61,9 @@ export default function ThemeSpecCard({
           </span>
         </div>
         <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[10px] uppercase tracking-[0.14em] text-on-surface-variant">
-          <span>{priority}</span>
+          <span className={PRIORITY_TEXT[priority] ?? "text-on-surface-variant"}>
+            {priority}
+          </span>
           <span>· {citationCount} citations</span>
         </div>
       </button>
