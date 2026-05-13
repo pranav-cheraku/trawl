@@ -56,7 +56,6 @@ export default function NewProjectModal({
   }
 
   return (
-    /* Backdrop */
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-on-surface/40"
       role="dialog"
@@ -64,7 +63,6 @@ export default function NewProjectModal({
       aria-labelledby="modal-title"
       onClick={handleClose}
     >
-      {/* Modal panel — frosted glass */}
       <motion.div
         initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.96 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -108,10 +106,9 @@ export default function NewProjectModal({
           </button>
         </div>
 
-        {/* Body */}
         <form onSubmit={handleSubmit}>
+          {/* Form fields */}
           <div className="p-8 pt-4 space-y-6">
-            {/* Name field */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <label
@@ -138,7 +135,6 @@ export default function NewProjectModal({
               />
             </div>
 
-            {/* Description field */}
             <div className="space-y-2">
               <label
                 htmlFor="project-description"
@@ -160,7 +156,6 @@ export default function NewProjectModal({
               />
             </div>
 
-            {/* Error message */}
             {error && (
               <p
                 className="text-[13px] text-error"
@@ -172,7 +167,7 @@ export default function NewProjectModal({
             )}
           </div>
 
-          {/* Footer */}
+          {/* Action buttons */}
           <div className="flex items-center justify-end gap-3 px-8 py-5">
             <button
               type="button"

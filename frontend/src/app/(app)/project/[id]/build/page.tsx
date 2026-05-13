@@ -104,8 +104,8 @@ export default function BuildNextPage() {
       stopPolling();
       pollStartRef.current = Date.now();
       const tick = async () => {
-        // Guard: stopPolling() nulls pollStartRef — bail if called before or
-        // during this tick (handles unmount during the in-flight await).
+        // stopPolling() nulls pollStartRef. Bail if called before or during
+        // this tick to handle unmount during the in-flight await.
         if (pollStartRef.current === null) return;
 
         const fresh = await refreshReport(id);
@@ -137,8 +137,6 @@ export default function BuildNextPage() {
     [projectId, refreshReport, stopPolling],
   );
 
-  // Mount: fetch project + sources + runs in parallel; if a run exists,
-  // hydrate the latest one.
   useEffect(() => {
     let cancelled = false;
     void (async () => {
@@ -175,7 +173,7 @@ export default function BuildNextPage() {
 
   const handleRun = useCallback(async () => {
     setErrorBanner(null);
-    setChunks(null); // align with handleSelectRun — old chunks shouldn't linger
+    setChunks(null); // old chunks shouldn't linger across runs
     try {
       const { reportId } = await runBuildNext(
         projectId,
@@ -189,7 +187,6 @@ export default function BuildNextPage() {
       }
     } catch (e) {
       if (e instanceof AlreadyRunningError) {
-        // Attach to the existing run.
         const fresh = await refreshReport(e.existingReportId);
         if (fresh) startPolling(e.existingReportId);
       } else {
@@ -269,6 +266,7 @@ export default function BuildNextPage() {
 
   return (
     <div className="flex flex-col gap-4 overflow-x-hidden">
+      {/* Header */}
       <WorkspaceHeader
         label="Workspace / Build Next"
         title="What Should We Build Next?"
@@ -292,7 +290,7 @@ export default function BuildNextPage() {
         }
       />
 
-      {/* Source scope strip — mirrors Specs tab */}
+      {/* Scope strip */}
       <div className="flex flex-col gap-2 rounded-[4px] bg-surface-container-lowest px-4 py-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-on-surface-variant">
@@ -329,7 +327,7 @@ export default function BuildNextPage() {
         </div>
       ) : null}
 
-      {/* Body — state machine. CP4-7 replace these placeholders. */}
+      {/* Main content */}
       <div>
         {isLoading ? (
           <div className="rounded-[4px] bg-surface-container-lowest px-8 py-16 text-center text-[12px] text-on-surface-variant">
@@ -393,7 +391,7 @@ export default function BuildNextPage() {
                   promotingIds={promotingIds}
                 />
               ))}
-              {/* Mobile inline X-Ray; desktop has it in the right aside below. */}
+              {/* X-Ray panel (mobile inline) */}
               <div className="block lg:hidden">
                 {chunks ? (
                   <XrayPanel
@@ -411,6 +409,7 @@ export default function BuildNextPage() {
                 )}
               </div>
             </div>
+            {/* X-Ray panel (desktop aside) */}
             <aside className="hidden lg:block">
               {chunks ? (
                 <XrayPanel
@@ -439,8 +438,8 @@ export default function BuildNextPage() {
 
       {selectedSpec && report
         ? (() => {
-            // Derive the freshest spec from report.specs so promote-to-Kanban
-            // updates the modal's button state without a re-open.
+            // Derive the live spec from report.specs so promote-to-Kanban updates
+            // the modal button without requiring a re-open.
             const liveSpec =
               report.specs.find((s) => s.id === selectedSpec.id) ??
               selectedSpec;

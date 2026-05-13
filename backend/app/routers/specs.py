@@ -30,11 +30,6 @@ router = APIRouter(tags=["specs"])
 logger = logging.getLogger(__name__)
 
 
-# ---------------------------------------------------------------------------
-# Shared helpers (same pattern as conversations.py)
-# ---------------------------------------------------------------------------
-
-
 async def _get_project_for_user(
     project_id: uuid.UUID,
     db: AsyncSession,
@@ -91,11 +86,6 @@ async def _get_spec_for_user(
     return spec
 
 
-# ---------------------------------------------------------------------------
-# Generation + polling
-# ---------------------------------------------------------------------------
-
-
 @router.post(
     "/projects/{project_id}/generate",
     response_model=GenerateSpecsResponse,
@@ -121,11 +111,10 @@ async def generate_specs(
             ),
         )
 
-    # Convention: commit before .delay() so the Celery worker sees the data
+    # Must commit before .delay() so the Celery worker sees the row.
     await db.commit()
 
-    # Celery serializes arguments to JSON, so pass UUIDs as strings; the task
-    # converts them back to uuid.UUID before forwarding into retrieval.
+    # UUIDs must be strings for Celery's JSON serializer; the task parses them back.
     source_ids_for_task: list[str] | None = (
         [str(s) for s in body.source_ids] if body.source_ids is not None else None
     )
@@ -171,11 +160,6 @@ async def get_task_status(
     )
 
 
-# ---------------------------------------------------------------------------
-# Spec CRUD
-# ---------------------------------------------------------------------------
-
-
 @router.get(
     "/projects/{project_id}/specs",
     response_model=list[SpecResponse],
@@ -208,8 +192,7 @@ async def list_specs(
     return list(result.scalars().all())
 
 
-# NOTE: /specs/reorder MUST be defined before /specs/{spec_id} so FastAPI
-# does not try to parse "reorder" as a UUID path parameter.
+# /specs/reorder must be defined before /specs/{spec_id} or FastAPI parses "reorder" as a UUID.
 
 
 @router.patch(

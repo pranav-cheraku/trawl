@@ -78,14 +78,10 @@ async def _get_conversation_for_project(
 
 
 def _chunk_to_transparency_dict(chunk: RetrievedChunk) -> dict:
-    """Serialize a RetrievedChunk into the transparency JSONB shape.
+    """Serialize a RetrievedChunk into the camelCase transparency JSONB shape.
 
-    Keys are camelCase so the blob matches the frontend's expected shape
-    without an extra transformation layer.
-
-    Stores BOTH a short preview (for compact card display) and the full
-    chunk text + full parent feedback item content so the frontend can
-    open a detail modal without a follow-up API call.
+    Stores both a short preview and full chunk + feedback item text so the
+    detail modal works without a follow-up API call.
     """
     text = chunk.chunk_text or ""
     preview = text[:280] + ("…" if len(text) > 280 else "")
@@ -197,7 +193,6 @@ async def get_conversation(
             detail="Conversation not found.",
         )
 
-    # Sort messages chronologically ascending (oldest first)
     conversation.messages.sort(key=lambda m: m.created_at)
     return conversation
 
@@ -215,8 +210,7 @@ async def update_conversation(
     db: AsyncSession = Depends(get_db),
     user_id: uuid.UUID = Depends(get_current_user),
 ) -> Conversation:
-    """Rename a conversation. Empty or whitespace-only titles are
-    normalized to NULL so the next user message can re-auto-populate."""
+    """Rename a conversation. Whitespace-only titles are normalized to NULL."""
     await _get_project_for_user(project_id, db, user_id)
     conversation = await _get_conversation_for_project(
         conversation_id, project_id, db
@@ -246,12 +240,7 @@ async def send_message(
     db: AsyncSession = Depends(get_db),
     user_id: uuid.UUID = Depends(get_current_user),
 ) -> Message:
-    """Synchronous RAG message endpoint.
-
-    Flow: validate ownership → check project has ready sources → load history
-    → embed query → retrieve chunks → generate answer (if any) → store both
-    user and assistant messages with transparency metadata → return assistant.
-    """
+    """Embed query, retrieve chunks, generate answer, persist both messages, return assistant."""
     await _get_project_for_user(project_id, db, user_id)
     conversation = await _get_conversation_for_project(
         conversation_id, project_id, db
@@ -266,7 +255,6 @@ async def send_message(
             ),
         )
 
-    # Load last N messages for conversation context
     history_result = await db.execute(
         select(Message)
         .where(Message.conversation_id == conversation.id)
@@ -275,9 +263,7 @@ async def send_message(
     )
     history = list(reversed(history_result.scalars().all()))
 
-    # --- Retrieval -----------------------------------------------------------
-    # User-tunable retrieval params from the RAG X-Ray sliders, falling back to
-    # the server defaults when the client didn't send overrides.
+    # Use `is not None` checks (not `or`) so threshold=0.0 is not coerced to the default.
     effective_top_k = body.top_k if body.top_k is not None else TOP_K
     effective_threshold = (
         body.threshold if body.threshold is not None else SIMILARITY_THRESHOLD
@@ -294,7 +280,6 @@ async def send_message(
     )
     retrieval_latency_ms = int((time.perf_counter() - retrieval_start) * 1000)
 
-    # --- Generation (skipped if no chunks) -----------------------------------
     transparency_chunks = [_chunk_to_transparency_dict(c) for c in chunks]
 
     if not chunks:
@@ -313,7 +298,7 @@ async def send_message(
         result = await generate_answer(body.content, chunks, history=history)
         generation_latency_ms = int((time.perf_counter() - generation_start) * 1000)
         answer_text = result.answer
-        # Map 1-indexed chunk positions back to their chunk UUIDs
+        # supporting_indices are 1-based; map back to chunk UUIDs.
         supporting_chunk_ids = [
             chunks[i - 1].chunk_id
             for i in result.supporting_indices
@@ -336,7 +321,6 @@ async def send_message(
         "outputTokens": output_tokens,
     }
 
-    # --- Auto-populate conversation title from first user message -----------
     if conversation.title is None:
         trimmed = body.content.strip()
         if len(trimmed) > TITLE_MAX_CHARS:
@@ -344,7 +328,6 @@ async def send_message(
         else:
             conversation.title = trimmed
 
-    # --- Persist both messages in one transaction ----------------------------
     # Explicit timestamps so user_message strictly precedes assistant_message.
     now = datetime.utcnow()
     user_message = Message(

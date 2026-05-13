@@ -83,7 +83,6 @@ async def trigger_build_next(
             detail="Activate at least one source to run",
         )
 
-    # Concurrency guard: 409 if any pending/running run exists for the project.
     existing = await db.execute(
         select(BuildReport).where(
             BuildReport.project_id == project_id,
@@ -100,7 +99,6 @@ async def trigger_build_next(
             },
         )
 
-    # Create the row in pending state.
     source_ids_value = body.source_ids if body.source_ids is not None else []
     report = BuildReport(
         project_id=project_id,
@@ -112,18 +110,16 @@ async def trigger_build_next(
     await db.commit()
     await db.refresh(report)
 
-    # Kick off the task. UUIDs → strings for Celery JSON serialization.
+    # UUIDs must be strings for Celery's JSON serializer.
     source_ids_str = (
         [str(s) for s in body.source_ids] if body.source_ids is not None else None
     )
-    # Note: if the broker is down here, the row stays as `status=pending` with
-    # task_id=None. The frontend's 10-minute stale heuristic in build/page.tsx
-    # treats such rows as failed on next mount.
+    # If the broker is down here, the row stays as pending with task_id=None.
+    # The frontend's 10-minute stale heuristic treats such rows as failed on next mount.
     async_result = run_build_next_task.delay(
         str(report.id), str(project_id), source_ids_str
     )
 
-    # Persist task_id immediately so polling can find it.
     report.task_id = async_result.id
     await db.commit()
 
@@ -261,7 +257,7 @@ async def get_build_report_chunks(
     user_id: uuid.UUID = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> BuildReportChunksResponse:
-    """RAG X-Ray data — chunks with similarity, rank, query attribution."""
+    """RAG X-Ray data: chunks with similarity, rank, query attribution."""
     auth = await db.execute(
         select(BuildReport.id).where(
             BuildReport.id == report_id, BuildReport.user_id == user_id
@@ -340,7 +336,7 @@ async def promote_build_spec(
             status_code=status.HTTP_404_NOT_FOUND, detail="Build report not found."
         )
 
-    # Lock the source spec row to prevent concurrent double-promote.
+    # Lock the row to prevent concurrent double-promote.
     source_q = await db.execute(
         select(BuildReportSpec)
         .where(
@@ -361,7 +357,7 @@ async def promote_build_spec(
             detail={"existingSpecId": str(source_spec.promoted_spec_id)},
         )
 
-    # Shift existing Backlog rows up by 1 first (avoids self-collision on the new row).
+    # Shift existing Backlog rows up before inserting at order=0 (avoids collision).
     await db.execute(
         update(Spec)
         .where(
@@ -373,7 +369,6 @@ async def promote_build_spec(
         .values(kanban_order=Spec.kanban_order + 1)
     )
 
-    # Insert the new spec at the top of Backlog.
     new_spec = Spec(
         project_id=report.project_id,
         title=source_spec.title,

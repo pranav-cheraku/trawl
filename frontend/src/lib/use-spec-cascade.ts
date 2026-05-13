@@ -3,13 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 
 /**
- * Tracks which spec IDs are NEW since the previous render (i.e., were not in
- * the previous specs array). Used to flag which spec cards should play the
- * post-generation cascade entrance animation.
- *
- * Returns a Set of spec IDs that should animate in. The set is cleared
- * automatically after `clearAfterMs` so subsequent re-renders (e.g. from
- * filter changes) don't re-trigger the animation on the same cards.
+ * Returns a Set of spec IDs that appeared in the latest specIds array but not
+ * the previous one. Cards in this set should play the cascade entrance animation.
+ * The set is cleared after `clearAfterMs` so filter changes don't re-trigger
+ * the animation on the same cards.
  */
 export function useSpecCascade(
   specIds: string[],

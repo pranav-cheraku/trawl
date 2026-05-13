@@ -8,15 +8,9 @@ interface EditableTextAreaProps {
   placeholder?: string;
   ariaLabel: string;
   className?: string;
-  /** Optional row hint; the textarea autosizes past this. */
   minRows?: number;
 }
 
-/**
- * Multi-line click-to-edit with autosize. Save on blur or Cmd/Ctrl+Enter.
- * Esc reverts. Empty string is allowed (unlike EditableText which treats
- * empty as a cancel) — list rows want to let users clear them.
- */
 export default function EditableTextArea({
   value,
   onSave,
@@ -116,9 +110,8 @@ export default function EditableTextArea({
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
         onBlur={(e) => {
-          // If blur was caused by clicking the Save or Cancel button inside
-          // this control's footer, the button's onMouseDown already handled
-          // the action — don't double-commit on blur.
+          // The Save/Cancel buttons use onMouseDown to act before blur fires.
+          // If relatedTarget carries data-editor-action, skip the blur-save.
           const next = e.relatedTarget as HTMLElement | null;
           if (next?.dataset?.editorAction) return;
           commit();
@@ -147,7 +140,6 @@ export default function EditableTextArea({
             type="button"
             data-editor-action="cancel"
             onMouseDown={(e) => {
-              // Prevent the textarea from blurring before our handler fires.
               e.preventDefault();
               cancel();
             }}

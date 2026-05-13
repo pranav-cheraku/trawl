@@ -20,11 +20,9 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    """Replace dead Day-1 build_next_analyses scaffold with the real schema."""
-    # 1. Drop the unused Day-1 placeholder table.
+    """Replace the Day-1 build_next_analyses placeholder with the real schema."""
     op.drop_table("build_next_analyses")
 
-    # 2. build_reports — top-level run artifact.
     op.create_table(
         "build_reports",
         sa.Column(
@@ -80,7 +78,6 @@ def upgrade() -> None:
         ["project_id", sa.text("created_at DESC")],
     )
 
-    # 3. build_themes — clustered theme per report.
     op.create_table(
         "build_themes",
         sa.Column(
@@ -107,7 +104,6 @@ def upgrade() -> None:
     )
     op.create_index("ix_build_themes_report_id", "build_themes", ["report_id"])
 
-    # 4. build_report_specs — generated specs nested under themes.
     op.create_table(
         "build_report_specs",
         sa.Column(
@@ -142,7 +138,6 @@ def upgrade() -> None:
         "ix_build_report_specs_theme_id", "build_report_specs", ["theme_id"]
     )
 
-    # 5. build_report_chunks — RAG X-Ray data per report.
     op.create_table(
         "build_report_chunks",
         sa.Column(
@@ -168,7 +163,6 @@ def upgrade() -> None:
         "ix_build_report_chunks_report_id", "build_report_chunks", ["report_id"]
     )
 
-    # 6. specs — add nullable back-link to source build_report_spec.
     op.add_column(
         "specs",
         sa.Column("build_report_spec_id", sa.Uuid(), nullable=True),
@@ -189,7 +183,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    """Reverse — drop new tables and restore the Day-1 placeholder."""
+    """Drop new tables and restore the Day-1 placeholder."""
     op.drop_constraint("uq_specs_build_report_spec_id", "specs", type_="unique")
     op.drop_constraint(
         "fk_specs_build_report_spec_id", "specs", type_="foreignkey"
@@ -211,7 +205,6 @@ def downgrade() -> None:
     )
     op.drop_table("build_reports")
 
-    # Restore the Day-1 placeholder so downgrade is symmetric.
     op.create_table(
         "build_next_analyses",
         sa.Column(

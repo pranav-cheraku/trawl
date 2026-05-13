@@ -31,11 +31,7 @@ export interface DashboardViewApi {
   setView: (view: DashboardView) => void;
 }
 
-/**
- * Persistent grid|list view preference for the dashboard, keyed per-browser
- * via localStorage. SSR-safe (typeof window guards) and corruption-tolerant
- * (any non-"grid"|"list" value falls back to "grid").
- */
+/** Persists the grid/list view preference in localStorage. */
 export function useDashboardView(): DashboardViewApi {
   const [view, setViewState] = useState<DashboardView>(() => read());
 

@@ -16,12 +16,6 @@ interface RagSettingsMenuProps {
   onReset: () => void;
 }
 
-/**
- * Compact trigger + frosted-glass popover wrapper around RagSettingsPanel.
- * Positions the popover with JS-computed fixed coordinates so it stays
- * inside the viewport regardless of where the trigger sits. Close-on-outside
- * / Esc pattern matches SourceScopeMenu / FocusPopover / ExportMenu.
- */
 export function RagSettingsMenu({
   settings,
   onTopKChange,
@@ -41,7 +35,6 @@ export function RagSettingsMenu({
     settings.topK === RAG_SETTINGS_DEFAULTS.topK &&
     Math.abs(settings.threshold - RAG_SETTINGS_DEFAULTS.threshold) < 1e-6;
 
-  // Esc closes.
   useEffect(() => {
     if (!isOpen) return;
     function handleKey(e: KeyboardEvent) {
@@ -51,9 +44,9 @@ export function RagSettingsMenu({
     return () => window.removeEventListener("keydown", handleKey);
   }, [isOpen]);
 
-  // Click outside closes. Register via setTimeout(0) so the opening click
-  // doesn't immediately trigger the close handler. The popover is rendered
-  // outside the trigger's DOM subtree (position: fixed) so we check both.
+  // Register via setTimeout(0) so the opening click doesn't immediately close
+  // the popover. The popover renders outside the trigger's DOM subtree
+  // (position: fixed), so both refs must be checked for outside-click detection.
   useEffect(() => {
     if (!isOpen) return;
     function handleMouseDown(e: MouseEvent) {

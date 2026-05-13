@@ -11,7 +11,6 @@ import ThemeSpecFailed from "./theme-spec-failed";
 
 type Props = {
   theme: BuildTheme;
-  /** 1-indexed position in the page's display order (by frequency). */
   displayRank: number;
   specs: BuildReportSpec[];
   projectId: string;

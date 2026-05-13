@@ -1,17 +1,3 @@
-"""Manual paste parser: split a text blob into individual feedback items.
-
-Strategy:
-- Trim outer whitespace.
-- Split on one-or-more blank lines (paragraph breaks).
-- If only one paragraph results, fall back to splitting on single newlines
-  (line-by-line).
-- Drop empty results from either split.
-
-Each returned item is a dict with `content` (str) and `external_id` (None).
-The `external_id` is None because manual-paste items have no stable upstream
-identifier -- they're authored ad-hoc by the user.
-"""
-
 from __future__ import annotations
 
 import re
@@ -22,9 +8,10 @@ _LINE_SPLIT = re.compile(r"\n+")
 
 
 def parse_paste(text: str) -> list[dict]:
-    """Split a free-form paste into feedback items.
+    """Split pasted text into feedback items.
 
-    See module docstring for the splitting rules.
+    Splits on blank lines first; falls back to single newlines if only one
+    paragraph results. external_id is always None for manual-paste items.
     """
     trimmed = text.strip()
     if not trimmed:

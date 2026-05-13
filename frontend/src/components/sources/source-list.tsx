@@ -23,8 +23,7 @@ const TERMINAL_STATUSES = new Set(["ready", "error"]);
 const POLL_INTERVAL = 3000;
 
 function formatDate(iso: string): string {
-  // Backend stores naive UTC timestamps — append "Z" if missing so the browser
-  // parses them as UTC and renders in the user's local timezone.
+  // Backend writes naive UTC. Append "Z" so the browser treats it as UTC.
   const normalized = /[zZ]|[+-]\d{2}:?\d{2}$/.test(iso) ? iso : `${iso}Z`;
   return new Date(normalized).toLocaleString("en-US", {
     month: "short",
@@ -93,9 +92,8 @@ export default function SourceList({ projectId, refreshKey }: Props) {
     }
   }, [projectId]);
 
-  // Fetch on mount + refreshKey. Only show the skeleton on the very first
-  // load — subsequent refreshes (after adding a source) refetch in the
-  // background so the list doesn't flash.
+  // Only show the skeleton on the first load; subsequent refreshes run in
+  // the background so the list doesn't flash.
   useEffect(() => {
     if (!hasLoadedRef.current) {
       setIsLoading(true);
@@ -103,12 +101,10 @@ export default function SourceList({ projectId, refreshKey }: Props) {
     fetchSources();
   }, [fetchSources, refreshKey]);
 
-  // Keep sourcesRef in sync
   useEffect(() => {
     sourcesRef.current = sources;
   }, [sources]);
 
-  // Poll for non-terminal sources
   useEffect(() => {
     if (pollRef.current) clearInterval(pollRef.current);
 
@@ -162,9 +158,6 @@ export default function SourceList({ projectId, refreshKey }: Props) {
     [projectId, expandedId]
   );
 
-  // Compute display names with duplicate suffixes. Numbering follows addition
-  // order (oldest = 1), and suffixes only appear when the same app or filename
-  // has been added more than once.
   const displayNames = useMemo(() => {
     const sorted = [...sources].sort((a, b) =>
       a.createdAt.localeCompare(b.createdAt),
@@ -213,10 +206,8 @@ export default function SourceList({ projectId, refreshKey }: Props) {
     );
   }
 
-  // Column widths (left → right): icon · source · type · records · status · added · actions.
-  // Records 70px (max value "2,216" + counter padding), Status 80px (longest pill is
-  // "ingesting"), Added 138px (longest date "May 10, 2026, 10:43 AM" in JetBrains
-  // Mono is ~134px — kept just enough slack to avoid a 1-char clip).
+  // Added column is 138px. "May 10, 2026, 10:43 AM" in JetBrains Mono is ~134px,
+  // just enough slack to avoid a 1-char clip at the longest expected date.
   const columnTemplate =
     "grid-cols-[28px_minmax(0,1.6fr)_86px_70px_80px_138px_72px]";
 
@@ -262,15 +253,11 @@ export default function SourceList({ projectId, refreshKey }: Props) {
         </p>
       ) : (
         <>
-          {/* ── md+ columnar table ── */}
+          {/* Table layout (md+) */}
           <div className="hidden md:block">
             <div className="mt-3 overflow-hidden rounded-[4px]">
-              {/* Table header. SOURCE spans the icon + name columns so it
-                  reads as one logical "source" header rather than starting
-                  awkwardly indented past the icon. Actions column header
-                  ("Delete") is right-aligned with `pr-5` so the text lands
-                  above the trash icon (which sits just left of the caret
-                  inside the `justify-end gap-1` action cell). */}
+              {/* "Source" header spans the icon + name columns (col-span-2).
+                  "Delete" is right-aligned to align with the trash icon. */}
               <div
                 className={`grid ${columnTemplate} items-center gap-3 bg-surface-container-low px-3 py-2 font-mono text-[9.5px] font-medium uppercase tracking-[0.15em] text-on-surface-variant/70`}
               >
@@ -282,7 +269,6 @@ export default function SourceList({ projectId, refreshKey }: Props) {
                 <span className="pr-5 text-right">Delete</span>
               </div>
 
-              {/* Rows */}
               {sources.map((source, idx) => {
                 const cumulativeDelay = Math.min(idx * staggers.list, 0.8);
                 return (
@@ -312,24 +298,20 @@ export default function SourceList({ projectId, refreshKey }: Props) {
                       {getSourceTypeIcon(source.sourceType)}
                     </div>
 
-                    {/* Source name column */}
                     <div className="min-w-0">
                       <div className="truncate text-[13px] text-on-surface">
                         {getSourceName(source)}
                       </div>
                     </div>
 
-                    {/* Type column */}
                     <span className="font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-on-surface-variant">
                       {getSourceTypeLabel(source.sourceType)}
                     </span>
 
-                    {/* Records column */}
                     <span className="font-mono text-[12px] text-on-surface">
                       {source.recordCount.toLocaleString()}
                     </span>
 
-                    {/* Status column */}
                     {confirmDeleteId === source.id ? (
                       <div className="col-span-3">
                         <InlineConfirm
@@ -343,12 +325,10 @@ export default function SourceList({ projectId, refreshKey }: Props) {
                       <>
                         <StatusBadge status={source.status} />
 
-                        {/* Added column */}
                         <span className="font-mono text-[10px] text-on-surface-variant">
                           {formatDate(source.createdAt)}
                         </span>
 
-                        {/* Actions column */}
                         <div className="flex items-center justify-end gap-1">
                           <button
                             onClick={(e) => {
@@ -393,7 +373,6 @@ export default function SourceList({ projectId, refreshKey }: Props) {
                     )}
                   </div>
 
-                  {/* Expanded feedback items panel — unchanged logic */}
                   {expandedId === source.id && source.status === "ready" && (
                     <div className="bg-surface-container px-3 py-2">
                       <FeedbackItemPanel
@@ -417,7 +396,7 @@ export default function SourceList({ projectId, refreshKey }: Props) {
             </div>
           </div>
 
-          {/* ── <md card list ── */}
+          {/* Card layout (mobile) */}
           <div className="mt-3 flex flex-col gap-2 md:hidden">
             {sources.map((source, idx) => {
               const cumulativeDelay = Math.min(idx * staggers.list, 0.8);
@@ -437,7 +416,6 @@ export default function SourceList({ projectId, refreshKey }: Props) {
                     : "bg-surface-container-low hover:bg-surface-container-low"
                 }`}
               >
-                {/* Card header — tap to expand */}
                 <button
                   type="button"
                   onClick={() =>
@@ -449,7 +427,6 @@ export default function SourceList({ projectId, refreshKey }: Props) {
                     {getSourceTypeIcon(source.sourceType)}
                   </div>
                   <div className="min-w-0 flex-1">
-                    {/* Top row: name + chevron */}
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1 truncate text-[13px] text-on-surface">
                         {getSourceName(source)}
@@ -471,7 +448,6 @@ export default function SourceList({ projectId, refreshKey }: Props) {
                       </svg>
                     </div>
 
-                    {/* Meta row: type · records · status · added */}
                     <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
                       <span className="font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-on-surface-variant">
                         {getSourceTypeLabel(source.sourceType)}
@@ -487,7 +463,6 @@ export default function SourceList({ projectId, refreshKey }: Props) {
                   </div>
                 </button>
 
-                {/* Delete action / confirmation row */}
                 {confirmDeleteId === source.id ? (
                   <div className="px-3 pb-2.5">
                     <InlineConfirm
@@ -526,7 +501,6 @@ export default function SourceList({ projectId, refreshKey }: Props) {
                   </div>
                 )}
 
-                {/* Expanded feedback items panel */}
                 {expandedId === source.id && source.status === "ready" && (
                   <div className="bg-surface-container px-3 py-2">
                     <FeedbackItemPanel

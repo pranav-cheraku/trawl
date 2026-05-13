@@ -4,6 +4,9 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# 200 tokens keeps chunks small enough for precise retrieval without losing
+# enough context to be uninterpretable. 100-token overlap reduces hard cuts
+# at boundaries that span a sentence or idea.
 MAX_CHUNK_TOKENS = 200
 OVERLAP_TOKENS = 100
 
@@ -13,14 +16,9 @@ def chunk_feedback_items(
 ) -> list[dict]:
     """Split feedback items into chunks for embedding.
 
-    Short items (< MAX_CHUNK_TOKENS) stay whole as a single chunk.
-    Long items are split on paragraph boundaries with token overlap.
-
-    Args:
-        items: list of dicts with keys 'id' (UUID) and 'content' (str).
-
-    Returns:
-        list of dicts with keys: feedback_item_id, chunk_text, chunk_index, token_count.
+    Short items (<=MAX_CHUNK_TOKENS) stay whole. Long items split on paragraph
+    boundaries with token overlap. Returns dicts with keys: feedback_item_id,
+    chunk_text, chunk_index, token_count.
     """
     all_chunks: list[dict] = []
 
@@ -60,7 +58,6 @@ def _split_long_text(text: str) -> list[str]:
     if not paragraphs:
         return _split_by_token_count(text.split())
 
-    # If paragraphs are small enough, merge into chunks up to MAX_CHUNK_TOKENS
     chunks: list[str] = []
     current_tokens: list[str] = []
 
@@ -72,11 +69,10 @@ def _split_long_text(text: str) -> list[str]:
         else:
             if current_tokens:
                 chunks.append(" ".join(current_tokens))
-                # Keep overlap from end of current chunk
                 overlap = current_tokens[-OVERLAP_TOKENS:] if len(current_tokens) > OVERLAP_TOKENS else []
                 current_tokens = overlap + para_tokens
             else:
-                # Single paragraph exceeds limit — split by sentences
+                # Single paragraph exceeds the limit; fall through to sentence splitting.
                 sentence_chunks = _split_by_sentences(para)
                 chunks.extend(sentence_chunks[:-1])
                 last_tokens = sentence_chunks[-1].split() if sentence_chunks else []
@@ -89,8 +85,7 @@ def _split_long_text(text: str) -> list[str]:
 
 
 def _split_by_sentences(text: str) -> list[str]:
-    """Split text by sentence boundaries when paragraphs are too long."""
-    # Simple sentence splitting on period + space
+    """Split text by sentence boundaries when a paragraph exceeds the token limit."""
     sentences = []
     current = ""
     for char in text:
@@ -104,7 +99,6 @@ def _split_by_sentences(text: str) -> list[str]:
     if not sentences:
         return [text]
 
-    # Merge sentences into chunks
     chunks: list[str] = []
     current_tokens: list[str] = []
 
@@ -118,7 +112,7 @@ def _split_by_sentences(text: str) -> list[str]:
                 overlap = current_tokens[-OVERLAP_TOKENS:] if len(current_tokens) > OVERLAP_TOKENS else []
                 current_tokens = overlap + sent_tokens
             else:
-                # Single sentence exceeds limit — split by token count
+                # Single sentence exceeds the limit; token-count split is the last resort.
                 token_chunks = _split_by_token_count(sent_tokens)
                 chunks.extend(token_chunks)
                 current_tokens = []

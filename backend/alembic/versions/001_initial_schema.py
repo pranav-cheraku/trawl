@@ -23,10 +23,8 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     """Create all tables and indexes for the initial Trawl schema."""
 
-    # Enable the pgvector extension for vector similarity search.
     op.execute("CREATE EXTENSION IF NOT EXISTS vector")
 
-    # 1. users
     op.create_table(
         "users",
         sa.Column(
@@ -48,7 +46,6 @@ def upgrade() -> None:
         sa.UniqueConstraint("email"),
     )
 
-    # 2. projects
     op.create_table(
         "projects",
         sa.Column(
@@ -76,7 +73,6 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
     )
 
-    # 3. feedback_sources
     op.create_table(
         "feedback_sources",
         sa.Column(
@@ -107,7 +103,6 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
     )
 
-    # 4. feedback_items
     op.create_table(
         "feedback_items",
         sa.Column(
@@ -140,7 +135,6 @@ def upgrade() -> None:
         ),
         sa.PrimaryKeyConstraint("id"),
     )
-    # Partial unique index: (source_id, external_id) WHERE external_id IS NOT NULL
     op.create_index(
         "ix_feedback_items_source_external",
         "feedback_items",
@@ -149,7 +143,6 @@ def upgrade() -> None:
         postgresql_where=sa.text("external_id IS NOT NULL"),
     )
 
-    # 5. feedback_chunks (with IVFFlat index)
     op.create_table(
         "feedback_chunks",
         sa.Column(
@@ -165,9 +158,8 @@ def upgrade() -> None:
         sa.Column("token_count", sa.Integer(), nullable=True),
         sa.Column(
             "embedding",
-            sa.Text().with_variant(
-                sa.Text(), "postgresql"
-            ),  # placeholder; raw SQL below handles the real type
+            # Placeholder; raw SQL below replaces this with vector(1024).
+            sa.Text().with_variant(sa.Text(), "postgresql"),
             nullable=True,
         ),
         sa.Column(
@@ -184,19 +176,14 @@ def upgrade() -> None:
         ),
         sa.PrimaryKeyConstraint("id"),
     )
-    # Replace the placeholder embedding column with the real vector(1024) type.
     op.execute("ALTER TABLE feedback_chunks DROP COLUMN IF EXISTS embedding")
-    op.execute(
-        "ALTER TABLE feedback_chunks ADD COLUMN embedding vector(1024)"
-    )
-    # IVFFlat index for cosine similarity.
+    op.execute("ALTER TABLE feedback_chunks ADD COLUMN embedding vector(1024)")
     op.execute(
         "CREATE INDEX ix_feedback_chunks_embedding_ivfflat "
         "ON feedback_chunks USING ivfflat (embedding vector_cosine_ops) "
         "WITH (lists = 100)"
     )
 
-    # 6. specs
     op.create_table(
         "specs",
         sa.Column(
@@ -244,7 +231,6 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
     )
 
-    # 7. spec_transparency
     op.create_table(
         "spec_transparency",
         sa.Column(
@@ -273,7 +259,6 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
     )
 
-    # 8. conversations
     op.create_table(
         "conversations",
         sa.Column(
@@ -295,7 +280,6 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
     )
 
-    # 9. messages
     op.create_table(
         "messages",
         sa.Column(
@@ -330,7 +314,6 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
     )
 
-    # 10. build_next_analyses
     op.create_table(
         "build_next_analyses",
         sa.Column(

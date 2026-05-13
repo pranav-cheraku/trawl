@@ -3,13 +3,8 @@
 import { useEffect } from "react";
 import { useReducedMotion } from "framer-motion";
 
-/**
- * Mounts Lenis smooth scroll for the lifetime of the wrapping route.
- * Mounted only on the landing page — momentum scroll feels wrong inside
- * the app (PMs scrolling a Kanban don't want it).
- *
- * Reduced-motion users: Lenis never instantiates.
- */
+// Mounted only on the landing page; momentum scroll feels wrong inside
+// the app (Kanban, chat, etc). Lenis does not instantiate for reduced-motion users.
 export function LenisProvider({ children }: { children: React.ReactNode }) {
   const prefersReducedMotion = useReducedMotion();
 

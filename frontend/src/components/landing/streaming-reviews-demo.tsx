@@ -6,11 +6,6 @@ import { motion, useInView, useReducedMotion } from "framer-motion";
 import { springs, staggers } from "@/lib/motion";
 import reviews from "../../../public/landing-fixtures/reviews.json";
 
-/**
- * Connect-section demo: rows of reviews stream in vertically when the section
- * is half-visible. Each row enters from y+8 with opacity fade, 60ms stagger.
- * Re-entries replay the animation.
- */
 export function StreamingReviewsDemo() {
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { amount: 0.5, once: false });

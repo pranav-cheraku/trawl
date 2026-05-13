@@ -12,12 +12,11 @@ BuildStatus = Literal["pending", "running", "success", "failure"]
 
 
 class _CamelModel(BaseModel):
-    """Base for all schemas — alias_generator produces camelCase JSON.
+    """Base for all schemas. alias_generator produces camelCase JSON.
 
-    Note: nested ``dict`` fields (content, retrieval_metadata, build_order
-    entries) keep their snake_case keys verbatim — the alias_generator
-    only transforms declared model fields. This matches the existing
-    Spec / TaskStatus pattern documented in CLAUDE.md.
+    Nested dict fields (content, retrieval_metadata, build_order entries)
+    keep their snake_case keys verbatim. alias_generator only transforms
+    declared model fields.
     """
 
     model_config = ConfigDict(
@@ -34,7 +33,7 @@ class RunBuildNextRequest(_CamelModel):
 
 
 class RunBuildNextResponse(_CamelModel):
-    """202 response — task kicked off."""
+    """202 response. Task kicked off."""
 
     report_id: uuid.UUID
     task_id: str
@@ -80,7 +79,7 @@ class BuildReportSpecResponse(_CamelModel):
 
 
 class BuildOrderEntry(_CamelModel):
-    """Entry in the build_order JSONB list — keys camelCased on the wire."""
+    """Entry in the build_order JSONB list. Keys camelCased on the wire."""
 
     rank: int
     spec_id: uuid.UUID | None

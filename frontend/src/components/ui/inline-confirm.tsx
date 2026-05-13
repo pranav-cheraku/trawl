@@ -7,11 +7,7 @@ interface InlineConfirmProps {
   isSubmitting?: boolean;
 }
 
-/**
- * Compact Yes / No confirmation used inline for destructive actions
- * (delete source, delete project). Stops click propagation so it can
- * safely live inside clickable rows or cards.
- */
+// Stops click propagation so it can safely live inside clickable rows or cards.
 export default function InlineConfirm({
   message,
   onConfirm,

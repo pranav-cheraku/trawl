@@ -7,21 +7,10 @@ import EditableTextArea from "@/components/kanban/editable-textarea";
 interface EditableListProps {
   items: string[];
   onSave: (next: string[]) => Promise<void>;
-  /** Label shown on the "+ Add <addLabel>" row, e.g. "story", "criterion". */
   addLabel: string;
-  /** Optional aria prefix for row fields, e.g. "user story". */
   itemAriaLabel: string;
 }
 
-/**
- * Array-of-strings editor. Each row wraps an EditableTextArea plus a
- * trailing x delete. Footer "+ Add <addLabel>" appends a blank row
- * already in edit mode.
- *
- * Persistence model: whenever the list changes (edit, delete, add), the
- * full resulting array is passed to onSave. Parent PATCHes the content
- * dict with the new array.
- */
 export default function EditableList({
   items,
   onSave,
@@ -36,7 +25,7 @@ export default function EditableList({
     try {
       await onSave(copy);
     } catch {
-      // Parent surfaces the error.
+      // parent surfaces error via banner
     }
   }
 
@@ -45,7 +34,7 @@ export default function EditableList({
     try {
       await onSave(copy);
     } catch {
-      // Parent surfaces the error.
+      // parent surfaces error via banner
     }
   }
 
@@ -57,7 +46,7 @@ export default function EditableList({
     try {
       await onSave([...items, next]);
     } catch {
-      // Parent surfaces the error.
+      // parent surfaces error via banner
     } finally {
       setPendingNew(false);
     }

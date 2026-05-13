@@ -1,23 +1,14 @@
 import type { ReactNode } from "react";
 
 export interface WorkspaceStat {
-  /** Right-aligned primary number, e.g. "1,247". */
   value: string;
-  /** Small uppercase mono label under the value, e.g. "Reviews Indexed". */
   key: string;
 }
 
 export interface WorkspaceHeaderProps {
-  /** Mono uppercase crumb above the title, e.g. "Workspace / Sources". */
   label: string;
-  /** Primary semibold heading. */
   title: string;
-  /** Optional right-aligned stats row. */
   stats?: WorkspaceStat[];
-  /**
-   * Optional right-side slot for action buttons (e.g. generate buttons on Specs).
-   * Renders after the stats row; both can coexist.
-   */
   right?: ReactNode;
 }
 

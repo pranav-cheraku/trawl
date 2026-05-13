@@ -26,11 +26,7 @@ TASK_SOFT_TIME_LIMIT = 540  # soft timeout (9 min) for graceful logging
 
 
 async def _mark_failure(report_id: uuid.UUID, reason: str) -> None:
-    """Open a fresh session and mark the report as failed.
-
-    Used from both the RuntimeError (user-facing) and Exception (internal)
-    branches so the persistence shape is identical.
-    """
+    """Open a fresh session and mark the report as failed."""
     async with AsyncSessionLocal() as db:
         await db.execute(
             update(BuildReport)
@@ -51,24 +47,16 @@ async def _async_run_and_persist(
     source_ids: list[uuid.UUID] | None,
     celery_task_id: str,
 ) -> dict[str, Any]:
-    """Run the pipeline and persist all result rows in a single async session.
+    """Run the Build Next pipeline and persist results.
 
-    Mirrors the pattern in tasks/spec_generation.py: ONE asyncio.run() at
-    the Celery boundary, all DB I/O happens here.
+    Three sessions keep transactions tight:
+    1. Mark running -- commits before the pipeline so polling sees status=running.
+    2. Run pipeline -- if it raises, _mark_failure opens a fresh session for the error row.
+    3. Persist success -- fresh session avoids carrying pipeline state.
+
+    If the worker is SIGKILLed mid-pipeline, the row stays as running indefinitely.
+    The frontend's 10-minute stale heuristic covers that zombie case.
     """
-    # Three separate sessions to keep transactions tight:
-    #
-    #   1. Mark running — must commit before the pipeline runs so the polling
-    #      endpoint sees status="running" immediately.
-    #   2. Run pipeline — wraps the long-running Claude calls; if anything
-    #      raises, this session is rolled back and a fresh one (via
-    #      _mark_failure) writes the failure marker.
-    #   3. Persist success — fresh session so we don't carry any state from
-    #      the pipeline session.
-    #
-    # If the worker is SIGKILLed mid-pipeline (OOM, container restart), the
-    # row stays as `running` indefinitely. The frontend's 10-minute stale
-    # heuristic in build/page.tsx covers that zombie case.
     async with AsyncSessionLocal() as db:
         await db.execute(
             update(BuildReport)
@@ -85,15 +73,13 @@ async def _async_run_and_persist(
         async with AsyncSessionLocal() as db:
             result = await run_build_next(db, project_id, source_ids)
     except RuntimeError as e:
-        # User-facing failure — message is already actionable.
+        # User-facing failure. Message is already actionable.
         logger.info("Build pipeline failed for report %s: %s", report_id, e)
         await _mark_failure(report_id, str(e))
         return {"reportId": str(report_id), "status": "failure", "reason": str(e)}
     except Exception as e:
-        # Unexpected internal failure. Surface a PM-friendly message — the
-        # exception's own .message often carries the actionable detail (e.g.
-        # Anthropic's "API usage limit reached" text); prefer it over the
-        # bare class name.
+        # Anthropic BadRequestError surfaces actionable text via e.message;
+        # prefer it over the bare class name.
         logger.exception("Unexpected build_next failure for report %s", report_id)
         detail = (
             getattr(e, "message", None)
@@ -104,9 +90,7 @@ async def _async_run_and_persist(
         await _mark_failure(report_id, reason)
         return {"reportId": str(report_id), "status": "failure", "reason": reason}
 
-    # Persist the success path. Single transaction.
     async with AsyncSessionLocal() as db:
-        # Persist themes — get back ids by ordering.
         theme_models: list[BuildTheme] = []
         for theme_rank, pair in enumerate(result.themes, start=1):
             t = BuildTheme(
@@ -121,9 +105,8 @@ async def _async_run_and_persist(
             )
             db.add(t)
             theme_models.append(t)
-        await db.flush()  # populate theme ids
+        await db.flush()  # populate theme ids before inserting specs
 
-        # Persist specs across all themes, ordered by build_rank.
         spec_models_by_rank: dict[int, BuildReportSpec] = {}
         for theme_model, pair in zip(theme_models, result.themes, strict=True):
             for spec in pair.specs:
@@ -136,9 +119,8 @@ async def _async_run_and_persist(
                 )
                 db.add(m)
                 spec_models_by_rank[spec.build_rank] = m
-        await db.flush()  # populate spec ids
+        await db.flush()  # populate spec ids before building build_order
 
-        # Inject the spec_id into each build_order entry now that ids exist.
         enriched_build_order: list[dict[str, Any]] = []
         for entry in result.build_order:
             raw_rank = entry.get("rank")
@@ -152,7 +134,6 @@ async def _async_run_and_persist(
                 }
             )
 
-        # Persist chunks (RAG X-Ray).
         for chunk in result.chunks:
             source_query = result.chunk_source_queries.get(chunk.chunk_id)
             if source_query is None:
@@ -171,7 +152,6 @@ async def _async_run_and_persist(
                 )
             )
 
-        # Update the report row with summary, build_order, metadata, status.
         partial_failure = any(p.generation_failed for p in result.themes)
         await db.execute(
             update(BuildReport)
@@ -209,7 +189,7 @@ def run_build_next_task(
     project_id: str,
     source_ids: list[str] | None,
 ) -> dict[str, Any]:
-    """Celery entrypoint. JSON-serializable args only — UUIDs are strings."""
+    """Celery entrypoint. JSON-serializable args only. UUIDs are strings."""
     try:
         report_uuid = uuid.UUID(report_id)
         project_uuid = uuid.UUID(project_id)
@@ -225,11 +205,9 @@ def run_build_next_task(
         return {"status": "failure", "reason": "invalid arguments"}
 
     async def _run_and_dispose() -> dict[str, Any]:
-        # Dispose per-loop singletons (Redis client, asyncpg engine pool)
-        # inside the same event loop so the next task in this worker
-        # process starts fresh. Without this, module-level singletons
-        # leak loop-bound state across tasks → "got Future attached to
-        # a different loop" on the 2nd+ task.
+        # Dispose module-level singletons inside the same loop so the next
+        # task starts fresh. Without this, loop-bound state leaks across
+        # tasks -> "Future attached to a different loop" on the second task.
         try:
             return await _async_run_and_persist(
                 report_uuid,

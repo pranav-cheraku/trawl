@@ -1,11 +1,4 @@
-"""Google Play scraper. Wraps the sync google-play-scraper package via
-asyncio.to_thread so it integrates with the surrounding async machinery.
-
-No auth required -- the package scrapes Google Play's public HTML.
-
-Yield: up to `count` reviews per app via Sort.NEWEST (default 500).
-"""
-
+# Wraps the sync google-play-scraper package via asyncio.to_thread.
 from __future__ import annotations
 
 import asyncio
@@ -17,22 +10,14 @@ logger = logging.getLogger(__name__)
 
 
 async def search_apps(query: str, limit: int = 8) -> list[dict]:
-    """Search Google Play for apps matching `query`. Returns up to `limit`
-    results, US English storefront.
+    """Search Google Play for apps matching query, US English storefront.
 
-    Workaround for a google-play-scraper limitation: when given a bare,
-    short, single-word query, Google Play returns the result as a
-    "featured" HTML block whose appId the scraper can't extract — it comes
-    back as None. Prefixing the query with "search " forces Google Play
-    to return the regular result HTML with parseable appIds. Verified
-    against bumble, spotify, netflix, notion, slack, tinder, instagram —
-    all return None bare and the correct appId with the prefix.
-    The prefix is only applied to short single-word queries; longer
-    queries already trigger the regular HTML path.
+    Short single-word queries return a "featured" HTML block that the scraper
+    can't parse (appId comes back as None). Prefixing with "search " forces
+    the regular result HTML. Verified against bumble, spotify, netflix, etc.
     """
 
     def _search() -> list[dict]:
-        # Apply the "search " prefix workaround for short single-word queries
         scrape_query = (
             f"search {query.strip()}"
             if " " not in query.strip() and len(query.strip()) < 30
@@ -53,7 +38,7 @@ async def search_apps(query: str, limit: int = 8) -> list[dict]:
                 "genre": app.get("genre", ""),
             }
             for app in results
-            if app.get("appId") is not None
+            if app.get("appId") is not None  # ad/feature slots may have appId=None
         ]
 
     return await asyncio.to_thread(_search)
@@ -63,11 +48,7 @@ async def fetch_reviews(
     package_name: str,
     count: int = 500,
 ) -> list[dict]:
-    """Fetch up to `count` most-recent reviews for `package_name`.
-
-    Returns list of dicts with keys: content, title, rating, author, external_id.
-    `title` is None -- Google Play reviews don't have titles.
-    """
+    """Fetch up to count most-recent reviews. title is always None -- Google Play reviews have no title."""
 
     def _fetch() -> list[dict]:
         result, _ = reviews(

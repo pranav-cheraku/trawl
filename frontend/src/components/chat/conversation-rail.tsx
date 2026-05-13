@@ -86,7 +86,6 @@ export function ConversationRail({
 
   return (
     <aside className="flex h-full flex-col gap-1 overflow-y-auto rounded-[4px] bg-surface-container-low p-3">
-      {/* Header: count + New button */}
       <div className="flex items-center justify-between px-1 pb-2">
         <span className="font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-on-surface-variant">
           Chats · {conversations.length}/{maxConversations}
@@ -116,7 +115,6 @@ export function ConversationRail({
         </button>
       </div>
 
-      {/* New-chat inline input */}
       {isCreatingNew && (
         <div className="rounded-[4px] bg-surface-container-lowest p-2">
           <input
@@ -136,7 +134,6 @@ export function ConversationRail({
               }
             }}
             onBlur={() => {
-              // Commit-on-blur with empty string is OK (auto-name).
               if (isCreatingNew) commitCreateNew();
             }}
             className="w-full rounded-[4px] bg-surface-container-low px-2 py-1.5 text-[12.5px] text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-secondary/60"
@@ -147,14 +144,12 @@ export function ConversationRail({
         </div>
       )}
 
-      {/* Empty state */}
       {conversations.length === 0 && !isCreatingNew && (
         <div className="px-1 pt-1 text-[12px] text-on-surface-variant">
           No conversations yet. Click <span className="font-mono">New</span> to start.
         </div>
       )}
 
-      {/* List */}
       <motion.div layout className="flex flex-col gap-1">
         {conversations.map((conv, idx) => {
           const isActive = conv.id === currentId;
@@ -279,7 +274,6 @@ export function ConversationRail({
                 </span>
               </button>
 
-              {/* Hover actions */}
               <div className="absolute right-1.5 top-1.5 flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
                 <button
                   type="button"

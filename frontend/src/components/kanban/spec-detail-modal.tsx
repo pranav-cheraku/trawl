@@ -71,12 +71,10 @@ export default function SpecDetailModal({
   const [isDeleting, setIsDeleting] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>("idle");
 
-  // Move focus to the close button on mount so keyboard users can navigate.
   useEffect(() => {
     closeButtonRef.current?.focus();
   }, []);
 
-  // Close on Escape.
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();
@@ -85,7 +83,6 @@ export default function SpecDetailModal({
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  // Lock body scroll.
   useEffect(() => {
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -94,7 +91,6 @@ export default function SpecDetailModal({
     };
   }, []);
 
-  // Fetch spec sources.
   useEffect(() => {
     let cancelled = false;
     setSpecSources(null);
@@ -123,7 +119,6 @@ export default function SpecDetailModal({
     [specSources],
   );
 
-  // ── Save helpers ────────────────────────────────────────────────────
   const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     return () => {
@@ -178,7 +173,6 @@ export default function SpecDetailModal({
     [content, saveField],
   );
 
-  // ── Delete ──────────────────────────────────────────────────────────
   async function handleDelete() {
     setIsDeleting(true);
     try {
@@ -194,7 +188,7 @@ export default function SpecDetailModal({
     }
   }
 
-  // Filter to valid positive integers only.
+  // supporting_feedback_indices are 1-based; filter garbage values before resolving.
   const indices = useMemo<number[]>(() => {
     const raw = content.supporting_feedback_indices;
     if (!Array.isArray(raw)) return [];
@@ -226,7 +220,6 @@ export default function SpecDetailModal({
         className="absolute inset-0 bg-on-surface/40 backdrop-blur-[2px]"
       />
 
-      {/* Frame */}
       <motion.div
         role="dialog"
         aria-modal="true"
@@ -257,7 +250,6 @@ export default function SpecDetailModal({
         transition={prefersReducedMotion ? { duration: 0.15 } : { ...springs.bouncy }}
         className="relative flex h-[90vh] w-[95vw] max-w-[1100px] flex-col overflow-hidden rounded-[4px] bg-surface-container-lowest"
       >
-        {/* ── Compact header ──────────────────────────────────────── */}
         <header className="flex items-center justify-between gap-3 px-5 py-3 shadow-[inset_0_-1px_0_rgba(15,23,42,0.06)]">
           <div className="flex items-center gap-3 font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-on-surface-variant/70">
             <span>Workspace / Spec</span>
@@ -288,19 +280,14 @@ export default function SpecDetailModal({
           </button>
         </header>
 
-        {/* ── Body (content + inspector) ──────────────────────────
-         *  Mobile (<lg): the WRAPPER scrolls; both panes flow naturally as one
-         *  long page (content first, then Properties + Sources). Without this,
-         *  CSS grid auto-sizes each row to content and clips with overflow —
-         *  user would see only the top of the left pane AND the top of the
-         *  right pane simultaneously, with Properties appearing mid-body which
-         *  is very confusing.
-         *  Desktop (lg+): two side-by-side panes, each with its own scroll. */}
+        {/* Body */}
+        {/* Mobile: the outer wrapper scrolls so both panes flow as one page.
+             CSS grid would auto-size rows to content and clip with overflow,
+             showing only the top of each pane simultaneously.
+             Desktop (lg+): two side-by-side panes, each with its own scroll. */}
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto lg:grid lg:grid-cols-[1fr_340px] lg:overflow-hidden">
-          {/* Left — content */}
           <div className="px-6 pt-6 pb-6 lg:min-h-0 lg:overflow-y-auto lg:pb-8">
             <div className="mx-auto max-w-[680px]">
-              {/* Type chip */}
               <div className="mb-2">
                 <span className="inline-flex rounded-[2px] bg-surface-container px-2 py-0.5 font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-on-surface-variant">
                   {typeLabel}
@@ -334,7 +321,6 @@ export default function SpecDetailModal({
                 </span>
               </div>
 
-              {/* Edit error banner */}
               {editError ? (
                 <div className="mt-4 flex items-center justify-between gap-3 rounded-[4px] bg-error/10 px-3 py-2 text-[12px] text-error">
                   <span>{editError}</span>
@@ -348,7 +334,6 @@ export default function SpecDetailModal({
                 </div>
               ) : null}
 
-              {/* Sections */}
               <div className="mt-7 flex flex-col gap-7">
                 {isFeature ? (
                   <>
@@ -423,16 +408,15 @@ export default function SpecDetailModal({
             </div>
           </div>
 
-          {/* Right — inspector */}
+          {/* Sidebar */}
           <aside
             className="flex flex-col bg-surface-container-low shadow-[inset_0_1px_0_rgba(15,23,42,0.06)] lg:min-h-0 lg:overflow-hidden lg:shadow-[inset_1px_0_0_rgba(15,23,42,0.06)]"
             aria-label="Spec inspector"
           >
-            {/* Properties panel */}
+            {/* Properties */}
             <div className="flex-shrink-0 px-5 pt-4 pb-4 shadow-[inset_0_-1px_0_rgba(15,23,42,0.06)]">
               <PanelHeader>Properties</PanelHeader>
               <dl className="mt-2.5 flex flex-col">
-                {/* Short value: compact row (label left, value right) */}
                 <RowField label="Type">
                   <span className="text-[12px] font-medium text-on-surface">
                     {typeLabel}
@@ -448,7 +432,6 @@ export default function SpecDetailModal({
                     />
                   </div>
                 </RowField>
-                {/* Stacked: pill rows need full width to avoid wrap */}
                 <StackField label="Priority">
                   <PriorityPills value={spec.priority} onChange={savePriority} />
                 </StackField>
@@ -456,16 +439,13 @@ export default function SpecDetailModal({
                   <StatusPills value={spec.status} onChange={saveStatus} />
                 </StackField>
               </dl>
-              {/* Timeline footer — compact 2 lines */}
               <div className="mt-3 flex flex-col gap-0.5">
                 <TimelineLine kind="Created" iso={spec.createdAt} />
                 <TimelineLine kind="Updated" iso={spec.updatedAt} />
               </div>
             </div>
 
-            {/* Sources panel — RAG X-Ray. Flow naturally on mobile (parent
-             *  modal handles the scroll); on lg+ take remaining flex space and
-             *  let the panel's own internal scroll work. */}
+            {/* X-Ray panel */}
             <div className="flex flex-col lg:min-h-0 lg:flex-1 lg:overflow-hidden">
               {sourcesError ? (
                 <div className="flex flex-1 flex-col items-center justify-center px-6 py-10 text-center">
@@ -487,7 +467,7 @@ export default function SpecDetailModal({
           </aside>
         </div>
 
-        {/* ── Footer action bar ──────────────────────────────────── */}
+        {/* Footer */}
         <footer className="flex items-center justify-between gap-3 px-5 py-3 shadow-[inset_0_1px_0_rgba(15,23,42,0.06)]">
           <div className="flex items-center">
             {confirmingDelete ? (
@@ -535,7 +515,6 @@ export default function SpecDetailModal({
   );
 }
 
-// ── Helpers ────────────────────────────────────────────────────────────
 
 function Section({
   title,
@@ -571,8 +550,6 @@ function PanelHeader({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** Compact label/value row: label left (mono uppercase), value right. Use
- *  for fields whose value comfortably fits inline with the label. */
 function RowField({
   label,
   children,
@@ -603,8 +580,6 @@ function RowField({
   );
 }
 
-/** Stacked label/value row: label on top, content below (full-width). Use
- *  for pill rows where the value won't fit inline with a label. */
 function StackField({
   label,
   children,
@@ -628,8 +603,6 @@ function StackField({
   );
 }
 
-/** "Created · 12 minutes ago" style — friendlier than ISO timestamps in a
- *  side rail. Title attribute keeps the precise timestamp on hover. */
 function TimelineLine({ kind, iso }: { kind: "Created" | "Updated"; iso: string }) {
   const normalized = /[zZ]|[+-]\d{2}:?\d{2}$/.test(iso) ? iso : `${iso}Z`;
   const d = new Date(normalized);
@@ -698,7 +671,6 @@ function SaveIndicator({ state }: { state: SaveState }) {
       </span>
     );
   }
-  // error
   return (
     <span className="font-mono text-[10px] font-medium uppercase tracking-[0.18em] text-error">
       Save failed

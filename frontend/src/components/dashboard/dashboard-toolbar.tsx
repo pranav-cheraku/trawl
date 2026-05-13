@@ -31,7 +31,6 @@ export default function DashboardToolbar({
   onViewChange,
 }: DashboardToolbarProps) {
   function handleChipClick(chip: ToolbarChip) {
-    // Re-click active chip resets to "all" (matches Kanban FilterBar pattern).
     onChipChange(activeChip === chip ? "all" : chip);
   }
 
@@ -49,7 +48,6 @@ export default function DashboardToolbar({
   return (
     <div className="rounded-[4px] bg-surface-container-lowest px-3 py-2.5">
       <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-3">
-        {/* Search */}
         <div className="relative flex-1">
           <span
             aria-hidden="true"
@@ -80,7 +78,6 @@ export default function DashboardToolbar({
           />
         </div>
 
-        {/* Chips + view toggle */}
         <div className="flex items-center gap-3">
           <div className="flex flex-wrap gap-1.5">
             <FilterChip
@@ -109,7 +106,6 @@ export default function DashboardToolbar({
             />
           </div>
 
-          {/* View toggle */}
           <div
             role="group"
             aria-label="View"

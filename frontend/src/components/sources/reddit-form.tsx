@@ -38,7 +38,6 @@ export default function RedditForm({
 
   return (
     <div className="flex flex-col gap-3">
-      {/* Mode toggle */}
       <div
         role="group"
         aria-label="Reddit input mode"
@@ -70,7 +69,6 @@ export default function RedditForm({
         </button>
       </div>
 
-      {/* Yield preset */}
       <div
         role="group"
         aria-label="Yield preset"
@@ -114,7 +112,6 @@ export default function RedditForm({
         </button>
       </div>
 
-      {/* Input */}
       <div>
         <label className="mb-1 block text-[12px] text-on-surface-variant">
           {mode === "subreddit" ? "Subreddit name" : "Search keyword"}

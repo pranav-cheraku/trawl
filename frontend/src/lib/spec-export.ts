@@ -9,7 +9,7 @@ const STATUS_LABEL: Record<SpecStatus, string> = {
 
 const STATUS_ORDER: SpecStatus[] = ["backlog", "planned", "in_progress", "done"];
 
-// RFC 4180 CSV cell escape.
+// RFC 4180: wrap in quotes and double any internal quotes if the cell contains , " \n or \r.
 function csvCell(value: unknown): string {
   const s = value === null || value === undefined ? "" : String(value);
   if (/[",\n\r]/.test(s)) {
@@ -128,7 +128,6 @@ export function specsToMarkdown(specs: Spec[], projectName: string): string {
     if (inCol.length === 0) continue;
     lines.push(`## ${STATUS_LABEL[status]} (${inCol.length})`);
     lines.push("");
-    // Order by kanbanOrder asc, then createdAt asc.
     inCol.sort((a, b) => {
       if (a.kanbanOrder !== b.kanbanOrder) return a.kanbanOrder - b.kanbanOrder;
       return a.createdAt.localeCompare(b.createdAt);

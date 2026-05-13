@@ -26,7 +26,6 @@ export default function AddSourceModal({
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const prefersReducedMotion = useReducedMotion();
 
-  // Reset to picker on open. Esc + body scroll lock.
   useEffect(() => {
     if (!isOpen) return;
     setStep("pick");
@@ -38,7 +37,6 @@ export default function AddSourceModal({
     }
     window.addEventListener("keydown", handleKey);
 
-    // Focus the close button on mount for keyboard users.
     const t = setTimeout(() => closeButtonRef.current?.focus(), 0);
 
     return () => {

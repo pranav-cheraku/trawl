@@ -20,10 +20,6 @@ import type { Message } from "@/types";
 const CITATION_BLOCK_REGEX =
   /\[Feedback\s+#?\d+(?:\s*[-,]\s*#?\d+)*\]/g;
 
-/**
- * Extract the numeric chunk indices referenced by a single citation block.
- * Handles comma-separated, range notation, and hash-prefixed forms.
- */
 function extractIndices(block: string): number[] {
   const rangeMatch = block.match(/(\d+)\s*-\s*(\d+)/);
   if (rangeMatch) {
@@ -60,11 +56,8 @@ interface CitationHastNode extends Node {
   children: [];
 }
 
-/**
- * Remark plugin: walks text nodes, splits any that contain a CITE_N
- * sentinel, and replaces each sentinel with a `citation-slot` HAST node.
- * react-markdown then renders those via `components["citation-slot"]`.
- */
+// Remark plugin: replaces CITE_N sentinels in text nodes with citation-slot
+// HAST nodes so react-markdown can render CitationBadge inline.
 function remarkSplitCitations() {
   return (tree: Node) => {
     visit(tree, "text", (node, index, parent) => {

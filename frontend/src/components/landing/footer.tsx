@@ -2,7 +2,6 @@ export default function Footer() {
   return (
     <footer className="bg-on-surface">
       <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-6 px-8 py-10 sm:flex-row sm:items-center">
-        {/* Logo + copyright */}
         <div>
           <a href="#" className="flex items-center gap-2" aria-label="Trawl home">
             <span className="text-base font-bold text-white">Trawl</span>
@@ -12,7 +11,6 @@ export default function Footer() {
           </p>
         </div>
 
-        {/* Author */}
         <div className="flex items-center gap-4">
           <span className="text-[12px] font-medium text-white/40">
             Built by Pranav Cheraku

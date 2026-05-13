@@ -1,4 +1,3 @@
-// frontend/src/components/landing/cta-section.tsx
 "use client";
 
 import Link from "next/link";

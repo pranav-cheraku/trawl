@@ -54,13 +54,11 @@ export default function SpecCard({ spec, onClick, isDragging }: Props) {
         isDragging ? "shadow-[0_8px_24px_rgba(15,23,42,0.04)]" : ""
       }`}
     >
-      {/* Priority bar — architectural ruler mark on left edge */}
       <span
         aria-hidden
         className={`absolute left-0 top-2.5 bottom-2.5 w-[2px] rounded-[1px] ${PRIORITY_BARS[priority]}`}
       />
 
-      {/* Header row — priority label left, type chip right */}
       <div className="flex items-center justify-between gap-2">
         <span
           className={`font-mono text-[9px] font-medium uppercase tracking-[0.18em] ${PRIORITY_COLORS[priority]}`}
@@ -72,12 +70,10 @@ export default function SpecCard({ spec, onClick, isDragging }: Props) {
         </span>
       </div>
 
-      {/* Title */}
       <h3 className="text-[13px] font-medium leading-snug text-on-surface line-clamp-3">
         {spec.title}
       </h3>
 
-      {/* Meta row — citation count */}
       <div className="flex items-center gap-2 pt-0.5">
         <span className="flex items-center gap-1 font-mono text-[10px] font-medium text-on-surface-variant">
           <svg

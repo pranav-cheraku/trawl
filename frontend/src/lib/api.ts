@@ -39,10 +39,9 @@ const API_BASE_URL =
 
 let cachedToken: string | null = null;
 let tokenFetchedAt = 0;
-const TOKEN_CACHE_MS = 5 * 60 * 1000; // 5 minutes
+const TOKEN_CACHE_MS = 5 * 60 * 1000;
 
 async function getAuthToken(): Promise<string | null> {
-  // Only attempt in browser (Client Components)
   if (typeof window === "undefined") return null;
 
   if (cachedToken && Date.now() - tokenFetchedAt < TOKEN_CACHE_MS) {
@@ -88,7 +87,6 @@ export async function apiFetch<T>(
     }
     throw new Error(`API error: ${response.status}`);
   }
-  // 204 No Content — return undefined without attempting JSON parse
   if (response.status === 204) {
     return undefined as unknown as T;
   }
@@ -121,8 +119,6 @@ async function apiUpload<T>(path: string, body: FormData): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-// ── Project endpoints ────────────────────────────────────────────────
-
 export async function createProject(data: {
   name: string;
   description?: string;
@@ -145,8 +141,6 @@ export async function deleteProject(id: string): Promise<void> {
   await apiFetch<void>(`/api/projects/${id}`, { method: "DELETE" });
 }
 
-// ── App search endpoints ─────────────────────────────────────────────
-
 export async function searchApps(
   query: string,
   country?: string
@@ -155,8 +149,6 @@ export async function searchApps(
   if (country) params.set("country", country);
   return apiFetch<AppSearchResult[]>(`/api/apps/search?${params}`);
 }
-
-// ── Source endpoints ─────────────────────────────────────────────────
 
 export async function connectAppStore(
   projectId: string,
@@ -273,8 +265,6 @@ export async function getChunkDetail(
   );
 }
 
-// ── Conversation endpoints ───────────────────────────────────────────
-
 export async function createConversation(
   projectId: string,
   title?: string | null
@@ -355,8 +345,6 @@ export async function updateConversation(
   );
 }
 
-// ── Spec endpoints ───────────────────────────────────────────────────
-
 export async function generateSpecs(
   projectId: string,
   type: SpecType,
@@ -430,8 +418,6 @@ export async function deleteSpec(specId: string): Promise<void> {
 export async function getSpecSources(specId: string): Promise<SpecSources> {
   return apiFetch<SpecSources>(`/api/specs/${specId}/sources`);
 }
-
-// ── Build Next endpoints ─────────────────────────────────────────────
 
 export async function runBuildNext(
   projectId: string,

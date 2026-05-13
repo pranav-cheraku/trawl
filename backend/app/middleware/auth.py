@@ -12,20 +12,10 @@ _DEV_SECRET = "dev-secret-change-in-production"
 
 
 async def get_user_id_from_token(request: Request) -> uuid.UUID:
-    """Extract and validate user ID from JWT Bearer token.
+    """Validate JWT Bearer token and return the user UUID.
 
-    In dev mode (JWT_SECRET == default), allows unauthenticated requests
-    by falling back to DEV_USER_ID.
-
-    Args:
-        request: The incoming FastAPI request object.
-
-    Returns:
-        The authenticated user's UUID.
-
-    Raises:
-        HTTPException: 401 if the token is missing (in production), expired,
-            malformed, or contains an invalid subject claim.
+    Falls back to DEV_USER_ID when JWT_SECRET is the default dev value and
+    no Authorization header is present.
     """
     authorization: str | None = request.headers.get("Authorization")
 

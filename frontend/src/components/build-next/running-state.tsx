@@ -28,7 +28,6 @@ export default function RunningState({ startedAtIso }: Props) {
   const elapsed = Math.max(0, now - startedMs);
   const elapsedSec = Math.floor(elapsed / 1000);
 
-  // Find the active stage — the last stage whose threshold has elapsed.
   let activeIdx = 0;
   for (let i = 0; i < STAGES.length; i++) {
     if (elapsed >= STAGES[i].thresholdMs) activeIdx = i;

@@ -10,14 +10,8 @@ interface CitationBadgeProps {
   onClick?: (chunkId: string) => void;
 }
 
-/**
- * Inline citation pill rendered inside assistant prose — `[F#3]`.
- *
- * Resolves to a specific chunk via transparency.retrievedChunks[index-1].
- * When the chunk is undefined (rare — Claude cited an out-of-range index),
- * the badge renders disabled so users still see the citation intent but
- * can't click to nowhere.
- */
+// Renders disabled when chunk is undefined (out-of-range citation index)
+// so users still see the citation intent without a broken click target.
 export function CitationBadge({ index, chunk, onClick }: CitationBadgeProps) {
   const prefersReducedMotion = useReducedMotion();
   const isClickable = Boolean(chunk && onClick);
@@ -29,10 +23,8 @@ export function CitationBadge({ index, chunk, onClick }: CitationBadgeProps) {
     : { duration: 0.18, ease: "easeOut" };
 
   function handleClick(e: React.MouseEvent<HTMLButtonElement>) {
-    // Stop propagation so the badge click doesn't also trigger the
-    // parent assistant bubble's onClick (which would clear focusedChunkId
-    // as part of its "plain bubble click" behavior and clobber our
-    // scroll-to-chunk intent).
+    // Without stopPropagation the parent bubble's onClick clears focusedChunkId,
+    // undoing the scroll-to-chunk before it can happen.
     e.stopPropagation();
     if (chunk && onClick) {
       onClick(chunk.chunkId);

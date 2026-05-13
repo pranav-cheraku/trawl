@@ -30,7 +30,7 @@ export default function FeedbackItemPanel({ projectId, sourceId }: Props) {
         setItems((prev) => (append ? [...prev, ...data] : data));
         setHasMore(data.length === PAGE_SIZE);
       } catch {
-        // Silently fail — panel is supplementary
+        // Panel is supplementary. Silently ignore fetch errors.
       } finally {
         setIsLoading(false);
       }
@@ -79,7 +79,6 @@ export default function FeedbackItemPanel({ projectId, sourceId }: Props) {
             key={item.id}
             className="border-t border-surface-container-high px-4 py-3"
           >
-            {/* Header row: title/author + date */}
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0 flex-1">
                 {title && (
@@ -118,7 +117,6 @@ export default function FeedbackItemPanel({ projectId, sourceId }: Props) {
               </span>
             </div>
 
-            {/* Content */}
             <p className="mt-1 text-[12px] leading-relaxed text-on-surface-variant">
               {item.content}
             </p>
@@ -126,7 +124,6 @@ export default function FeedbackItemPanel({ projectId, sourceId }: Props) {
         );
       })}
 
-      {/* Load more */}
       {hasMore && (
         <div className="px-4 py-3">
           <button

@@ -19,8 +19,8 @@ from app.services.retrieval import RetrievedChunk, retrieve_chunks
 
 logger = logging.getLogger(__name__)
 
-# Five hardcoded exploratory queries. Cached after first run via embed_query
-# (Redis SHA-256 key, 1-hour TTL) so repeated runs pay only the cache lookup.
+# These query strings must stay byte-for-byte synced with
+# frontend/src/lib/build-next-queries.ts or X-Ray Q-attribution badges drift.
 BUILD_NEXT_QUERIES: list[str] = [
     "What are users complaining about?",
     "What features are users requesting?",
@@ -40,17 +40,15 @@ SUMMARY_MAX_TOKENS = 1024
 class ClusteredTheme:
     """Output of the Claude clustering call, before persistence.
 
-    ``chunk_indices`` are 0-indexed into the deduped chunk list returned by
-    ``_embed_and_retrieve``. ``severity_hint`` is Claude's qualitative
-    severity estimate in the range 0..1.
+    chunk_indices are 0-indexed into the deduped chunk list from _embed_and_retrieve.
+    severity_hint is Claude's qualitative severity estimate in the range 0..1.
     """
 
     name: str
     description: str
-    chunk_indices: list[int]  # 0-indexed into the deduped chunk list
-    severity_hint: float  # 0..1, Claude's qualitative severity estimate
+    chunk_indices: list[int]
+    severity_hint: float
 
-    # Computed at task time after clustering:
     frequency_pct: float = 0.0
     severity_score: float = 0.0
     chunk_count: int = 0
@@ -60,19 +58,18 @@ class ClusteredTheme:
 class GeneratedSpec:
     """One spec generated for a theme.
 
-    ``content`` mirrors the same shape as the existing spec generation output
-    (``problem``, ``proposed_solution``, ``user_stories``, etc.) so the Celery
+    content mirrors the shape of existing spec generation output so the Celery
     task can persist it via the same ORM path.
     """
 
     title: str
     content: dict
-    build_rank: int = 0  # filled in during global ranking phase
+    build_rank: int = 0
 
 
 @dataclass
 class ThemeWithSpecs:
-    """A theme paired with its generated specs (or empty if generation failed)."""
+    """A theme paired with its generated specs, or empty if generation failed."""
 
     theme: ClusteredTheme
     specs: list[GeneratedSpec]
@@ -83,15 +80,13 @@ class ThemeWithSpecs:
 class BuildNextResult:
     """Final output of run_build_next, returned to the Celery task for persistence.
 
-    ``chunk_source_queries`` maps each retained chunk_id to the query string
-    that surfaced it with the highest similarity score, for RAG X-Ray attribution.
-    ``retrieval_metadata`` is the dict from ``_embed_and_retrieve`` and populates
-    the ``build_reports.retrieval_metadata`` JSONB column.
+    chunk_source_queries maps each retained chunk_id to the query string that
+    surfaced it with the highest similarity, for RAG X-Ray attribution.
     """
 
     themes: list[ThemeWithSpecs]
     chunks: list[RetrievedChunk]
-    chunk_source_queries: dict[uuid.UUID, str]  # chunk_id → which query surfaced it
+    chunk_source_queries: dict[uuid.UUID, str]
     executive_summary: str
     build_order: list[dict] = field(default_factory=list)
     retrieval_metadata: dict = field(default_factory=dict)
@@ -102,29 +97,18 @@ async def _embed_and_retrieve(
     project_id: uuid.UUID,
     source_ids: list[uuid.UUID] | None,
 ) -> tuple[list[RetrievedChunk], dict[uuid.UUID, str], dict]:
-    """Embed all 5 queries, retrieve per query, dedupe, and return.
+    """Embed all 5 queries concurrently, retrieve sequentially, dedupe, and return.
 
-    Runs all 5 ``embed_query`` calls concurrently via ``asyncio.gather``; each
-    result is already Redis-cached after the first hit so subsequent runs are
-    sub-millisecond. The 5 ``retrieve_chunks`` calls are executed sequentially
-    because ``AsyncSession`` / asyncpg is single-flight and cannot safely run
-    concurrent statements on the same connection.
+    Embedding is concurrent because embed_query hits Voyage + Redis and does not
+    touch the DB. Retrieval is sequential because AsyncSession / asyncpg is
+    single-flight; asyncio.gather over retrieve_chunks raises InterfaceError.
 
-    Deduplication keeps the highest-similarity occurrence of each chunk_id across
-    queries. The final list is sorted by similarity descending and ``retrieval_rank``
-    is reassigned from 1 sequentially.
-
-    Returns:
-        A 3-tuple of:
-        - ``deduped_chunks`` — deduplicated, sorted list of ``RetrievedChunk``.
-        - ``source_query_attribution`` — maps each retained chunk_id to the query
-          that surfaced it with the highest similarity (ties broken by query order).
-        - ``metadata`` — timing + count dict for the ``retrieval_metadata`` JSONB column.
+    Deduplication keeps the highest-similarity occurrence per chunk_id. Strict >
+    comparison means the first query wins on exact ties, preserving the ordering
+    of BUILD_NEXT_QUERIES. retrieval_rank is reassigned globally from 1 after dedup.
     """
     start_time = time.monotonic()
 
-    # Embed all 5 queries concurrently. embed_query is Redis-cached so repeated
-    # runs against unchanged queries pay only the cache lookup cost.
     query_embeddings: list[list[float]] = await asyncio.gather(
         *(embed_query(q) for q in BUILD_NEXT_QUERIES)
     )
@@ -132,10 +116,6 @@ async def _embed_and_retrieve(
     embed_elapsed_ms = int((time.monotonic() - start_time) * 1000)
     retrieve_start = time.monotonic()
 
-    # Retrieve per query. We serialize because SQLAlchemy AsyncSession is
-    # not safe for concurrent statement execution — asyncpg's underlying
-    # connection is single-flight. Wall-clock cost is negligible vs. the
-    # Claude calls downstream.
     per_query_results: list[tuple[list[RetrievedChunk], int]] = []
     for emb in query_embeddings:
         result = await retrieve_chunks(
@@ -150,8 +130,6 @@ async def _embed_and_retrieve(
 
     retrieve_elapsed_ms = int((time.monotonic() - retrieve_start) * 1000)
 
-    # Dedupe by chunk_id, keeping the highest-similarity occurrence.
-    # Track which query surfaced each retained chunk for X-Ray attribution.
     deduped: dict[uuid.UUID, RetrievedChunk] = {}
     source_query: dict[uuid.UUID, str] = {}
 
@@ -160,15 +138,12 @@ async def _embed_and_retrieve(
     ):
         for chunk in chunks:
             existing = deduped.get(chunk.chunk_id)
-            # Strict `>` so the FIRST query that surfaces a chunk wins on exact ties —
-            # gives priority to earlier queries in BUILD_NEXT_QUERIES.
+            # Strict > so the first query wins on exact similarity ties.
             if existing is None or chunk.similarity_score > existing.similarity_score:
                 deduped[chunk.chunk_id] = chunk
                 source_query[chunk.chunk_id] = query_text
 
-    # Final list ordered by similarity desc, with rank reassigned from 1.
     ordered = sorted(deduped.values(), key=lambda c: -c.similarity_score)
-    # Overwrite per-query retrieval_rank with the global rank across all 5 queries.
     for new_rank, chunk in enumerate(ordered, start=1):
         chunk.retrieval_rank = new_rank
 
@@ -266,18 +241,11 @@ how much it threatens retention. 0 = trivial, 1 = company-critical.
 async def _cluster_themes(
     chunks: list[RetrievedChunk],
 ) -> tuple[list[ClusteredTheme], dict]:
-    """Call Claude with tool_choice forced to cluster_feedback_themes.
+    """Call Claude to cluster feedback chunks into 3-6 themes.
 
-    Returns (themes, metadata). Themes have ``chunk_indices`` rewritten to
-    0-indexed for downstream code; ``frequency_pct``, ``severity_score``,
-    and ``chunk_count`` computed.
-
-    Severity scoring blends two signals equally (v1):
-    - ``frequency_pct``: fraction of all deduped chunks assigned to this theme
-      (proxy for how widespread the issue is across the corpus).
-    - ``severity_hint``: Claude's qualitative read on urgency/retention risk.
-    Blending both avoids over-ranking large-but-trivial themes and
-    small-but-critical ones.
+    Claude returns 1-indexed chunk_indices; we convert to 0-indexed for all
+    downstream code. severity_score blends frequency_pct and severity_hint
+    equally so large-but-trivial themes don't outrank small-but-critical ones.
     """
     if not settings.ANTHROPIC_API_KEY:
         raise RuntimeError("ANTHROPIC_API_KEY is not configured")
@@ -305,7 +273,6 @@ async def _cluster_themes(
     )
     elapsed_ms = int((time.monotonic() - start) * 1000)
 
-    # Extract the tool input — Claude is forced to return exactly one tool_use block.
     tool_input: dict | None = None
     for block in response.content:
         if getattr(block, "type", None) == "tool_use":
@@ -325,24 +292,21 @@ async def _cluster_themes(
     themes: list[ClusteredTheme] = []
     for raw in raw_themes:
         if not isinstance(raw, dict):
-            continue  # Skip malformed theme entries silently — defensive.
-        # Claude returns 1-indexed; convert to 0-indexed and clamp to valid range.
+            continue
+        # Convert from Claude's 1-indexed to 0-indexed and clamp to valid range.
         zero_indexed = [
             i - 1
             for i in raw.get("chunk_indices", [])
             if isinstance(i, int) and 1 <= i <= total_chunks
         ]
-        # Dedupe within the theme (defensive against Claude returning duplicates).
         zero_indexed = sorted(set(zero_indexed))
 
         chunk_count = len(zero_indexed)
         if chunk_count == 0:
-            # Drop empty themes — shouldn't happen with forced tool_choice but defensive.
             continue
 
         frequency_pct = chunk_count / total_chunks if total_chunks > 0 else 0.0
         severity_hint = float(raw.get("severity_hint", 0.5))
-        # Combined score: blend frequency and severity_hint equally for v1.
         severity_score = (frequency_pct + severity_hint) / 2.0
 
         themes.append(
@@ -357,7 +321,6 @@ async def _cluster_themes(
             )
         )
 
-    # Rank themes by severity_score descending so callers can iterate in priority order.
     themes.sort(key=lambda t: -t.severity_score)
 
     metadata = {
@@ -451,12 +414,12 @@ async def _generate_theme_specs(
     theme: ClusteredTheme,
     all_chunks: list[RetrievedChunk],
 ) -> tuple[list[GeneratedSpec], dict]:
-    """Call Claude to generate 1-3 specs for one theme.
+    """Generate 1-3 specs for one theme via forced tool_choice.
 
-    The chunks passed to Claude are renumbered locally (1..N for THIS theme)
-    so supporting_feedback_indices come back in a small, theme-local range.
-    We then translate those indices back to global retrieval ranks before
-    persistence.
+    Chunks are renumbered 1..N locally for this theme so Claude receives a
+    small, focused index range. supporting_feedback_indices returned by Claude
+    are then translated back to global retrieval_ranks via
+    theme_chunks[i - 1].retrieval_rank before being stored.
     """
     if not settings.ANTHROPIC_API_KEY:
         raise RuntimeError("ANTHROPIC_API_KEY is not configured")
@@ -469,10 +432,8 @@ async def _generate_theme_specs(
         timeout=60.0,
     )
 
-    # Slice down to this theme's chunks and renumber 1..N locally.
     theme_chunks = [all_chunks[i] for i in theme.chunk_indices]
     if not theme_chunks:
-        # Defensive: cluster_themes should have dropped empty themes already.
         return [], {"spec_ms": 0, "spec_input_tokens": 0, "spec_output_tokens": 0}
 
     local_lines: list[str] = []
@@ -520,7 +481,7 @@ async def _generate_theme_specs(
     specs: list[GeneratedSpec] = []
     for raw in raw_specs:
         if not isinstance(raw, dict):
-            continue  # Skip malformed spec entries silently — defensive.
+            continue
 
         if "priority" not in raw:
             logger.warning(
@@ -528,10 +489,8 @@ async def _generate_theme_specs(
                 theme.name,
             )
 
-        # Translate local 1..N indices back to global retrieval_ranks.
-        # `theme_chunks` is a slice of `all_chunks`; each chunk still carries
-        # the global retrieval_rank that `_embed_and_retrieve` assigned, so
-        # `theme_chunks[i - 1].retrieval_rank` is the global rank.
+        # Translate local 1..N indices to global retrieval_ranks.
+        # theme_chunks[i - 1].retrieval_rank holds the rank assigned by _embed_and_retrieve.
         local_indices = [
             i
             for i in raw.get("supporting_feedback_indices", [])
@@ -581,16 +540,11 @@ async def _generate_all_theme_specs(
 ) -> tuple[list[ThemeWithSpecs], dict]:
     """Generate specs for all themes concurrently with partial-failure tolerance.
 
-    Per-theme failures are caught individually. If a theme's spec gen
-    raises, we record ``generation_failed=True`` and yield no specs. The
-    caller decides whether all-failed → run failure or some-succeeded →
-    partial success.
-
-    Concurrent gather is safe here because each call hits the Anthropic
-    API over its own HTTP request — no shared DB session, unlike retrieval.
+    Each theme hits the Anthropic API over its own HTTP request with no shared
+    DB session, so asyncio.gather is safe here (unlike retrieval). Per-theme
+    failures are caught individually; the caller decides whether all-failed
+    means a run failure or some-succeeded means partial success.
     """
-    # asyncio.gather with return_exceptions=True so one failure doesn't
-    # cancel the others.
     results = await asyncio.gather(
         *(_generate_theme_specs(t, chunks) for t in themes),
         return_exceptions=True,
@@ -627,10 +581,6 @@ async def _generate_all_theme_specs(
     }
     return pairs, metadata
 
-
-# ---------------------------------------------------------------------------
-# Build-order rationale + executive summary tools
-# ---------------------------------------------------------------------------
 
 BUILD_ORDER_TOOL: dict = {
     "name": "rank_build_order",
@@ -684,8 +634,7 @@ EXEC_SUMMARY_TOOL: dict = {
     },
 }
 
-# Priority weights used during global spec ranking.
-# Score = theme.severity_score * priority_weight; higher is more urgent.
+# Score = theme.severity_score * priority_weight; higher score = higher build priority.
 PRIORITY_WEIGHTS: dict[str, int] = {
     "critical": 4,
     "high": 3,
@@ -694,20 +643,13 @@ PRIORITY_WEIGHTS: dict[str, int] = {
 }
 
 
-# ---------------------------------------------------------------------------
-# Global ranking (synchronous — pure math, no I/O)
-# ---------------------------------------------------------------------------
-
 def _rank_specs_globally(
     pairs: list[ThemeWithSpecs],
 ) -> list[tuple[GeneratedSpec, ClusteredTheme]]:
     """Compute a global build order across all themes' specs.
 
-    Score = theme.severity_score * priority_weight. Returns specs ordered
-    best-first; mutates each spec's ``build_rank`` in-place.
-
-    Themes whose spec generation failed (``generation_failed=True``) are
-    skipped entirely so they don't pollute the ranking.
+    Score = theme.severity_score * priority_weight. Mutates each spec's
+    build_rank in-place. Themes with generation_failed=True are skipped.
     """
     flat: list[tuple[GeneratedSpec, ClusteredTheme, float]] = []
     for pair in pairs:
@@ -728,24 +670,13 @@ def _rank_specs_globally(
     return ranked
 
 
-# ---------------------------------------------------------------------------
-# Build-order rationale generation
-# ---------------------------------------------------------------------------
-
 async def _generate_build_order_rationales(
     ranked: list[tuple[GeneratedSpec, ClusteredTheme]],
 ) -> tuple[dict[int, str], dict]:
-    """Ask Claude to write a one-sentence rationale per ranked spec.
+    """Write a one-sentence rationale per ranked spec via forced tool_choice.
 
-    Uses forced tool_choice on ``rank_build_order`` so we get a structured
-    list of ``{spec_index, rationale}`` objects back without manual parsing.
-    The ``spec_index`` values Claude returns are 1-indexed positions in the
-    ``ranked`` list (i.e. the spec's ``build_rank``).
-
-    Returns:
-        A 2-tuple of:
-        - ``rationales`` — dict mapping build_rank → rationale string.
-        - ``metadata`` — timing + token dict for ``retrieval_metadata``.
+    spec_index values Claude returns are 1-indexed positions in ranked (i.e.
+    build_rank). Returns a dict mapping build_rank to rationale string.
     """
     if not ranked:
         return {}, {
@@ -803,7 +734,7 @@ async def _generate_build_order_rationales(
     rationales: dict[int, str] = {}
     for entry in rationales_list:
         if not isinstance(entry, dict):
-            continue  # Skip malformed entries silently — defensive.
+            continue
         raw_idx = entry.get("spec_index")
         raw_text = entry.get("rationale")
         if (
@@ -831,23 +762,13 @@ async def _generate_build_order_rationales(
     return rationales, metadata
 
 
-# ---------------------------------------------------------------------------
-# Executive summary generation
-# ---------------------------------------------------------------------------
-
 async def _generate_executive_summary(
     pairs: list[ThemeWithSpecs],
 ) -> tuple[str, dict]:
-    """Ask Claude for a 2-3 sentence summary of the report's top themes.
+    """Generate a 2-3 sentence executive summary of the report's top themes.
 
-    Only the top 3 themes (by severity_score, already sorted by
-    ``_cluster_themes``) are passed to the model to keep the prompt tight.
-    Uses forced tool_choice on ``summarize_report`` for structured output.
-
-    Returns:
-        A 2-tuple of:
-        - ``summary`` — the 2-3 sentence executive summary string.
-        - ``metadata`` — timing + token dict for ``retrieval_metadata``.
+    Only the top 3 themes (already sorted by _cluster_themes) are passed to
+    keep the prompt tight. Uses forced tool_choice on summarize_report.
     """
     if not pairs:
         return "", {
@@ -916,10 +837,6 @@ async def _generate_executive_summary(
     return summary, metadata
 
 
-# ---------------------------------------------------------------------------
-# Public entrypoint
-# ---------------------------------------------------------------------------
-
 async def run_build_next(
     db: AsyncSession,
     project_id: uuid.UUID,
@@ -927,21 +844,16 @@ async def run_build_next(
 ) -> BuildNextResult:
     """Orchestrate the full Build Next pipeline.
 
-    Steps: embed 5 queries → retrieve top-K per query → dedupe →
-    cluster themes → generate specs per theme (concurrent, partial-failure
-    tolerant) → globally rank specs → generate per-rank rationales →
-    generate executive summary → return result for persistence.
+    Steps: embed 5 queries (concurrent) -> retrieve top-K per query (sequential)
+    -> dedupe -> cluster themes -> generate specs per theme (concurrent, partial-failure
+    tolerant) -> globally rank specs -> generate per-rank rationales -> executive summary.
 
-    Raises ``RuntimeError`` if retrieval returns no chunks, if clustering
-    returns no themes, or if every theme's spec generation fails.
-    Per-theme spec gen failures are handled internally and surface via
-    ``ThemeWithSpecs.generation_failed`` — they do not abort the run.
+    Raises RuntimeError if retrieval returns no chunks, clustering returns no themes,
+    or every theme's spec generation fails. Per-theme failures are tolerated and
+    surface via ThemeWithSpecs.generation_failed without aborting the run.
 
-    The ``source_ids`` argument follows the same three-state semantics as
-    ``retrieve_chunks``:
-    - ``None`` — no source filter (all sources).
-    - ``[]`` — explicitly empty; short-circuits to zero chunks (RuntimeError).
-    - non-empty list — scoped to those source IDs only.
+    source_ids follows the same three-state semantics as retrieve_chunks:
+    None = no filter, [] = short-circuit to zero chunks (RuntimeError), non-empty = scoped.
     """
     overall_start = time.monotonic()
 
@@ -971,7 +883,6 @@ async def run_build_next(
     rationales, rationale_meta = await _generate_build_order_rationales(ranked)
     exec_summary, summary_meta = await _generate_executive_summary(pairs)
 
-    # Build the persistent build_order JSONB payload.
     build_order: list[dict] = []
     for spec, _theme in ranked:
         build_order.append(

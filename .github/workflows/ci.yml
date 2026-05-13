@@ -1,8 +1,5 @@
-# .github/workflows/ci.yml — Continuous Integration pipeline
-#
-# Runs on every push to main and on every pull request targeting main.
-# Both jobs (frontend and backend) must pass before a merge is allowed.
-# Target runtime: under 5 minutes total.
+# CI: runs on push to main and on pull requests targeting main.
+# flake8 short-circuits the backend job, so a mypy failure can be hidden if flake8 fails first. Run both locally.
 
 name: CI
 
@@ -16,8 +13,6 @@ on:
 
 jobs:
 
-  # ── Frontend ────────────────────────────────────────────────────────────────
-  # Installs Node dependencies, runs ESLint, then type-checks with tsc.
   frontend:
     name: Frontend (lint + typecheck)
     runs-on: ubuntu-latest
@@ -30,7 +25,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-          # Cache npm dependencies keyed on the lockfile so installs are fast.
           cache: "npm"
           cache-dependency-path: frontend/package-lock.json
 
@@ -43,8 +37,6 @@ jobs:
       - name: Type check
         run: cd frontend && npx tsc --noEmit
 
-  # ── Backend ─────────────────────────────────────────────────────────────────
-  # Installs Python dependencies, runs flake8 linting and mypy type checking.
   backend:
     name: Backend (lint + typecheck)
     runs-on: ubuntu-latest

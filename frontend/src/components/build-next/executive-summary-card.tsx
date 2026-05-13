@@ -1,4 +1,3 @@
-// frontend/src/components/build-next/executive-summary-card.tsx
 "use client";
 
 import type { ReactNode } from "react";
@@ -33,7 +32,6 @@ export default function ExecutiveSummaryCard({
   const queryCount = metadata?.queries?.length ?? 0;
   const chunkCount = metadata?.dedupedTotal ?? 0;
 
-  // Split the summary on whitespace so we can fade each word in sequence.
   const summaryWords = useMemo(
     () => (summary ? summary.split(/\s+/) : []),
     [summary],
@@ -61,6 +59,7 @@ export default function ExecutiveSummaryCard({
           hasStats ? "lg:grid-cols-[1fr_220px] lg:items-start" : ""
         }`}
       >
+        {/* Summary text */}
         <div>
           {summary ? (
             <p className="text-[14px] leading-relaxed text-on-surface">
@@ -101,6 +100,7 @@ export default function ExecutiveSummaryCard({
           ) : null}
         </div>
 
+        {/* Stats row */}
         {hasStats ? (
           <dl className="grid grid-cols-2 gap-x-5 gap-y-4 lg:grid-cols-1 lg:gap-y-3 lg:pl-5 lg:shadow-[inset_1px_0_0_rgba(15,23,42,0.06)]">
             {queryCount > 0 ? (

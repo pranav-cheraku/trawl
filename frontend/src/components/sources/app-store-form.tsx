@@ -22,7 +22,6 @@ export default function AppStoreForm({
   const containerRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
 
-  // Debounced search
   useEffect(() => {
     if (query.trim().length < 2) {
       setResults([]);
@@ -58,7 +57,6 @@ export default function AppStoreForm({
     return () => clearTimeout(timeout);
   }, [query]);
 
-  // Click outside to dismiss
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (
@@ -93,7 +91,6 @@ export default function AppStoreForm({
 
   return (
     <div ref={containerRef} className="relative flex flex-col">
-      {/* Yield preset */}
       <div
         role="group"
         aria-label="Yield preset"
@@ -125,7 +122,6 @@ export default function AppStoreForm({
         </button>
       </div>
 
-      {/* Search input */}
       <div className="relative">
         <input
           type="text"
@@ -160,7 +156,6 @@ export default function AppStoreForm({
         )}
       </div>
 
-      {/* Results dropdown */}
       {showDropdown && (
         <div className="absolute left-0 right-0 top-full z-40 mt-1 max-h-[320px] overflow-y-auto rounded-[4px] bg-surface-container-lowest/85 p-1 shadow-[0_8px_24px_rgba(15,23,42,0.04)] backdrop-blur-[12px]">
           {results.map((app) => (

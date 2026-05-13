@@ -13,12 +13,21 @@ export default async function LandingPage() {
   return (
     <LenisProvider>
       <div className="min-h-screen bg-surface font-sans text-on-surface">
+        {/* Nav */}
         <Navbar session={session} />
+
+        {/* Hero section */}
         <HeroSection session={session} />
+
+        {/* Demo sections */}
         <ConnectDemoSection />
         <AskDemoSection />
         <BuildDemoSection />
+
+        {/* CTA */}
         <CtaSection session={session} />
+
+        {/* Footer */}
         <Footer />
       </div>
     </LenisProvider>

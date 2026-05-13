@@ -62,7 +62,7 @@ export default function ProjectLayout({
         if (!cancelled) setProject(p);
       })
       .catch(() => {
-        /* silent — header falls back to placeholder */
+        /* silent. Header falls back to placeholder. */
       });
     return () => {
       cancelled = true;
@@ -71,7 +71,7 @@ export default function ProjectLayout({
 
   return (
     <div className="mx-auto max-w-screen-2xl px-6 py-5">
-      {/* Back chip */}
+      {/* Breadcrumb */}
       <Link
         href="/dashboard"
         className="inline-flex items-center gap-1.5 font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-on-surface-variant transition-colors hover:text-on-surface"
@@ -89,7 +89,6 @@ export default function ProjectLayout({
         All Projects
       </Link>
 
-      {/* Compact crumb: WORKSPACE / {project name} */}
       <div className="mt-2.5 flex items-baseline gap-3.5">
         <span className="font-mono text-[10px] font-medium uppercase tracking-[0.25em] text-on-surface-variant/70">
           Workspace /
@@ -103,7 +102,7 @@ export default function ProjectLayout({
         )}
       </div>
 
-      {/* Workspace tabs — horizontal scroll on mobile if needed. */}
+      {/* Tabs */}
       <nav
         className="mt-4 flex gap-1 overflow-x-auto"
         aria-label="Project tabs"
@@ -129,7 +128,6 @@ export default function ProjectLayout({
         })}
       </nav>
 
-      {/* Tab content — full-bleed within max-w-screen-2xl outer container */}
       <div className="mt-4">{children}</div>
     </div>
   );

@@ -1,15 +1,9 @@
-// frontend/src/lib/use-mouse-position.ts
 "use client";
 
 import { useEffect, useState } from "react";
 
-/**
- * Tracks the pointer position relative to the viewport, in [-1, 1] range
- * on each axis. Center is 0,0. Returns 0,0 when the cursor leaves the window.
- *
- * Used for subtle parallax effects — multiply by a small pixel value (≤ 4px)
- * before applying to a transform.
- */
+// Returns pointer position in [-1, 1] on each axis, centered at 0,0.
+// Multiply by a small pixel value (4px or less) before applying to a transform.
 export function useMousePosition() {
   const [position, setPosition] = useState<{ x: number; y: number }>({
     x: 0,

@@ -1,4 +1,3 @@
-// frontend/src/components/landing/live-input-demo.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -14,11 +13,6 @@ const LOOP_INTERVAL_MS = 12_000;
 
 type Phase = "typing" | "streaming" | "settled" | "resetting";
 
-/**
- * Hero's live demo: types "Spotify" character by character, then flies in five
- * stacked review cards from the right. Loops every 12 seconds, but pauses while
- * offscreen and runs once on initial mount.
- */
 export function LiveInputDemo() {
   const prefersReducedMotion = useReducedMotion();
   const [typed, setTyped] = useState(prefersReducedMotion ? TYPED_STRING : "");
@@ -26,7 +20,6 @@ export function LiveInputDemo() {
     prefersReducedMotion ? "settled" : "typing",
   );
 
-  // Type the string character by character.
   useEffect(() => {
     if (prefersReducedMotion) return;
     if (phase !== "typing") return;
@@ -40,7 +33,6 @@ export function LiveInputDemo() {
     return () => clearTimeout(t);
   }, [typed, phase, prefersReducedMotion]);
 
-  // After streaming ends, hold for a beat, then loop.
   useEffect(() => {
     if (prefersReducedMotion) return;
     if (phase !== "streaming") return;

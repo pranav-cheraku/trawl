@@ -95,7 +95,6 @@ async def connect_appstore(
     """
     project = await _get_project_for_user(project_id, db, user_id)
 
-    # Resolve app name to App Store ID (fail fast if not found)
     app_info = await search_app(body.app_name, body.country)
 
     source = FeedbackSource(
@@ -111,7 +110,7 @@ async def connect_appstore(
     await db.commit()
     await db.refresh(source)
 
-    # Kick off async ingestion pipeline (must be after commit so worker can read the row)
+    # Must commit before .delay() so the Celery worker can read the row.
     ingest_appstore_source.delay(str(source.id), preset=body.preset)
 
     return source
@@ -138,7 +137,6 @@ async def upload_csv(
     """
     project = await _get_project_for_user(project_id, db, user_id)
 
-    # Validate file size (10 MB limit)
     max_size = 10 * 1024 * 1024
     contents = await file.read()
     if len(contents) > max_size:
@@ -148,7 +146,6 @@ async def upload_csv(
         )
     await file.seek(0)
 
-    # Save uploaded file to shared volume (accessible by both API and Celery worker)
     upload_dir = "/tmp/trawl_uploads"
     os.makedirs(upload_dir, exist_ok=True)
     tmp = tempfile.NamedTemporaryFile(
@@ -168,7 +165,7 @@ async def upload_csv(
     await db.commit()
     await db.refresh(source)
 
-    # Kick off async ingestion pipeline (must be after commit so worker can read the row)
+    # Must commit before .delay() so the Celery worker can read the row.
     ingest_csv_source.delay(str(source.id), tmp.name, content_column)
 
     return source
@@ -285,7 +282,6 @@ async def create_reddit_source(
             detail="Reddit value cannot be empty.",
         )
 
-    # Strip leading 'r/' for subreddit mode
     if body.mode == "subreddit":
         value = value.lstrip("r/").strip()
         if not value:
@@ -417,7 +413,6 @@ async def list_items(
     """Return paginated feedback items for a source."""
     await _get_project_for_user(project_id, db, user_id)
 
-    # Verify source exists
     source_result = await db.execute(
         select(FeedbackSource.id).where(
             FeedbackSource.id == source_id,
@@ -452,12 +447,7 @@ async def get_chunk_detail(
     db: AsyncSession = Depends(get_db),
     user_id: uuid.UUID = Depends(get_current_user),
 ) -> dict:
-    """Return the full text of a chunk and its parent feedback item.
-
-    Used by the RAG X-Ray detail modal to load full content when the
-    embedded transparency blob only has a truncated preview (messages
-    created before the Day 16 schema change).
-    """
+    """Return the full text of a chunk and its parent feedback item."""
     await _get_project_for_user(project_id, db, user_id)
 
     result = await db.execute(
@@ -486,7 +476,6 @@ async def get_chunk_detail(
             detail="Chunk not found.",
         )
 
-    # Inline source-name fallback chain (mirrors retrieval._derive_source_name)
     source_name = (
         row["app_store_name"]
         or row["filename"]

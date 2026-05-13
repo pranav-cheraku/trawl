@@ -11,23 +11,16 @@ export interface FloatingPosition {
 interface UseFloatingPositionOptions {
   isOpen: boolean;
   triggerRef: RefObject<HTMLElement>;
-  /** Preferred popover width in px. Will be reduced if the viewport is too
-   *  narrow, never exceeded. */
   preferredWidth: number;
-  /** Vertical gap between the trigger's bottom edge and the popover top. */
   gap?: number;
-  /** Horizontal viewport margin to keep around the popover. */
   margin?: number;
 }
 
 /**
- * Compute viewport-anchored fixed-positioning coordinates for a popover that
- * floats below a trigger button. Clamps the left coordinate so the popover
- * never overflows past the left or right viewport edge — critical on mobile
- * where the trigger is often nowhere near the viewport edge.
- *
- * Recomputes on resize and scroll while the popover is open; returns null
- * while closed.
+ * Returns viewport-clamped fixed-position coordinates for a popover that
+ * floats below a trigger. CSS absolute positioning falls off mobile viewports
+ * when the trigger is near an edge; this hook keeps the popover within the
+ * safe area. Recomputes on resize and capture-phase scroll.
  */
 export function useFloatingPosition({
   isOpen,

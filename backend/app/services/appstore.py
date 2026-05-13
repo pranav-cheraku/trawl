@@ -106,7 +106,7 @@ async def fetch_reviews(app_id: str, country: str = "us") -> list[dict]:
                 break
 
             for entry in entries:
-                # Skip the app metadata entry (no "im:rating" key)
+                # The first entry is the app metadata record; skip it.
                 if "im:rating" not in entry:
                     continue
 
@@ -118,7 +118,6 @@ async def fetch_reviews(app_id: str, country: str = "us") -> list[dict]:
                     "external_id": entry.get("id", {}).get("label", ""),
                 })
 
-            # Follow pagination link
             url = _get_next_page_url(feed)
 
     logger.info("Fetched %d reviews for app %s (%s)", len(reviews), app_id, country)
@@ -132,15 +131,14 @@ def _get_next_page_url(feed: dict) -> str | None:
         if isinstance(link, dict) and link.get("attributes", {}).get("rel") == "next":
             href: str | None = link["attributes"].get("href")
             if href is not None:
-                # Apple returns pagination URLs with /xml suffix — swap to /json
+                # Apple pagination URLs use /xml; swap to /json.
                 href = href.replace("/xml", "/json")
             return href
     return None
 
 
-# Default storefronts: 5 English-speaking markets that share Voyage/Claude
-# language compatibility for the RAG pipeline. Apple uses globally-unique
-# review IDs across countries, so dedup by external_id is byte-clean.
+# 5 English-speaking markets. Apple review IDs are globally unique across countries,
+# so dedup by external_id is safe.
 DEFAULT_STOREFRONTS: list[str] = ["us", "gb", "ca", "au", "ie"]
 
 
@@ -152,7 +150,7 @@ async def fetch_reviews_multi_country(
     deduped by external_id.
 
     Returns (reviews, succeeded_countries). The succeeded list is what should
-    be persisted to connector_config — countries that returned at least one
+    be persisted to connector_config: countries that returned at least one
     review without raising.
 
     Per-country failures are logged and skipped. If ALL countries fail the

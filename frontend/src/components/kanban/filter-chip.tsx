@@ -10,10 +10,7 @@ interface FilterChipProps {
   onClick: () => void;
   accent?: "ink" | "signal";
   ariaLabel?: string;
-  /** Group key for the layoutId so the active highlight slides ONLY within this row. */
   layoutGroup: string;
-  /** True for the "All" / reset chip. Renders as a quiet baseline pill —
-   *  never the heavy active fill that real filter values use. */
   neutral?: boolean;
 }
 
@@ -31,10 +28,6 @@ export default function FilterChip({
   const base =
     "relative inline-flex items-center rounded-[2px] px-2 py-[3px] font-mono text-[10px] font-medium uppercase tracking-[0.15em] focus:outline-none focus-visible:ring-2 focus-visible:ring-secondary/40";
 
-  // The "All" / reset chip always looks like a quiet baseline pill so it
-  // never competes with the heavier active state of real filter values.
-  // When active (the current baseline), it gets a thin signal-blue accent
-  // underline — visible without being loud.
   if (neutral) {
     return (
       <button

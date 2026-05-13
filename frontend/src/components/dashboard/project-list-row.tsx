@@ -58,12 +58,10 @@ export default function ProjectListRow({
         className="grid grid-cols-[minmax(0,1.6fr)_120px_56px_28px] items-center gap-4 px-4 py-3 sm:grid-cols-[minmax(0,1.6fr)_minmax(0,1.4fr)_120px_56px_28px]"
         style={{ boxShadow: "inset 0 -1px 0 rgba(15,23,42,0.04)" }}
       >
-        {/* Name */}
         <div className="truncate text-[14px] font-semibold text-on-surface group-hover:text-secondary">
           {project.name}
         </div>
 
-        {/* Description (hidden at <sm to save horizontal space) */}
         <div className="hidden truncate text-[12px] text-on-surface-variant sm:block">
           {project.description ?? (
             <span className="italic text-on-surface-variant/50">
@@ -72,12 +70,10 @@ export default function ProjectListRow({
           )}
         </div>
 
-        {/* Updated date */}
         <div className="text-right font-mono text-[11px] uppercase tracking-wider text-on-surface-variant">
           {formatDate(project.updatedAt)}
         </div>
 
-        {/* Action cluster: pin + delete */}
         <div
           className="flex items-center justify-end gap-1"
           onClick={(e) => e.stopPropagation()}
@@ -132,7 +128,6 @@ export default function ProjectListRow({
           </div>
         </div>
 
-        {/* → arrow */}
         <svg
           className="h-3.5 w-3.5 justify-self-end text-on-surface-variant transition-[transform,color] duration-200 group-hover:translate-x-0.5 group-hover:text-secondary"
           fill="none"

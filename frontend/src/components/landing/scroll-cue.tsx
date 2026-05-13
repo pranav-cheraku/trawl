@@ -6,12 +6,8 @@ import { motion, useReducedMotion } from "framer-motion";
 import { durations, easings } from "@/lib/motion";
 
 interface ScrollCueProps {
-  /** Anchor id of the section to smooth-scroll to on click. */
   nextId: string;
-  /** When set, the cue fades out once the user has scrolled past this many px.
-   *  Omit on sections below the hero — the cue should stay visible there. */
   hideAfterScrollY?: number;
-  /** Entrance delay in seconds. Defaults to 0.5. */
   delay?: number;
 }
 
@@ -21,11 +17,6 @@ function scrollToAnchor(id: string) {
     ?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
-/**
- * Pinned-to-bottom cue ("SCROLL ↓") that nudges visitors toward the next
- * section. Click → smooth-scroll to `nextId`. Optional fade-out once the user
- * has scrolled past `hideAfterScrollY` (useful only on the hero).
- */
 export function ScrollCue({
   nextId,
   hideAfterScrollY,

@@ -1,4 +1,3 @@
-// frontend/src/components/landing/ask-demo-section.tsx
 "use client";
 
 import { useRef } from "react";

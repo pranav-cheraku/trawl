@@ -54,6 +54,7 @@ export default function BuildSpecDetailModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-stretch justify-stretch">
+      {/* Backdrop */}
       <button
         type="button"
         tabIndex={-1}
@@ -129,6 +130,7 @@ export default function BuildSpecDetailModal({
             </div>
           </div>
         </header>
+        {/* Body */}
         <div className="flex-1 overflow-y-auto px-6 py-5">
           <Section label="Problem" body={problem} />
           <Section label="Proposed Solution" body={solution} />

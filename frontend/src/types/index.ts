@@ -6,7 +6,6 @@ export interface Project {
   updatedAt: string;
 }
 
-/** iTunes app search result from GET /api/apps/search. */
 export interface AppSearchResult {
   trackId: string;
   trackName: string;
@@ -17,7 +16,6 @@ export interface AppSearchResult {
   genre: string;
 }
 
-/** Google Play app search result. */
 export interface GooglePlaySearchResult {
   packageName: string;
   trackName: string;
@@ -34,7 +32,6 @@ export type SourceType =
   | "csv"
   | "manual";
 
-/** Feedback source from GET /api/projects/{id}/sources. */
 export interface Source {
   id: string;
   sourceType: SourceType;
@@ -45,15 +42,11 @@ export interface Source {
   recordCount: number;
   status: string;
   createdAt: string;
-  /**
-   * Per-type connector metadata. App Store sources still use the legacy
-   * `appStoreId/Name/Country` columns; new source types (google_play, reddit,
-   * manual) populate this JSONB blob. Shape varies by sourceType.
-   */
+  // App Store sources use the legacy appStoreId/Name/Country columns.
+  // Other source types populate this JSONB blob; shape varies by sourceType.
   connectorConfig: Record<string, unknown> | null;
 }
 
-/** Single feedback item from GET /api/projects/{id}/sources/{id}/items. */
 export interface FeedbackItem {
   id: string;
   content: string;
@@ -62,17 +55,14 @@ export interface FeedbackItem {
   createdAt: string;
 }
 
-/** Response from the /api/token endpoint. */
 export interface TokenResponse {
   token: string | null;
 }
 
-/** Response from POST /api/auth/sync (backend user upsert). */
 export interface UserSyncResponse {
   id: string;
 }
 
-/** Full chunk + parent feedback item, fetched on demand by the X-Ray modal. */
 export interface ChunkDetail {
   chunkId: string;
   feedbackItemId: string;
@@ -82,14 +72,11 @@ export interface ChunkDetail {
   sourceName: string;
 }
 
-/** A single retrieved chunk as it appears in a message's transparency blob. */
 export interface TransparencyChunk {
   chunkId: string;
   feedbackItemId: string;
   chunkTextPreview: string;
-  /** Full chunk text. Optional for messages created before Day 16. */
   chunkText?: string;
-  /** Full parent feedback item content. Optional for pre-Day-16 messages. */
   feedbackItemContent?: string;
   similarityScore: number;
   retrievalRank: number;
@@ -97,7 +84,6 @@ export interface TransparencyChunk {
   sourceName: string;
 }
 
-/** Full RAG transparency payload stored on assistant messages. */
 export interface Transparency {
   query: string;
   retrievedChunks: TransparencyChunk[];
@@ -111,7 +97,6 @@ export interface Transparency {
   outputTokens: number;
 }
 
-/** A single message in a conversation. */
 export interface Message {
   id: string;
   conversationId: string;
@@ -122,7 +107,6 @@ export interface Message {
   createdAt: string;
 }
 
-/** Basic conversation shape (no nested messages). */
 export interface Conversation {
   id: string;
   projectId: string;
@@ -130,12 +114,10 @@ export interface Conversation {
   createdAt: string;
 }
 
-/** Conversation detail with full message history. */
 export interface ConversationDetail extends Conversation {
   messages: Message[];
 }
 
-// ── Spec generation ──────────────────────────────────────────────────
 
 export type SpecType = "feature_specs" | "user_stories";
 export type SpecStatus = "backlog" | "planned" | "in_progress" | "done";
@@ -147,7 +129,6 @@ export type TaskStatusValue =
   | "failure"
   | "retry";
 
-/** Structured body written to Spec.content for type="feature_specs". */
 export interface FeatureSpecContent {
   title: string;
   problem: string;
@@ -158,7 +139,6 @@ export interface FeatureSpecContent {
   supporting_feedback_indices: number[];
 }
 
-/** Structured body written to Spec.content for type="user_stories". */
 export interface UserStoryContent {
   title: string;
   theme: string;
@@ -167,7 +147,6 @@ export interface UserStoryContent {
   supporting_feedback_indices: number[];
 }
 
-/** A single spec returned by GET /api/projects/{id}/specs. */
 export interface Spec {
   id: string;
   projectId: string;
@@ -182,25 +161,19 @@ export interface Spec {
   updatedAt: string;
 }
 
-/** 202 response from POST /api/projects/{id}/generate. */
 export interface GenerateSpecsResponse {
   taskId: string;
 }
 
-/** Response from GET /api/tasks/{taskId}. */
 export interface TaskStatus {
   taskId: string;
   status: TaskStatusValue;
-  /**
-   * Celery result payload. `result` is a raw dict on the backend, so nested
-   * keys are NOT transformed by the camelCase alias generator — they arrive
-   * in snake_case exactly as the task returned them.
-   */
+  // result is a raw Celery dict, not a Pydantic model, so the camelCase
+  // alias_generator does not apply. Keys arrive in snake_case.
   result?: { spec_ids: string[]; count: number } | null;
   error?: string | null;
 }
 
-/** Response from GET /api/specs/{id}/sources — powers the RAG X-Ray panel. */
 export interface SpecSources {
   specId: string;
   retrievedChunks: TransparencyChunk[];
@@ -210,7 +183,6 @@ export interface SpecSources {
   retrievalTopK?: number | null;
 }
 
-// ── Build Next ────────────────────────────────────────────────────────
 
 export type BuildReportStatus = "pending" | "running" | "success" | "failure";
 
@@ -248,9 +220,7 @@ export interface BuildReportSpec {
   themeId: string;
   buildRank: number;
   title: string;
-  // Snake_case-keyed: matches backend dict-field rule (problem,
-  // proposed_solution, user_stories, acceptance_criteria, priority,
-  // supporting_feedback_indices).
+  // content is a raw JSONB dict, not a Pydantic model. Keys stay snake_case.
   content: Record<string, unknown>;
   promotedSpecId: string | null;
 }

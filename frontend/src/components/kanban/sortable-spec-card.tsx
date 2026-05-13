@@ -1,4 +1,3 @@
-// frontend/src/components/kanban/sortable-spec-card.tsx
 "use client";
 
 import { useSortable } from "@dnd-kit/sortable";
@@ -14,9 +13,6 @@ interface Props {
   spec: Spec;
   onClick?: (spec: Spec, originRect?: DOMRect) => void;
   disabled?: boolean;
-  /** When set (a non-negative integer), the card animates in with a staggered
-   *  delay computed as `cascadeFromIndex * staggers.cards` seconds. Used by
-   *  the parent to flag newly-generated specs (post `generateSpecs` poll). */
   cascadeFromIndex?: number;
 }
 

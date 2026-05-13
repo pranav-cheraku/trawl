@@ -27,20 +27,8 @@ async def sync_user(
 ) -> User:
     """Create or update a user record from NextAuth identity data.
 
-    Protected by the X-Auth-Secret header which must match ``settings.JWT_SECRET``.
-    This endpoint is intentionally NOT behind JWT auth — it is called by the
-    NextAuth server-side jwt callback before the client JWT exists.
-
-    Args:
-        body: Sync payload containing email, optional name and avatar_url.
-        db: Async database session.
-        x_auth_secret: Value of the ``X-Auth-Secret`` request header.
-
-    Returns:
-        The created or updated :class:`User` ORM instance.
-
-    Raises:
-        HTTPException: 403 if the X-Auth-Secret header is missing or incorrect.
+    Protected by X-Auth-Secret, NOT JWT, because the NextAuth jwt callback calls
+    this before the client JWT exists.
     """
     if x_auth_secret != settings.JWT_SECRET:
         raise HTTPException(
@@ -79,18 +67,7 @@ async def get_me(
     db: AsyncSession = Depends(get_db),
     user_id: uuid.UUID = Depends(get_current_user),
 ) -> User:
-    """Fetch the authenticated user's profile from the database.
-
-    Args:
-        db: Async database session.
-        user_id: UUID extracted from the validated JWT by ``get_current_user``.
-
-    Returns:
-        The :class:`User` ORM instance for the authenticated user.
-
-    Raises:
-        HTTPException: 404 if no user row exists for the given ID.
-    """
+    """Fetch the authenticated user's profile."""
     result = await db.execute(select(User).where(User.id == user_id))
     user: User | None = result.scalar_one_or_none()
 

@@ -25,8 +25,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   ],
   session: { strategy: "jwt" },
   jwt: {
-    // Produce plain HS256 JWS so the FastAPI backend (python-jose) can validate it.
-    // Auth.js v5 defaults to JWE (A256CBC-HS512) which python-jose cannot verify.
+    // Auth.js v5 defaults to JWE. We produce plain HS256 JWS so python-jose can verify it.
     async encode({ token }) {
       const payload = token ?? {};
       return new SignJWT({ ...payload } as Record<string, unknown>)
@@ -49,7 +48,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   },
   callbacks: {
     async jwt({ token, user, account }) {
-      // On initial sign-in: sync the user to the backend DB and capture the DB UUID.
       if (account && user) {
         try {
           const res = await fetch(`${API_BASE}/api/auth/sync`, {
@@ -67,10 +65,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           });
           if (res.ok) {
             const data: UserSyncResponse = await res.json();
-            token.sub = data.id; // DB UUID replaces the Google-provided sub
+            // DB UUID replaces the Google-provided sub so the backend can look up the user.
+            token.sub = data.id;
           }
         } catch {
-          // Backend unreachable — keep the Google-provided sub; sync on next sign-in
+          // Backend unreachable. Keep the Google-provided sub and sync on next sign-in.
         }
         token.email = user.email;
         token.name = user.name;
@@ -97,6 +96,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
   },
   pages: {
-    signIn: "/", // Redirect unauthenticated users to the landing page
+    // Linking to /api/auth/signin causes a redirect loop; use signIn("google") directly.
+    signIn: "/",
   },
 });

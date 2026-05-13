@@ -1,42 +1,29 @@
-// frontend/src/lib/radial-chart-math.ts
-
 export interface RadialSegmentInput {
-  /** Stable identity used for keys and event mapping. */
   id: string;
-  /** Wedge size weight. Should be > 0. Caller normalizes if needed. */
   weight: number;
 }
 
 export interface RadialSegment {
   id: string;
-  /** Path `d` attribute for the wedge from inner radius to outer radius. */
   pathD: string;
-  /** Center point of the wedge for label positioning. */
   labelX: number;
   labelY: number;
-  /** Mid-angle in radians, useful for label alignment. */
   midAngle: number;
-  /** Sweep angle in radians (post-normalization). */
   sweep: number;
 }
 
 export interface RadialChartGeometry {
-  /** Square viewBox edge in user units. */
   size: number;
-  /** Center x/y. */
   cx: number;
   cy: number;
-  /** Outer wedge radius. */
   outer: number;
-  /** Inner donut radius. */
   inner: number;
   segments: RadialSegment[];
 }
 
 /**
- * Compute SVG paths for an annular pie (donut) given a list of weighted
- * segments. Wedges start at 12 o'clock and proceed clockwise. If `weights`
- * sum to 0 the function returns a geometry with no segments.
+ * Compute SVG paths for a donut chart. Wedges start at 12 o'clock, clockwise.
+ * Returns empty segments when all weights are zero.
  */
 export function computeRadialGeometry(
   inputs: RadialSegmentInput[],
@@ -57,11 +44,11 @@ export function computeRadialGeometry(
   }
 
   const TWO_PI = Math.PI * 2;
-  let cursor = -Math.PI / 2; // start at 12 o'clock
+  let cursor = -Math.PI / 2;
   const segments: RadialSegment[] = [];
 
-  // Nudge a full-circle single segment by a small epsilon so the outer arc
-  // doesn't collapse to a zero-length path that SVG renderers won't draw.
+  // A segment whose sweep equals exactly 2*PI produces a zero-length arc that
+  // SVG renderers silently drop. Clamp to just below 2*PI to keep it visible.
   const FULL_CIRCLE_EPSILON = 1e-4;
 
   for (const input of inputs) {

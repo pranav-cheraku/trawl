@@ -21,12 +21,10 @@ export default function FocusPopover({
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Autofocus on mount.
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
 
-  // Esc to close.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -35,8 +33,8 @@ export default function FocusPopover({
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  // Click-outside to close. Defer registering the listener so the
-  // click that OPENED the popover doesn't immediately close it.
+  // Defer mousedown listener by one tick so the opening click doesn't
+  // immediately fire the close handler.
   useEffect(() => {
     const onDown = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {

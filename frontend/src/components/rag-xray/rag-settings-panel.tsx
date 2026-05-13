@@ -15,13 +15,8 @@ interface RagSettingsPanelProps {
   onReset: () => void;
 }
 
-/**
- * Two-slider control surface for the RAG retrieval knobs, mounted inside
- * `RagSettingsMenu`'s frosted-glass popover. Values are user-tuned per
- * project (persisted via `useRagSettings`) and apply to the NEXT
- * `sendMessage` call — they don't retroactively change the chunks shown
- * for the currently-displayed message.
- */
+// Settings apply to the next sendMessage call; they don't retroactively
+// change the chunks shown for the currently-displayed message.
 export function RagSettingsPanel({
   settings,
   onTopKChange,

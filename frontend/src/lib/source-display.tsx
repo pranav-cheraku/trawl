@@ -1,21 +1,6 @@
 import type { ReactNode } from "react";
 import type { Source, SourceType } from "@/types";
 
-/**
- * Per-source-type display helpers. Exhaustive switch on `SourceType` so adding
- * a new variant fails the build until handled here.
- *
- * Display names:
- * - app_store:    "App Store - {appName}"
- * - google_play:  "Google Play - {appName}"
- * - reddit:       'Reddit - r/{sub}' OR 'Reddit - "{keyword}"'
- * - csv:          "{filename}"
- * - manual:       "{title}" OR "Manual Paste · {YYYY-MM-DD}"
- *
- * Type-column chip text:
- * - app_store -> "App Store"; google_play -> "Google Play"; reddit -> "Reddit";
- *   csv -> "CSV"; manual -> "Manual"
- */
 
 const PHONE_PATH =
   "M10.5 1.5H8.25A2.25 2.25 0 0 0 6 3.75v16.5a2.25 2.25 0 0 0 2.25 2.25h7.5A2.25 2.25 0 0 0 18 20.25V3.75a2.25 2.25 0 0 0-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3";
@@ -80,18 +65,15 @@ export function getSourceTypeLabel(type: SourceType): string {
   }
 }
 
-/**
- * Returns the dedupe key for a source. Used by source-list's displayNames
- * useMemo to group sources for `(N)` suffix numbering when the same key
- * appears more than once.
- */
+// Dedupe key used to detect duplicate sources. When multiple sources share
+// the same key, the caller appends an (N) suffix to each display name.
 export function getSourceDedupeKey(source: Source): string {
   switch (source.sourceType) {
     case "app_store":
       return `appstore::${source.appStoreName ?? source.appStoreId ?? ""}`;
     case "google_play": {
       const cfg = source.connectorConfig ?? {};
-      // Backend stores snake_case keys inside JSONB dict fields — Pydantic's
+      // Backend stores snake_case keys inside JSONB dict fields. Pydantic's
       // alias_generator only transforms model fields, not dict values.
       const pkg =
         typeof cfg.package_name === "string" ? cfg.package_name : "";
@@ -113,10 +95,6 @@ export function getSourceDedupeKey(source: Source): string {
   }
 }
 
-/**
- * Display name without the `(N)` suffix. Source-list applies the suffix
- * when multiple sources share a dedupe key.
- */
 export function getSourceBaseName(source: Source): string {
   switch (source.sourceType) {
     case "app_store": {

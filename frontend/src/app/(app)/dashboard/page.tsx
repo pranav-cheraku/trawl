@@ -28,7 +28,6 @@ function formatDate(dateStr: string): string {
   });
 }
 
-// Skeleton card shown during loading
 function SkeletonCard() {
   return (
     <div className="rounded-[4px] bg-surface-container-lowest p-6 animate-pulse">
@@ -97,9 +96,7 @@ function ProjectCard({
 
   return (
     <div className="group relative rounded-[4px] bg-surface-container-lowest transition-all hover:bg-surface-container-low">
-      {/* Action cluster: pin + delete */}
       <div className="absolute right-3 top-3 z-10 flex items-center gap-1">
-        {/* Pin: opacity-100 when pinned, fade-on-hover otherwise */}
         <div
           className={
             isPinned
@@ -116,7 +113,6 @@ function ProjectCard({
           />
         </div>
 
-        {/* Delete: always fade-on-hover */}
         <div className="opacity-40 transition-opacity group-hover:opacity-100">
           {isConfirming ? (
             <div className="rounded-[4px] bg-surface-container-lowest px-2 py-1">
@@ -152,7 +148,6 @@ function ProjectCard({
         </div>
       </div>
 
-      {/* Card body — navigates to project */}
       <Link
         href={`/project/${project.id}/sources`}
         className="block p-6"
@@ -274,7 +269,6 @@ export default function DashboardPage() {
     else if (activeChip === "pinned") filtered = pinned;
     else filtered = searchMatched;
 
-    // Pinned-first ordering, then update-time desc within pinned.
     const ts = (p: Project) => parseUtcIso(p.updatedAt).getTime();
     const pinnedSegment = filtered
       .filter((p) => pins.isPinned(p.id))
@@ -295,6 +289,7 @@ export default function DashboardPage() {
   return (
     <>
       <div className="mx-auto max-w-6xl px-6 py-10">
+        {/* Header */}
         <WorkspaceHeader
           label="Workspace / Dashboard"
           title="Projects"
@@ -320,6 +315,7 @@ export default function DashboardPage() {
           }
         />
 
+        {/* Toolbar */}
         <div className="mt-4">
           <DashboardToolbar
             query={query}
@@ -332,9 +328,8 @@ export default function DashboardPage() {
           />
         </div>
 
-        {/* Content area */}
+        {/* Project grid / list */}
         <div className="mt-4">
-          {/* Loading state — grid skeletons */}
           {isLoading && viewApi.view === "grid" && (
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
               <SkeletonCard />
@@ -343,7 +338,6 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {/* Loading state — list skeletons */}
           {isLoading && viewApi.view === "list" && (
             <div className="rounded-[4px] bg-surface-container-lowest">
               <SkeletonRow />
@@ -352,7 +346,6 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {/* Error state */}
           {!isLoading && error && (
             <div className="flex flex-col items-start gap-4 rounded-[4px] bg-error/[0.04] px-8 py-10">
               <div className="flex items-center gap-2">
@@ -388,7 +381,6 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {/* Empty state */}
           {!isLoading && !error && projects.length === 0 && (
             <div className="flex flex-col items-start gap-4 rounded-[4px] bg-surface-container-lowest px-8 py-12">
               <p className="font-mono text-xs font-medium uppercase tracking-[0.2em] text-on-surface-variant">
@@ -420,7 +412,6 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {/* Filtered empty (search/chip excludes everything) */}
           {!isLoading &&
             !error &&
             projects.length > 0 &&
@@ -447,7 +438,6 @@ export default function DashboardPage() {
               </div>
             )}
 
-          {/* Project grid */}
           {!isLoading &&
             !error &&
             filteredProjects.length > 0 &&
@@ -480,7 +470,6 @@ export default function DashboardPage() {
               </div>
             )}
 
-          {/* Project list */}
           {!isLoading &&
             !error &&
             filteredProjects.length > 0 &&
@@ -500,7 +489,6 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* New Project Modal */}
       <AnimatePresence>
         {isModalOpen ? (
           <NewProjectModal

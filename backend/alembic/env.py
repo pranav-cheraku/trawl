@@ -9,7 +9,7 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from app.config import settings
-from app.models import Base  # noqa: F401 — imports all models so metadata is populated
+from app.models import Base  # noqa: F401 (imports all models so metadata is populated)
 
 # Alembic Config object, providing access to values in alembic.ini.
 config = context.config

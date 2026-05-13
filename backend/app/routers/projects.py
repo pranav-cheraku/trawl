@@ -34,7 +34,7 @@ async def create_project(
         description=body.description,
     )
     db.add(project)
-    await db.flush()  # populate server-generated id/timestamps before response
+    await db.flush()
     await db.refresh(project)
     return project
 

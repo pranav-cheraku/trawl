@@ -24,7 +24,6 @@ function readMutedIds(projectId: string, tab: SourceScopeTab): string[] {
     }
     return [];
   } catch {
-    // Corrupted localStorage entry — treat as no mutes.
     return [];
   }
 }
@@ -41,33 +40,22 @@ function writeMutedIds(
       JSON.stringify(ids),
     );
   } catch {
-    // Quota exceeded / storage disabled — silently ignore.
+    // Quota exceeded or storage disabled.
   }
 }
 
 export interface UseSourceScopeReturn {
-  /** Currently muted source IDs for this (project, tab). */
   mutedIds: string[];
-  /** Test whether a single source is muted. */
   isMuted: (id: string) => boolean;
-  /** Toggle a source's mute state. */
   toggle: (id: string) => void;
-  /** Un-mute every source for this (project, tab). */
   clear: () => void;
-  /**
-   * Derive the active source IDs given the current ready-source list.
-   * "Active" = a source ID that exists in `allReady` but isn't in `mutedIds`.
-   */
   activeIds: (allReady: Source[]) => string[];
 }
 
 /**
  * Per-tab, per-project source mute selection backed by localStorage.
- *
- * The storage shape is a list of MUTED source IDs (not a list of selected
- * IDs). This means the default state — for a brand-new tab visit, or for
- * a user who has never opted in — is "every source is active." Newly-added
- * sources are automatically active because they aren't in the muted list.
+ * Stores muted IDs rather than selected IDs so newly-added sources are
+ * automatically active without any explicit opt-in.
  */
 export function useSourceScope(
   projectId: string,
@@ -77,8 +65,6 @@ export function useSourceScope(
     readMutedIds(projectId, tab),
   );
 
-  // Re-read when the (projectId, tab) key changes so navigating between
-  // projects in the same tab picks up the new project's saved state.
   useEffect(() => {
     setMutedIds(readMutedIds(projectId, tab));
   }, [projectId, tab]);
@@ -116,8 +102,6 @@ export function useSourceScope(
     [mutedIds],
   );
 
-  // Stabilize the return object so consumers' useMemo / useCallback hooks
-  // that depend on the hook output don't re-run on every render.
   return useMemo(
     () => ({ mutedIds, isMuted, toggle, clear, activeIds }),
     [mutedIds, isMuted, toggle, clear, activeIds],

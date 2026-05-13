@@ -1,13 +1,6 @@
-# docker-compose.yml — Local development environment for Trawl
-# Starts four services: PostgreSQL (with pgvector), Redis, FastAPI, and Celery worker.
-# Usage: docker-compose up
-#        docker-compose down -v   (tear down including volumes)
-
 services:
 
-  # ── PostgreSQL 16 with pgvector ─────────────────────────────────────────────
-  # pgvector/pgvector:pg16 ships the pgvector extension pre-installed, which
-  # the backend needs for 1024-dim embedding similarity search.
+  # pgvector/pgvector:pg16 ships the extension pre-installed; plain postgres:16 requires manual install.
   db:
     image: pgvector/pgvector:pg16
     ports:
@@ -24,8 +17,6 @@ services:
       timeout: 5s
       retries: 5
 
-  # ── Redis 7 ─────────────────────────────────────────────────────────────────
-  # Used as the Celery broker and result backend.
   redis:
     image: redis:7-alpine
     ports:
@@ -36,9 +27,6 @@ services:
       timeout: 5s
       retries: 5
 
-  # ── FastAPI ─────────────────────────────────────────────────────────────────
-  # Built from backend/Dockerfile. The ./backend volume mount enables hot-reload
-  # so code changes are reflected without rebuilding the image.
   api:
     build:
       context: ./backend
@@ -54,11 +42,10 @@ services:
     volumes:
       - ./backend:/app
       - uploads:/tmp/trawl_uploads
-    # --reload watches for file changes inside the container (requires the volume mount above)
+    # --reload requires the ./backend volume mount above to detect file changes inside the container.
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
-  # ── Celery Worker ───────────────────────────────────────────────────────────
-  # Same image as api; different entrypoint to run the background task worker.
+  # Same image as api; docker-compose overrides the command so both services share one build.
   worker:
     build:
       context: ./backend
@@ -74,7 +61,6 @@ services:
       - uploads:/tmp/trawl_uploads
     command: celery -A app.celery_app worker --loglevel=info
 
-# ── Named Volumes ──────────────────────────────────────────────────────────────
 volumes:
   pgdata:
   uploads:

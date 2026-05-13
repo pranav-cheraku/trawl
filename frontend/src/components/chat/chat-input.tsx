@@ -10,8 +10,6 @@ interface ChatInputProps {
   onSend: (content: string) => void;
   isPending: boolean;
   placeholder?: string;
-  /** Controlled draft value. The parent owns the state so example-chip
-   *  pre-fills (and any other programmatic updates) work cleanly. */
   draft: string;
   onDraftChange: (value: string) => void;
 }
@@ -19,16 +17,6 @@ interface ChatInputProps {
 const MAX_CHARS = 2000;
 const MAX_ROWS = 6;
 
-/**
- * Textarea + submit button anchored at the bottom of the chat.
- *
- * Enter submits, Shift+Enter inserts a newline. Auto-resizes up to
- * MAX_ROWS. Disabled while a request is pending to prevent double-sends.
- *
- * Exposes an imperative `focus()` handle via forwardRef so callers can
- * focus the textarea after programmatically populating the draft (e.g.,
- * when an example chip is clicked).
- */
 export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(function ChatInput({
   onSend,
   isPending,
@@ -42,7 +30,6 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(function Ch
     focus: () => textareaRef.current?.focus(),
   }));
 
-  // Auto-resize to content, clamped to MAX_ROWS
   useEffect(() => {
     const el = textareaRef.current;
     if (!el) return;

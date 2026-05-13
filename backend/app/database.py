@@ -12,7 +12,6 @@ from sqlalchemy.orm import sessionmaker
 
 from app.config import settings
 
-# Async engine (FastAPI)
 engine = create_async_engine(
     settings.DATABASE_URL,
     echo=False,
@@ -25,7 +24,7 @@ AsyncSessionLocal = async_sessionmaker(
     expire_on_commit=False,
 )
 
-# Sync engine (Celery workers)
+# Celery workers are sync and use psycopg2, not asyncpg.
 sync_engine = create_engine(
     settings.DATABASE_URL.replace("+asyncpg", "+psycopg2"),
     echo=False,

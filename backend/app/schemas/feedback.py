@@ -120,7 +120,7 @@ class FeedbackItemResponse(BaseModel):
 
 
 class ChunkDetailResponse(BaseModel):
-    """Response for GET /projects/{id}/chunks/{id} — full chunk + parent item."""
+    """Response for GET /projects/{id}/chunks/{id}: full chunk plus parent item."""
 
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 

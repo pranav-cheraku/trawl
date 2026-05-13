@@ -22,8 +22,6 @@ interface Props {
   emptyState?: ReactNode;
   totalCount?: number;
   isFilterActive?: boolean;
-  /** True when ANY card on the board is currently being dragged. Drives the
-   *  "+" hint in empty columns and brightens the column body for legibility. */
   dragActive?: boolean;
   cascadeIds?: Set<string>;
 }
@@ -49,10 +47,6 @@ export default function KanbanColumn({
     typeof totalCount === "number" &&
     totalCount > 0;
 
-  // Body background:
-  //   - default: surface-container-low
-  //   - hovered by drag: brighter surface-container
-  //   - hidden by filter: dim
   const bodyBg = isOver
     ? "bg-surface-container"
     : "bg-surface-container-low";
@@ -63,7 +57,6 @@ export default function KanbanColumn({
         isHiddenByFilter ? " opacity-40" : ""
       }`}
     >
-      {/* Drop-zone top accent line — draws in left-to-right when isOver flips true */}
       {isOver && !prefersReducedMotion ? (
         <motion.div
           aria-hidden

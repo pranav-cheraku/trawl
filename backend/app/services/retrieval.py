@@ -27,8 +27,8 @@ class RetrievedChunk:
 def _format_vector_literal(vector: list[float]) -> str:
     """Format a Python float list as a pgvector literal string.
 
-    pgvector expects the form '[0.1,0.2,...]'. We bind it as a string and
-    cast to ::vector in the query so the driver doesn't try to interpret it.
+    pgvector expects '[0.1,0.2,...]'. We bind it as a string and cast to
+    ::vector in the query so the driver does not try to interpret it.
     """
     return "[" + ",".join(f"{v:.8f}" for v in vector) + "]"
 
@@ -38,7 +38,7 @@ def _derive_source_name(
     app_store_name: str | None,
     filename: str | None,
 ) -> str:
-    """Pick a human-readable display name for a source, with sensible fallbacks."""
+    """Return a human-readable display name for a source, with sensible fallbacks."""
     if app_store_name:
         return app_store_name
     if filename:
@@ -60,34 +60,29 @@ async def retrieve_chunks(
 ) -> tuple[list[RetrievedChunk], int]:
     """Retrieve the top_k most similar chunks for a query in a project.
 
-    Uses pgvector cosine distance (`<=>`) with an IVFFlat index. Chunks below
-    the similarity threshold are excluded in SQL so `total_candidates` reflects
-    the real above-threshold pool, not the raw table size.
+    Uses pgvector cosine distance (<=> operator) with an IVFFlat index.
+    Similarity is computed as 1 - distance so higher values mean closer matches.
 
-    If `source_ids` is provided and non-empty, results are constrained to
-    chunks whose parent feedback item belongs to one of those sources. If
-    `source_ids` is an empty list, the function returns `([], 0)` immediately
-    — that input means "the user explicitly muted every source." If
-    `source_ids` is `None` (the default), no source filter is applied.
+    source_ids has three states: None = no filter, [] = short-circuit to ([], 0)
+    without any DB call (user muted every source), non-empty = AND fi.source_id IN (...).
 
-    Returns a tuple of (chunks ordered by rank ascending, total_candidates).
+    Returns (chunks ordered by rank ascending, total_candidates above threshold).
     """
     if not query_embedding:
         raise ValueError("query_embedding must be non-empty")
 
-    # Empty list = user has muted every source. Return nothing without
-    # querying — distinct from None (no filter at all).
+    # Empty list means the user has muted every source; skip the DB entirely.
     if source_ids is not None and len(source_ids) == 0:
         return [], 0
 
     vector_literal = _format_vector_literal(query_embedding)
 
-    # Build an optional source filter. Stored as a fragment so we can splice
-    # it into both the COUNT and the SELECT queries identically.
+    # Build the optional source filter once and splice it into both queries
+    # so COUNT and SELECT always share identical WHERE conditions.
     source_filter_sql = ""
     source_filter_params: dict[str, uuid.UUID] = {}
     if source_ids:
-        # Bind each id individually so the IN clause uses real parameter binding.
+        # Bind each id individually rather than interpolating to keep the query safe.
         placeholders = ", ".join(
             f":source_id_{i}" for i in range(len(source_ids))
         )
@@ -96,8 +91,8 @@ async def retrieve_chunks(
             f"source_id_{i}": sid for i, sid in enumerate(source_ids)
         }
 
-    # Count candidates above threshold. Same WHERE clause as the main query so
-    # the number users see in the X-Ray panel reflects the true retrieval pool.
+    # COUNT uses the same WHERE clause as the SELECT so the "N candidates" number
+    # in the X-Ray panel reflects the true retrieval pool, not the raw table size.
     count_sql = text(
         f"""
         SELECT COUNT(*)
@@ -120,8 +115,8 @@ async def retrieve_chunks(
     )
     total_candidates = int(count_result.scalar() or 0)
 
-    # Top-k fetch with joins to source + feedback item for display metadata.
-    # Ordering uses raw distance (asc) so pgvector's IVFFlat index is used.
+    # ORDER BY raw distance ascending so pgvector's IVFFlat index is used;
+    # the similarity column is computed separately for display.
     select_sql = text(
         f"""
         SELECT

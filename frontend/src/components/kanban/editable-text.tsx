@@ -9,16 +9,10 @@ interface EditableTextProps {
   placeholder?: string;
   ariaLabel: string;
   className?: string;
-  /** Visual variant — title renders larger than body. */
   variant?: "title" | "body";
-  /** When true, saving an empty string is allowed. Default false. */
   allowEmpty?: boolean;
 }
 
-/**
- * Single-line click-to-edit. Save on blur or Enter. Esc reverts.
- * Renders as a button in read mode, input in edit mode. Autofocus on enter.
- */
 export default function EditableText({
   value,
   onSave,
@@ -64,7 +58,6 @@ export default function EditableText({
     } catch {
       setDraft(value);
       setIsEditing(false);
-      // Parent surfaces the error via its own banner.
     } finally {
       setIsSaving(false);
     }
@@ -86,9 +79,6 @@ export default function EditableText({
       : "text-[14px] leading-relaxed";
 
   if (!isEditing) {
-    // Body variant gets a persistent bg + min-width so the editable region
-    // is obviously a clickable input-like field. Title variant stays clean
-    // (its parent surfaces a "Click to edit" hover hint on hover).
     const isBody = variant !== "title";
     const bodyClasses = isBody
       ? "min-w-[72px] bg-surface-container hover:bg-surface-container-high"

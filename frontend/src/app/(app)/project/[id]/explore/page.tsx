@@ -61,7 +61,7 @@ export default function ExplorePage() {
   const [focusTick, setFocusTick] = useState(0);
   const [isMobileSheetOpen, setIsMobileSheetOpen] = useState(false);
 
-  // Input imperative handle — lets us focus the textarea after chip click.
+  // Imperative handle so chip clicks can refocus the textarea.
   const inputRef = useRef<ChatInputHandle>(null);
 
   // Ref at the very bottom of the chat column so auto-scroll can include
@@ -71,9 +71,9 @@ export default function ExplorePage() {
   const sourceScope = useSourceScope(projectId, "explore");
   const rag = useRagSettings(projectId);
 
-  // Derived from `sources` state — memoized so handleSend's useCallback deps
-  // don't churn on every render (the array reference would otherwise be new
-  // every time, re-creating the callback uselessly).
+  // Memoized so handleSend's useCallback deps stay stable across renders.
+  // Without this, the array reference changes each render and re-creates the
+  // callback.
   const readySources = useMemo(
     () => sources.filter((s) => s.status === "ready"),
     [sources],
@@ -154,7 +154,7 @@ export default function ExplorePage() {
           setMountStatus("ready");
           return;
         } catch {
-          // Conversation vanished server-side — clear and fall through.
+          // Conversation vanished server-side. Clear and fall through.
           if (typeof window !== "undefined") {
             window.sessionStorage.removeItem(sessionStorageKey(projectId));
           }
@@ -166,7 +166,7 @@ export default function ExplorePage() {
         const hasReady = fetchedSources.some((s) => s.status === "ready");
         setMountStatus(hasReady ? "ready" : "no-sources");
       } else {
-        // Sources fetch failed — allow the user into the workspace rather than
+        // Sources fetch failed. Allow the user into the workspace rather than
         // locking them out.
         setMountStatus("ready");
       }
@@ -180,8 +180,6 @@ export default function ExplorePage() {
 
   const handleCitationClick = useCallback(
     (chunkId: string, messageId: string) => {
-      // Switch the X-Ray panel to the clicked message AND scroll to the
-      // specific chunk inside it.
       setSelectedMessageId(messageId);
       setFocusedChunkId(chunkId);
       setFocusTick((t) => t + 1);
@@ -191,8 +189,7 @@ export default function ExplorePage() {
   );
 
   const handleMessageSelect = useCallback((messageId: string) => {
-    // Plain bubble click: switch the X-Ray to that message. Clear any
-    // pending scroll-to-chunk highlight since it was for a different message.
+    // Clear the pending chunk highlight; it was for a different message.
     setSelectedMessageId(messageId);
     setFocusedChunkId(null);
   }, []);
@@ -228,8 +225,8 @@ export default function ExplorePage() {
         }
       }
 
-      // Optimistic user bubble — reuse the existing one on retry so the
-      // failed bubble visually becomes the now-pending bubble.
+      // Reuse the existing bubble on retry so the failed bubble visually
+      // becomes the now-pending bubble.
       const bubbleId = reuseBubbleId ?? `temp-user-${Date.now()}`;
       if (!reuseBubbleId) {
         const optimisticUser: Message = {
@@ -255,12 +252,11 @@ export default function ExplorePage() {
           rag.settings.threshold,
         );
         setMessages((prev) => [...prev, assistant]);
-        // New reply → auto-follow latest in the X-Ray panel.
         setSelectedMessageId(null);
         setFocusedChunkId(null);
-        // Only refresh the conversation list when we just lazy-created — that's
-        // the path where the backend may have auto-populated a title from the
-        // first message. Subsequent sends don't change titles.
+        // Only refresh the conversation list on the lazy-create path. That is
+        // when the backend may have auto-populated a title from the first
+        // message. Subsequent sends don't change titles.
         if (isLazyCreating) {
           listConversations(projectId)
             .then(setConversations)
@@ -269,8 +265,6 @@ export default function ExplorePage() {
             });
         }
       } catch (err) {
-        // Keep the optimistic bubble on screen; show an inline retry UI.
-        // Always log the raw error for devtools debugging.
         // eslint-disable-next-line no-console
         console.error("sendMessage failed:", err);
 
@@ -353,7 +347,6 @@ export default function ExplorePage() {
             newConv.id,
           );
         }
-        // Focus the input so the user can start typing immediately.
         setTimeout(() => inputRef.current?.focus(), 0);
       } catch {
         setErrorMessage("Couldn't create a new chat. Please try again.");
@@ -367,7 +360,6 @@ export default function ExplorePage() {
       try {
         await deleteConversation(projectId, targetId);
         setConversations((prev) => prev.filter((c) => c.id !== targetId));
-        // If we deleted the currently-open conversation, clear the view.
         if (targetId === conversationId) {
           setConversationId(null);
           setMessages([]);
@@ -386,7 +378,6 @@ export default function ExplorePage() {
 
   const handleRenameConversation = useCallback(
     async (targetId: string, title: string) => {
-      // Optimistic update so the switcher updates immediately.
       setConversations((prev) =>
         prev.map((c) => (c.id === targetId ? { ...c, title } : c)),
       );
@@ -394,7 +385,6 @@ export default function ExplorePage() {
         await updateConversation(projectId, targetId, title);
       } catch {
         setErrorMessage("Couldn't rename the chat. Refresh to recover.");
-        // Refetch to revert the optimistic change.
         listConversations(projectId)
           .then(setConversations)
           .catch(() => {
@@ -407,13 +397,10 @@ export default function ExplorePage() {
 
   const handleExampleClick = useCallback((query: string) => {
     setDraft(query);
-    // Focus the textarea so the user can just hit Enter.
-    // Wait one tick so the controlled update has flushed.
+    // Wait one tick so the controlled draft update has flushed before focusing.
     setTimeout(() => inputRef.current?.focus(), 0);
   }, []);
 
-  // Panel reflects the explicitly-selected assistant message, or (if none
-  // is selected) falls back to the most recent assistant reply.
   const activeMessage = (() => {
     if (selectedMessageId) {
       const found = messages.find((m) => m.id === selectedMessageId);
@@ -444,9 +431,9 @@ export default function ExplorePage() {
     );
   }
 
-  // Only count records from ready sources — "Reviews Indexed" implies
-  // searchable/queryable, and a still-ingesting source can have a partial
-  // count that's misleading to surface here.
+  // Only count records from ready sources. "Reviews Indexed" implies
+  // searchable, and a still-ingesting source can have a partial count
+  // that's misleading to surface here.
   const reviewCount = readySources.reduce(
     (acc, s) => acc + (s.recordCount ?? 0),
     0,
@@ -454,6 +441,7 @@ export default function ExplorePage() {
 
   return (
     <div className="flex h-[calc(100vh-16rem)] flex-col gap-3">
+      {/* Error banner */}
       {errorMessage && (
         <div className="flex items-center justify-between gap-3 rounded-[4px] bg-error/10 px-4 py-3 text-[13px] text-error">
           <div className="flex items-center gap-2">
@@ -470,7 +458,7 @@ export default function ExplorePage() {
         </div>
       )}
 
-      {/* Corpus context strip — spans the full width of the workspace */}
+      {/* Corpus context strip */}
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-[4px] bg-surface-container-lowest px-4 py-2.5">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2 sm:gap-x-4">
           <div className="flex items-center gap-1.5">
@@ -501,17 +489,14 @@ export default function ExplorePage() {
             onReset={rag.reset}
           />
         </div>
-        {/* "Explore / Conversation" label is mostly redundant breadcrumb on
-         *  mobile — the tab bar above already conveys we're on Explore. Hide
-         *  below sm so the strip stays one tight row on phones. */}
         <span className="hidden font-mono text-[9px] font-medium uppercase tracking-[0.2em] text-on-surface-variant/60 sm:inline">
           Explore / Conversation
         </span>
       </div>
 
-      {/* Tri-column workspace — lg: rail | chat | xray; <lg: stack */}
+      {/* Workspace columns */}
       <div className="grid flex-1 gap-3 overflow-hidden lg:grid-cols-[200px_1fr_380px] xl:grid-cols-[220px_1fr_440px]">
-        {/* Conversation rail — desktop only */}
+        {/* Sidebar */}
         <div className="hidden lg:block">
           <ConversationRail
             conversations={conversations}
@@ -524,9 +509,7 @@ export default function ExplorePage() {
           />
         </div>
 
-        {/* Chat column — contains messages + input */}
         <div className="flex flex-col overflow-hidden rounded-[4px] bg-surface-container-low">
-          {/* Mobile: rail collapses into a horizontal scrollable chip row */}
           <div className="flex items-center gap-2 overflow-x-auto bg-surface-container-low px-3 py-2 shadow-[inset_0_-1px_0_rgba(15,23,42,0.04)] lg:hidden">
             <button
               type="button"
@@ -557,7 +540,6 @@ export default function ExplorePage() {
             })}
           </div>
 
-          {/* Scroll area */}
           <div className="flex-1 overflow-y-auto p-5">
             {messages.length === 0 && !isPending ? (
               <EmptyState onExampleClick={handleExampleClick} />
@@ -581,7 +563,6 @@ export default function ExplorePage() {
             )}
           </div>
 
-          {/* Input anchored inside the chat column */}
           <div className="bg-surface-container-lowest p-3 shadow-[inset_0_1px_0_rgba(15,23,42,0.04)]">
             {activeSourceIds.length === 0 ? (
               <div
@@ -605,7 +586,7 @@ export default function ExplorePage() {
           </div>
         </div>
 
-        {/* X-Ray panel — desktop only */}
+        {/* X-Ray panel */}
         <div className="hidden overflow-hidden lg:block">
           <XrayPanel
             variant="chat"
@@ -617,7 +598,7 @@ export default function ExplorePage() {
         </div>
       </div>
 
-      {/* Mobile bottom sheet for X-Ray panel */}
+      {/* Mobile sheet */}
       {isMobileSheetOpen && (
         <div className="fixed inset-0 z-40 lg:hidden">
           <button
@@ -627,9 +608,6 @@ export default function ExplorePage() {
             className="absolute inset-0 bg-on-surface/40 backdrop-blur-[2px]"
           />
           <div className="absolute inset-x-0 bottom-0 max-h-[75vh] rounded-t-[4px] bg-surface-container-low">
-            {/* Sheet chrome — drag handle + close. The "RAG X-Ray" label
-                lives inside <XrayPanel>'s own header below, so we don't
-                repeat it here. */}
             <div className="relative flex items-center justify-center px-4 pt-3 pb-1">
               <div className="h-1 w-10 rounded-full bg-surface-container-high" />
               <button
@@ -709,7 +687,7 @@ interface NoSourcesStateProps {
 function NoSourcesState({ projectId, onSourcesReady }: NoSourcesStateProps) {
   // Background poll so a user who lands here while a source is still ingesting
   // gets auto-recovered into the workspace once at least one source is ready.
-  // No visible indicator — the recovery is silent (workspace just appears).
+  // No visible indicator. The recovery is silent (workspace just appears).
   useEffect(() => {
     const id = window.setInterval(async () => {
       try {

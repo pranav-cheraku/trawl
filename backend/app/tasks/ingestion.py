@@ -132,7 +132,6 @@ def ingest_csv_source(
                 source.status = "error"
                 session.commit()
         finally:
-            # Always clean up temp file
             if os.path.exists(file_path):
                 os.remove(file_path)
 
@@ -235,11 +234,7 @@ def embed_source(self: object, source_id: str) -> None:
 
 @celery_app.task(bind=True, max_retries=2)  # type: ignore[misc]
 def ingest_manual_task(self: object, source_id: str, items: list) -> None:
-    """Persist parsed manual-paste items as feedback_items, then chain to chunk.
-
-    `items` is the output of services.manual_parser.parse_paste() — a list of
-    {content, external_id} dicts already split client-side at the route layer.
-    """
+    """Persist parsed manual-paste items, then chain to chunk_source."""
     with SyncSessionLocal() as session:
         try:
             source = session.get(FeedbackSource, uuid.UUID(source_id))
@@ -288,7 +283,7 @@ def ingest_google_play_task(
     preset: str = "standard",
 ) -> None:
     """Fetch Google Play reviews for `package_name` and persist as feedback_items."""
-    from app.services import google_play  # local import to avoid eager-load cost
+    from app.services import google_play
 
     with SyncSessionLocal() as db:
         try:
@@ -347,7 +342,7 @@ def ingest_reddit_task(
     preset: str = "standard",
 ) -> None:
     """Fetch Reddit posts + comments and persist as feedback_items."""
-    from app.services import reddit  # local import
+    from app.services import reddit
 
     with SyncSessionLocal() as db:
         try:

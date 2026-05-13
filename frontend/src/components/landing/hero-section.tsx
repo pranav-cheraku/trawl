@@ -1,4 +1,3 @@
-// frontend/src/components/landing/hero-section.tsx
 "use client";
 
 import Link from "next/link";
@@ -38,7 +37,6 @@ export default function HeroSection({ session }: HeroSectionProps) {
 
   return (
     <section className="relative isolate flex min-h-[88vh] items-center overflow-hidden bg-surface px-6 py-16 lg:px-12">
-      {/* Blueprint grid backdrop with capped parallax */}
       <motion.div
         aria-hidden
         className="absolute inset-0 -z-10"
@@ -56,7 +54,6 @@ export default function HeroSection({ session }: HeroSectionProps) {
       />
 
       <div className="mx-auto grid w-full max-w-screen-2xl items-center gap-12 lg:grid-cols-[1fr_auto] lg:gap-20">
-        {/* Headline column */}
         <div className="max-w-3xl">
           <motion.h1
             initial={{ opacity: 0, y: 12 }}
@@ -128,7 +125,6 @@ export default function HeroSection({ session }: HeroSectionProps) {
           </motion.p>
         </div>
 
-        {/* Demo column */}
         <motion.div
           initial={{ opacity: 0, x: 24 }}
           animate={{ opacity: 1, x: 0 }}
@@ -139,7 +135,6 @@ export default function HeroSection({ session }: HeroSectionProps) {
           }}
           className="hidden lg:mr-16 lg:block"
         >
-          {/* Section anchor row */}
           <motion.nav
             aria-label="Jump to section"
             initial={prefersReducedMotion ? false : { opacity: 0, y: -8 }}

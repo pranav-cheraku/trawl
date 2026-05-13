@@ -11,20 +11,13 @@ interface ChunkDetailModalProps {
   onClose: () => void;
 }
 
-/**
- * Full-screen modal showing the complete chunk text and the complete parent
- * feedback item.
- *
- * Uses embedded full text from the transparency blob when available
- * (messages sent after Day 16). For older messages that only have the
- * truncated preview, fetches the full content from the backend on mount.
- */
+// Falls back to a backend fetch when chunkText/feedbackItemContent are absent
+// from the transparency blob (older messages only carry the truncated preview).
 export function ChunkDetailModal({
   projectId,
   chunk,
   onClose,
 }: ChunkDetailModalProps) {
-  // Close on Escape
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();
@@ -33,7 +26,6 @@ export function ChunkDetailModal({
     return () => window.removeEventListener("keydown", handleKey);
   }, [onClose]);
 
-  // Lock body scroll while modal is open
   useEffect(() => {
     const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -42,13 +34,11 @@ export function ChunkDetailModal({
     };
   }, []);
 
-  // Auto-focus the close button so keyboard users land inside the dialog.
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   useEffect(() => {
     closeButtonRef.current?.focus();
   }, []);
 
-  // Fetch full detail if the embedded transparency blob is missing it.
   const needsFetch =
     chunk.chunkText === undefined || chunk.feedbackItemContent === undefined;
   const [fetchedDetail, setFetchedDetail] = useState<ChunkDetail | null>(null);
@@ -100,7 +90,6 @@ export function ChunkDetailModal({
         className="absolute inset-0 bg-on-surface/40 backdrop-blur-[2px]"
       />
 
-      {/* Dialog */}
       <div
         role="dialog"
         aria-modal="true"

@@ -25,8 +25,6 @@ from pathlib import Path
 
 from sqlalchemy import select
 
-# Make `app.*` imports work when run as `python scripts/inject_*.py`
-# from the backend dir.
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app.database import AsyncSessionLocal  # noqa: E402
@@ -49,9 +47,6 @@ QUERIES = [
     "Where do users encounter friction or confusion?",
 ]
 
-# Theme + spec fixtures. Names + descriptions chosen to look like a real PM
-# report so the visual smoke tells us what the page actually looks like with
-# realistic content.
 THEMES = [
     {
         "name": "Search Reliability",
@@ -62,7 +57,6 @@ THEMES = [
             {
                 "title": "Rebuild search index against canonical podcast catalog",
                 "priority": "critical",
-                "effort": "L",
                 "problem": "Users report search misses on exact-title queries — the index drifts from the canonical catalog within hours of new episode publishes.",
                 "solution": "Migrate from the legacy in-memory index to an Elasticsearch-backed canonical pipeline that re-syncs every 15 minutes.",
                 "stories": ["As a listener, I want to find a podcast by typing its exact name and have it appear within 200ms.", "As a discovery user, I want the top result to be the most popular match, not the most recently indexed."],
@@ -71,7 +65,6 @@ THEMES = [
             {
                 "title": "Add fuzzy fallback for misspelled queries",
                 "priority": "high",
-                "effort": "M",
                 "problem": "Users typing common misspellings ('podkast', 'lex friedmann') get zero results today.",
                 "solution": "Add a Levenshtein-distance fallback: if exact-match returns 0 results, run a fuzzy pass with edit-distance ≤ 2.",
                 "stories": ["As a user typing fast, I want the search to recover from typos."],
@@ -88,7 +81,6 @@ THEMES = [
             {
                 "title": "Add resume-where-you-left-off prompt",
                 "priority": "high",
-                "effort": "S",
                 "problem": "Users who close the app mid-onboarding return to the start, losing their preferences input.",
                 "solution": "Persist onboarding state at every step transition; on next launch, show a 'Continue setup' CTA instead of restarting.",
                 "stories": ["As a returning user, I want to pick up onboarding where I left off."],
@@ -105,7 +97,6 @@ THEMES = [
             {
                 "title": "Reduce login retry loop on slow connections",
                 "priority": "high",
-                "effort": "M",
                 "problem": "Users on cellular data report being kicked into an infinite login retry loop when the auth token refresh times out.",
                 "solution": "Add exponential backoff to token refresh + cache the last-good token for 24h offline use.",
                 "stories": ["As a commuter on weak signal, I want to keep listening without re-logging-in."],
@@ -122,7 +113,6 @@ THEMES = [
             {
                 "title": "Fix 30-second skip resetting episode state",
                 "priority": "medium",
-                "effort": "S",
                 "problem": "On iOS, the 30-second forward-skip button intermittently rewinds to position 0 instead of advancing.",
                 "solution": "Audit AVPlayer seek state machine; ensure currentTime+30 is computed from the live position, not a stale snapshot.",
                 "stories": ["As a podcast listener, I want skip-forward to advance reliably."],
@@ -143,10 +133,8 @@ THEMES = [
 
 async def main() -> str:
     async with AsyncSessionLocal() as db:
-        # Get the dev user.
         u = await db.execute(select(User).limit(1))
         user = u.scalar_one()
-        # Grab some real feedback chunks for the X-Ray.
         c = await db.execute(
             select(FeedbackChunk)
             .where(FeedbackChunk.project_id == PROJECT_ID)
@@ -169,7 +157,7 @@ async def main() -> str:
                 "top three opportunities; tackling all three would address roughly "
                 "three-quarters of the negative-rating drivers."
             ),
-            build_order=[],  # filled below once spec ids exist
+            build_order=[],
             retrieval_metadata={
                 "model": "claude-sonnet-4-20250514",
                 "queries": QUERIES,
@@ -211,7 +199,6 @@ async def main() -> str:
             theme_models.append(tm)
         await db.flush()
 
-        # Specs across themes, build_rank assigned globally.
         global_rank = 1
         spec_models: dict[int, BuildReportSpec] = {}
         for tm, t in zip(theme_models, THEMES, strict=True):
@@ -222,7 +209,6 @@ async def main() -> str:
                     "user_stories": sp["stories"],
                     "acceptance_criteria": sp["criteria"],
                     "priority": sp["priority"],
-                    "effort_estimate": sp["effort"],
                     "supporting_feedback_indices": [1, 3, 5, 7, 9],
                 }
                 m = BuildReportSpec(
@@ -237,7 +223,6 @@ async def main() -> str:
                 global_rank += 1
         await db.flush()
 
-        # Build order with rationales referencing the persisted spec ids.
         rationales = [
             "Highest frequency (34%) and severity (0.82) — every percentage point of search-reliability win compounds across the entire feedback funnel.",
             "Critical underpinning for the index rebuild; should land in the same release.",
@@ -257,8 +242,6 @@ async def main() -> str:
             )
         report.build_order = build_order
 
-        # Chunks for the X-Ray. Cycle the source_query list so attribution is
-        # spread across all 5 queries.
         for rank, chunk in enumerate(feedback_chunks, start=1):
             db.add(
                 BuildReportChunk(

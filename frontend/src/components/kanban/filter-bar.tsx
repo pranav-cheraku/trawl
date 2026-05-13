@@ -15,7 +15,7 @@ interface FilterBarProps {
   onChange: (next: Filters) => void;
   filteredCount: number;
   totalCount: number;
-  right?: ReactNode; // slot for export menu (Checkpoint 3)
+  right?: ReactNode;
 }
 
 const TYPE_OPTIONS: { value: SpecType | null; label: string }[] = [
@@ -53,7 +53,6 @@ export default function FilterBar({
     filters.priority !== null;
 
   const setField = <K extends keyof Filters>(key: K, value: Filters[K]) => {
-    // Re-clicking the currently-active value clears that facet.
     const next: Filters = { ...filters };
     next[key] = filters[key] === value ? null : value;
     onChange(next);
@@ -135,10 +134,8 @@ function FilterGroup({
   children: ReactNode;
   withDivider?: boolean;
 }) {
-  // Architectural vertical seam between groups (No-Line rule — inset shadow,
-  // not a border). Equal pr/mr keep both sides of the seam visually balanced.
-  // Hidden below sm: groups stack vertically there, so a vertical seam at the
-  // right edge of each stacked row would be a stray ornament.
+  // Inset shadow instead of border (No-Line rule). Hidden below sm because groups
+  // stack vertically there, making a right-edge seam look like a stray ornament.
   const divider = withDivider
     ? "sm:pr-4 sm:mr-4 sm:shadow-[inset_-1px_0_0_rgba(15,23,42,0.1)]"
     : "";

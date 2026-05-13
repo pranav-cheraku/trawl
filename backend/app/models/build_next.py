@@ -18,12 +18,7 @@ if TYPE_CHECKING:
 
 
 class BuildReport(Base):
-    """Top-level Build Next run artifact.
-
-    Each run creates one row. The row transitions through
-    ``pending → running → success | failure``. Persistent — users browse
-    history. Promoted specs link back via ``BuildReportSpec.promoted_spec_id``.
-    """
+    """Top-level Build Next run artifact. Status transitions: pending -> running -> success | failure."""
 
     __tablename__ = "build_reports"
 
@@ -88,10 +83,8 @@ class BuildReport(Base):
 class BuildTheme(Base):
     """One clustered theme inside a report.
 
-    Frequency and severity scores are computed at task time from the
-    cluster output's chunk indices. ``spec_generation_failed`` is the
-    per-theme partial-failure flag — true when this theme's spec gen
-    raised but other themes succeeded.
+    spec_generation_failed is the per-theme partial-failure flag set when this
+    theme's spec generation raised but other themes succeeded.
     """
 
     __tablename__ = "build_themes"
@@ -130,11 +123,8 @@ class BuildTheme(Base):
 class BuildReportSpec(Base):
     """One generated spec inside a report, nested under a theme.
 
-    ``content`` mirrors the shape of ``Spec.content`` (problem,
-    proposed_solution, user_stories, acceptance_criteria, priority,
-    supporting_feedback_indices). ``promoted_spec_id``
-    is set when the user clicks "+ Kanban"; ``ON DELETE SET NULL`` clears
-    it if the promoted Kanban spec is later deleted.
+    promoted_spec_id is set when the user promotes to Kanban; ON DELETE SET NULL
+    clears it if the promoted Kanban spec is later deleted.
     """
 
     __tablename__ = "build_report_specs"
@@ -176,9 +166,8 @@ class BuildReportSpec(Base):
 class BuildReportChunk(Base):
     """One retrieved chunk persisted for the RAG X-Ray panel.
 
-    ``source_query`` records which of the 5 multi-queries surfaced this
-    chunk (highest-similarity wins on ties). Used by the X-Ray panel to
-    show ``Q1 · Q2`` attribution badges per chunk.
+    source_query records which of the 5 multi-queries surfaced this chunk
+    (highest-similarity wins on ties), used to show query attribution badges.
     """
 
     __tablename__ = "build_report_chunks"

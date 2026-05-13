@@ -4,26 +4,14 @@ import { useEffect, useRef, useState } from "react";
 import { useInView, useReducedMotion } from "framer-motion";
 
 interface CountUpProps {
-  /** Final value to count up to. */
   to: number;
-  /** Starting value. Defaults to 0. */
   from?: number;
-  /** Duration in milliseconds. Defaults to 800. */
   duration?: number;
-  /** Optional delay before counting begins, in ms. */
   delay?: number;
-  /** Format the rendered value (e.g. add commas). Defaults to `String`. */
   format?: (value: number) => string;
-  /** Class for the rendering span. */
   className?: string;
 }
 
-/**
- * Animates a number from `from` to `to` when scrolled into view, with an
- * ease-out cubic curve over `duration` ms. Reduced-motion users jump straight
- * to the final value. Designed for integer counters — the rendered value is
- * rounded each frame; `format` is applied to the rounded integer.
- */
 export function CountUp({
   to,
   from = 0,

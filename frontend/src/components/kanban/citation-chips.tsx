@@ -2,22 +2,13 @@
 
 interface CitationChipsProps {
   indices: number[];
-  /** Called with the 1-based chunk index the user clicked. */
   onFocus: (idx: number) => void;
-  /** Max retrieved chunk count — used to disable out-of-range chips. */
   maxIndex: number;
-  /** When true, hides the inline "CITES" label. Use when the surrounding
-   *  context (e.g. a property row) already labels the row. */
   hideLabel?: boolean;
 }
 
-/**
- * Renders a row of F#N chips matching the `supporting_feedback_indices`
- * from a spec's content dict. Clicking a chip bubbles the 1-based index
- * up so the parent can focus/scroll the matching chunk in the X-Ray panel.
- * Out-of-range indices are rendered dimmed + disabled (can happen on
- * older specs where the retrieval set changed).
- */
+// Out-of-range indices are dimmed and disabled; they occur when the retrieval
+// set for a spec has changed since generation.
 export default function CitationChips({
   indices,
   onFocus,

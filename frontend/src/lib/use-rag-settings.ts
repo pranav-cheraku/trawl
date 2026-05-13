@@ -3,14 +3,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 export interface RagSettings {
-  /** How many top-similarity chunks to retrieve. 1..30. */
   topK: number;
-  /** Minimum cosine similarity for a chunk to count. 0.0..1.0. */
   threshold: number;
 }
 
-/** Backend defaults (mirror TOP_K + SIMILARITY_THRESHOLD in
- *  backend/app/routers/conversations.py). */
+// Mirror TOP_K + SIMILARITY_THRESHOLD from backend/app/routers/conversations.py.
 export const RAG_SETTINGS_DEFAULTS: RagSettings = {
   topK: 8,
   threshold: 0.3,
@@ -65,7 +62,7 @@ function writeStored(projectId: string, settings: RagSettings): void {
       JSON.stringify(settings),
     );
   } catch {
-    // Quota / private mode — non-fatal.
+    // Quota exceeded or private mode.
   }
 }
 
@@ -77,14 +74,11 @@ export interface UseRagSettingsResult {
 }
 
 /**
- * Per-project, localStorage-backed RAG retrieval settings. Defaults mirror
- * the backend (k=8, threshold=0.3). Whenever the user moves a slider the
- * change is persisted immediately; the next `sendMessage` call uses the
- * updated values via the `topK` / `threshold` body params.
+ * Per-project RAG retrieval settings backed by localStorage. Initializes to
+ * defaults so SSR and the first client render agree, then hydrates from
+ * storage in an effect.
  */
 export function useRagSettings(projectId: string): UseRagSettingsResult {
-  // Mount with defaults so SSR and the first client render agree. We hydrate
-  // from localStorage in a layout-effect.
   const [settings, setSettings] = useState<RagSettings>(RAG_SETTINGS_DEFAULTS);
 
   useEffect(() => {

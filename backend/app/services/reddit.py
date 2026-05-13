@@ -1,16 +1,3 @@
-"""Reddit scraper. Public read endpoints only (no OAuth).
-
-Two modes:
-- fetch_subreddit(subreddit): hot posts from r/{sub} + top comments per post
-- fetch_keyword_search(keyword): hot posts matching keyword across all subreddits
-
-Each post becomes one feedback item, plus its top comments as additional items.
-External IDs use Reddit's "fullname" format: t3_{post_id}, t1_{comment_id}.
-
-Rate limit: Reddit's public endpoints rate-limit per User-Agent / IP. We send
-a custom UA per Reddit's "make a unique UA" guidance.
-"""
-
 from __future__ import annotations
 
 import logging
@@ -24,8 +11,8 @@ USER_AGENT = "Trawl/1.0 (https://github.com/pranav-cheraku/trawl)"
 
 
 def _post_to_item(post: dict) -> dict:
-    # Reddit's `score` (upvotes - downvotes) is NOT a 1-5 rating, so we don't
-    # surface it as `rating` (which would silently render as stars in the UI).
+    # Reddit score is upvotes minus downvotes, not a 1-5 rating -- do not map
+    # it to the `rating` key or it will render as stars in the UI.
     body = (post.get("selftext") or "").strip()
     return {
         "content": body or post.get("title", ""),
@@ -68,7 +55,7 @@ async def _fetch_post_comments(
         )
         return []
 
-    # Reddit returns [post_data, comments_listing] -- we want index 1.
+    # Reddit returns [post_listing, comments_listing]; comments are at index 1.
     if not isinstance(data, list) or len(data) < 2:
         return []
     listing = data[1]

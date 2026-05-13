@@ -86,7 +86,6 @@ export default function SpecsPage() {
   const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hasLoadedRef = useRef(false);
 
-  // ── DnD sensors ───────────────────────────────────────────────────
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 8 },
@@ -96,13 +95,10 @@ export default function SpecsPage() {
     })
   );
 
-  // Collision detection: prefer pointerWithin so the column under the pointer
-  // wins regardless of the dragged card's width. closestCorners (the old
-  // default) measured corner-to-corner distances — a card dragged into Planned
-  // had its right edge extending into In Progress's column, and the right-edge
-  // corner pair was closer than the left-edge pair, so In Progress would
-  // wrongly win. Fall back to rectIntersection then closestCorners when the
-  // pointer is in a gutter between droppables.
+  // pointerWithin wins regardless of card width. closestCorners measured
+  // corner-to-corner distances, which mis-targeted adjacent same-width columns
+  // when a card's right edge overlapped the neighbor. Fall back to
+  // rectIntersection then closestCorners when the pointer is in a gutter.
   const collisionDetection = useCallback<CollisionDetection>((args) => {
     const within = pointerWithin(args);
     if (within.length > 0) return within;
@@ -111,7 +107,6 @@ export default function SpecsPage() {
     return closestCorners(args);
   }, []);
 
-  // ── Filter + derived values ────────────────────────────────────────
   const filteredSpecs = useMemo(() => {
     if (!specs) return null;
     return specs.filter((s) => {
@@ -165,7 +160,6 @@ export default function SpecsPage() {
     ];
   }, [specs]);
 
-  // ── Group specs into columns ───────────────────────────────────────
   const grouped = useMemo<Record<SpecStatus, Spec[]>>(() => {
     const buckets = emptyBuckets();
     for (const spec of filteredSpecs ?? []) {
@@ -179,14 +173,12 @@ export default function SpecsPage() {
     return buckets;
   }, [filteredSpecs]);
 
-  // ── Active spec for DragOverlay ────────────────────────────────────
   const activeSpec = useMemo(
     () => (activeId ? (specs ?? []).find((s) => s.id === activeId) ?? null : null),
     [activeId, specs]
   );
   const dragActive = activeSpec !== null;
 
-  // ── Data fetching ──────────────────────────────────────────────────
   const clearPoll = useCallback(() => {
     if (pollTimerRef.current) {
       clearTimeout(pollTimerRef.current);
@@ -220,14 +212,14 @@ export default function SpecsPage() {
         if (!cancelled) setProjectName(p.name);
       })
       .catch(() => {
-        /* swallow — fall back to UUID prefix when exporting */
+        /* swallow. Fall back to UUID prefix when exporting. */
       });
     listSources(projectId)
       .then((data) => {
         if (!cancelled) setSources(data);
       })
       .catch(() => {
-        /* non-fatal — scope strip will show "no ready sources yet" */
+        /* non-fatal. Scope strip will show "no ready sources yet". */
       });
     return () => {
       cancelled = true;
@@ -235,7 +227,6 @@ export default function SpecsPage() {
     };
   }, [fetchSpecs, clearPoll, projectId]);
 
-  // ── Task polling ───────────────────────────────────────────────────
   const pollTask = useCallback(
     (taskId: string, startedAt: number) => {
       clearPoll();
@@ -311,12 +302,11 @@ export default function SpecsPage() {
     setSelectedSpec((prev) => (prev?.id === specId ? null : prev));
   }, []);
 
-  // ── Drag handlers ──────────────────────────────────────────────────
   const handleDragStart = useCallback((event: DragStartEvent) => {
     setActiveId(String(event.active.id));
   }, []);
 
-  // @dnd-kit fires onDragCancel (NOT onDragEnd) when a drag is aborted —
+  // @dnd-kit fires onDragCancel (NOT onDragEnd) when a drag is aborted:
   // released outside any droppable, Esc, or sensor cancellation. Without
   // this, activeId stays set, the board stays in dragActive state (the +
   // hint chips persist in empty columns), and subsequent drags misbehave.
@@ -334,21 +324,18 @@ export default function SpecsPage() {
       const activeSpecId = String(active.id);
       const overId = String(over.id);
 
-      // Find source spec and its current status.
       const currentSpecs = specs ?? [];
       const activeSpec = currentSpecs.find((s) => s.id === activeSpecId);
       if (!activeSpec) return;
       const sourceStatus = activeSpec.status;
 
-      // Resolve destination status and target index.
       let destStatus: SpecStatus;
       let destIndex: number;
 
       if (overId.startsWith("col:")) {
-        // Dropped directly on a column droppable — append to end.
+        // col: prefix means drop on empty column body; append to end.
         destStatus = overId.slice(4) as SpecStatus;
         destIndex = grouped[destStatus].length;
-        // If we're moving within the same column to the end, skip if nothing changed.
         if (
           sourceStatus === destStatus &&
           grouped[sourceStatus].at(-1)?.id === activeSpecId
@@ -356,7 +343,6 @@ export default function SpecsPage() {
           return;
         }
       } else {
-        // Dropped on another card — find that card.
         const overSpec = currentSpecs.find((s) => s.id === overId);
         if (!overSpec) return;
         destStatus = overSpec.status;
@@ -364,37 +350,27 @@ export default function SpecsPage() {
         if (destIndex === -1) destIndex = grouped[destStatus].length;
       }
 
-      // ── Build new flat spec list ─────────────────────────────────────
-      // Snapshot for rollback.
       const snapshot = [...currentSpecs];
 
       let newSpecs: Spec[];
 
       if (sourceStatus === destStatus) {
-        // Within-column: arrayMove on that column's spec list.
         const colSpecs = [...grouped[sourceStatus]];
         const fromIdx = colSpecs.findIndex((s) => s.id === activeSpecId);
         if (fromIdx === -1 || fromIdx === destIndex) return;
         const reordered = arrayMove(colSpecs, fromIdx, destIndex);
-
-        // Reassign dense kanbanOrder.
         const updated = reordered.map((s, i) => ({ ...s, kanbanOrder: i }));
-
-        // Splice updated column back into flat list.
         newSpecs = currentSpecs.map((s) => {
           const found = updated.find((u) => u.id === s.id);
           return found ?? s;
         });
       } else {
-        // Cross-column: remove from source, insert at dest.
         const srcColSpecs = grouped[sourceStatus].filter(
           (s) => s.id !== activeSpecId
         );
         const dstColSpecs = [...grouped[destStatus]];
         const clampedIdx = Math.min(destIndex, dstColSpecs.length);
         dstColSpecs.splice(clampedIdx, 0, { ...activeSpec, status: destStatus });
-
-        // Dense kanbanOrder for both affected columns.
         const srcUpdated = srcColSpecs.map((s, i) => ({ ...s, kanbanOrder: i }));
         const dstUpdated = dstColSpecs.map((s, i) => ({ ...s, kanbanOrder: i }));
         const changedMap = new Map<string, Spec>();
@@ -403,7 +379,6 @@ export default function SpecsPage() {
         newSpecs = currentSpecs.map((s) => changedMap.get(s.id) ?? s);
       }
 
-      // ── Compute diff (only items whose kanbanOrder or status changed) ─
       const specsBefore = new Map(currentSpecs.map((s) => [s.id, s]));
       const diff = newSpecs.filter((s) => {
         const before = specsBefore.get(s.id);
@@ -415,13 +390,11 @@ export default function SpecsPage() {
 
       if (diff.length === 0) return;
 
-      // ── Optimistic update, then persist ───────────────────────────────
       setSpecs(newSpecs);
 
       try {
         await reorderSpecs(diff);
       } catch {
-        // Rollback on error.
         setSpecs(snapshot);
         setErrorMessage("Failed to save reorder. Your change was reverted.");
       }
@@ -434,6 +407,7 @@ export default function SpecsPage() {
   return (
     <>
     <div className="flex flex-col gap-4">
+      {/* Header */}
       <WorkspaceHeader
         label="Workspace / Kanban"
         title="Specs"
@@ -462,7 +436,6 @@ export default function SpecsPage() {
         }
       />
 
-      {/* Error banner */}
       {errorMessage ? (
         <div className="flex items-center justify-between gap-3 rounded-[4px] bg-error/10 px-4 py-3 text-[13px] text-error">
           <div className="flex items-center gap-2">
@@ -492,7 +465,8 @@ export default function SpecsPage() {
         </div>
       ) : null}
 
-      {/* Source scope strip — controls which sources future generations use */}
+      {/* Scope strip: controls which sources future generations query.
+          Does not filter the existing board display. */}
       <div className="flex flex-col gap-2 rounded-[4px] bg-surface-container-lowest px-4 py-2.5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3">
         <div className="flex items-center gap-3">
           <span className="font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-on-surface-variant/70">
@@ -521,7 +495,7 @@ export default function SpecsPage() {
         ) : null}
       </div>
 
-      {/* Filter bar — only when specs exist */}
+      {/* Filter bar */}
       {hasSpecs ? (
         <FilterBar
           filters={filters}
@@ -539,7 +513,6 @@ export default function SpecsPage() {
         />
       ) : null}
 
-      {/* No-match banner */}
       {isFilterActive && filteredSpecs?.length === 0 ? (
         <div className="flex items-center justify-between gap-3 rounded-[4px] bg-surface-container-low px-4 py-3 text-[13px] text-on-surface-variant">
           <span>No specs match the current filter.</span>
@@ -555,7 +528,6 @@ export default function SpecsPage() {
         </div>
       ) : null}
 
-      {/* Generating indicator — thin strip */}
       {generatingType ? (
         <div className="flex items-center gap-3 rounded-[4px] bg-secondary/10 px-4 py-2.5 text-[12px] text-secondary">
           <span className="relative flex h-2 w-2">
@@ -569,7 +541,7 @@ export default function SpecsPage() {
         </div>
       ) : null}
 
-      {/* Body */}
+      {/* Kanban board */}
       {isLoading ? (
         <BoardSkeleton />
       ) : hasSpecs ? (
@@ -601,6 +573,7 @@ export default function SpecsPage() {
         />
       )}
     </div>
+    {/* Spec detail modal */}
     <AnimatePresence>
       {selectedSpec ? (
         <SpecDetailModal
@@ -619,8 +592,6 @@ export default function SpecsPage() {
     </>
   );
 }
-
-// ─────────────────────────────────────────────────────────────────────
 
 function BoardSkeleton() {
   return (

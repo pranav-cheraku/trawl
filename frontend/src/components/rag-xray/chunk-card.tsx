@@ -8,16 +8,9 @@ interface ChunkCardProps {
   chunk: TransparencyChunk;
   isHighlighted: boolean;
   onClick?: (chunk: TransparencyChunk) => void;
-  /** Optional badge text rendered above the chunk preview — e.g. "Q2 · REQUESTS" in the build variant. */
   queryLabel?: string;
 }
 
-/**
- * One card in the RAG X-Ray panel. Clickable — opens a detail modal showing
- * the full chunk text and full parent feedback item content. Scroll+highlight
- * orchestration lives on the parent XrayPanel, which keeps a ref map keyed
- * by chunkId.
- */
 export const ChunkCard = forwardRef<HTMLDivElement, ChunkCardProps>(
   function ChunkCard({ chunk, isHighlighted, onClick, queryLabel }, ref) {
     const rankLabel = `#${String(chunk.retrievalRank).padStart(2, "0")}`;

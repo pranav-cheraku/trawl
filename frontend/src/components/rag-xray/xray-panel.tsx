@@ -56,9 +56,8 @@ export function XrayPanel(props: XrayPanelProps) {
     null,
   );
 
-  // Memoize build-variant derivations at the top level so they don't reallocate
-  // on every parent re-render. Hooks can't be called conditionally, so we hoist
-  // the source data via a stable dep and gate the computation inside the memo.
+  // Hooks cannot be called conditionally, so all variants' memos run at the top
+  // level; the build-variant ones short-circuit when buildVariantChunks is null.
   const buildVariantChunks =
     props.variant === "build" ? props.reportChunks : null;
   const buildChunks = useMemo<TransparencyChunk[]>(() => {
@@ -87,9 +86,8 @@ export function XrayPanel(props: XrayPanelProps) {
     return m;
   }, [buildVariantChunks]);
 
-  // Scroll + highlight when the parent changes focus. Depending on both the
-  // id AND the tick means re-clicking the same badge still triggers the
-  // effect (state transition is the tick, not the id).
+  // Depend on both focusedChunkId and focusTick so re-clicking the same citation
+  // badge re-triggers the scroll (tick changes even when id stays the same).
   useEffect(() => {
     if (!focusedChunkId) return;
     const node = cardRefs.current.get(focusedChunkId);
@@ -103,16 +101,12 @@ export function XrayPanel(props: XrayPanelProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusedChunkId, focusTick]);
 
-  // ── Chat variant: derive chunks + header from selectedMessage ─────────
   if (props.variant === "chat") {
     const transparency = props.selectedMessage?.transparency ?? null;
     const isAssistant =
       props.selectedMessage?.role === "assistant" && transparency !== null;
 
     if (!isAssistant) {
-      // No message yet (or non-assistant). Retrieval settings live in the
-      // page-level corpus context strip, not this panel — so just render the
-      // empty state.
       return (
         <div className="flex h-full flex-col rounded-[4px] bg-surface-container-low">
           <XrayEmpty />
@@ -136,7 +130,6 @@ export function XrayPanel(props: XrayPanelProps) {
     );
   }
 
-  // ── Build variant: derive chunks from a Build Next report ─────────────
   if (props.variant === "build") {
     const { reportMetadata } = props;
     return (
@@ -160,7 +153,6 @@ export function XrayPanel(props: XrayPanelProps) {
     );
   }
 
-  // ── Spec variant: derive chunks from specSources ──────────────────────
   const { specSources } = props;
   if (!specSources) {
     return (
@@ -189,7 +181,6 @@ export function XrayPanel(props: XrayPanelProps) {
 interface PanelShellProps {
   header: React.ReactNode;
   chunks: TransparencyChunk[];
-  /** Used only to render the "no chunks above threshold" empty-state copy. */
   threshold: number | null;
   highlightedChunkId: string | null;
   onChunkClick: (chunk: TransparencyChunk) => void;
@@ -197,7 +188,6 @@ interface PanelShellProps {
   detailChunk: TransparencyChunk | null;
   closeDetail: () => void;
   projectId: string;
-  /** Build variant only — maps chunkId to a short Q-label rendered as a chip on the card. */
   chunkQueryLabels?: Map<string, string>;
 }
 
@@ -213,10 +203,8 @@ function PanelShell({
   projectId,
   chunkQueryLabels,
 }: PanelShellProps) {
-  // Only render the modal if the stored chunk actually belongs to the
-  // currently-displayed chunk set. Prevents a stale modal from appearing
-  // when the user switches between messages while detailChunk state hasn't
-  // been cleared yet.
+  // Guard against a stale detailChunk lingering after the user switches
+  // messages before the state has been cleared.
   const visibleDetailChunk =
     detailChunk && chunks.some((c) => c.chunkId === detailChunk.chunkId)
       ? detailChunk
@@ -224,7 +212,9 @@ function PanelShell({
   return (
     <>
       <div className="flex h-full flex-col rounded-[4px] bg-surface-container-low">
+        {/* Header */}
         {header}
+        {/* Chunk list */}
         <div className="flex-1 overflow-y-auto px-4 pb-4">
           {chunks.length === 0 ? (
             <div className="mt-4 rounded-[4px] bg-surface-container-lowest px-4 py-6 text-center text-[12px] leading-relaxed text-on-surface-variant">

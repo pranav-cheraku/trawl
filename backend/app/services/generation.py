@@ -98,8 +98,7 @@ def _build_history_messages(
 ) -> list[dict[str, str]]:
     """Convert stored messages into Anthropic user/assistant turn dicts.
 
-    Keeps only the trailing MAX_HISTORY_TURNS, and drops any role we don't
-    explicitly recognize.
+    Keeps only the trailing MAX_HISTORY_TURNS and drops unrecognized roles.
     """
     trimmed = history[-MAX_HISTORY_TURNS:] if history else []
     turns: list[dict[str, str]] = []
@@ -115,11 +114,10 @@ async def generate_answer(
     chunks: list[RetrievedChunk],
     history: list[Message] | None = None,
 ) -> GenerationResult:
-    """Call Claude with tool-forced citations and return a structured result.
+    """Generate a cited answer using forced tool_choice.
 
-    Uses Anthropic tool use to guarantee the response matches our schema:
-    {answer: str, supporting_feedback_indices: int[]}. No JSON parsing or
-    retry logic needed — the SDK validates the tool input before returning.
+    Forced tool_choice guarantees the response matches the cite_feedback schema;
+    no JSON parsing or retry is needed because the SDK validates the tool input.
     """
     if not settings.ANTHROPIC_API_KEY:
         raise RuntimeError("ANTHROPIC_API_KEY is not configured")
@@ -151,8 +149,7 @@ async def generate_answer(
         messages=messages,
     )
 
-    # With forced tool_choice, Claude MUST call the tool. Find the tool_use
-    # block — there will be exactly one for cite_feedback.
+    # Forced tool_choice means exactly one tool_use block will be present.
     tool_block = None
     for block in response.content:
         if block.type == "tool_use" and block.name == "cite_feedback":
@@ -177,9 +174,8 @@ async def generate_answer(
     if not isinstance(raw_indices, list):
         raise RuntimeError("cite_feedback.supporting_feedback_indices is not a list")
 
-    # Defensive: coerce ints + drop out-of-range indices (Claude occasionally
-    # cites a chunk number higher than what we gave it when the system prompt
-    # is fresh in its memory).
+    # Claude occasionally returns an index higher than the chunk count when
+    # it has seen many chunks in its context. Clamp to the valid 1-indexed range.
     supporting_indices: list[int] = []
     for idx in raw_indices:
         try:
@@ -206,10 +202,6 @@ async def generate_answer(
         output_tokens=response.usage.output_tokens,
     )
 
-
-# ---------------------------------------------------------------------------
-# Spec generation
-# ---------------------------------------------------------------------------
 
 SPEC_MAX_TOKENS = 4096
 
@@ -404,7 +396,7 @@ class SpecGenerationResult:
 def _clamp_indices(
     raw_indices: list[Any], max_index: int
 ) -> list[int]:
-    """Coerce and filter supporting_feedback_indices to valid 1-indexed range."""
+    """Coerce and filter supporting_feedback_indices to the valid 1-indexed range."""
     clamped: list[int] = []
     for idx in raw_indices:
         try:
@@ -422,8 +414,7 @@ async def generate_feature_specs(
 ) -> SpecGenerationResult:
     """Generate feature specifications from retrieved feedback chunks.
 
-    Uses forced tool_choice to guarantee structured JSON output matching
-    the GENERATE_SPECS_TOOL schema.
+    Uses forced tool_choice to guarantee structured JSON output.
     """
     if not settings.ANTHROPIC_API_KEY:
         raise RuntimeError("ANTHROPIC_API_KEY is not configured")
@@ -551,7 +542,6 @@ async def generate_user_stories(
     if not isinstance(story_groups, list):
         raise RuntimeError("generate_user_stories.story_groups is not a list")
 
-    # Flatten grouped stories into individual spec dicts
     specs: list[dict[str, Any]] = []
     for group in story_groups:
         if not isinstance(group, dict):

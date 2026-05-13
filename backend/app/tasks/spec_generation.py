@@ -32,18 +32,12 @@ async def _async_generate_specs(
     focus: str | None,
     source_ids: list[uuid.UUID] | None,
 ) -> tuple[SpecGenerationResult | None, list[RetrievedChunk], int]:
-    """Run all async I/O (embed, retrieve, generate) in a single event loop.
+    """Run embed + retrieve + generate in one event loop.
 
-    Celery workers are sync, so we wrap all async work here and call it
-    via a single ``asyncio.run()`` to avoid event-loop conflicts between
-    the Redis-backed embedding cache, the async DB session, and the
-    Anthropic client.
-
-    The ``finally`` block disposes per-loop resources (Redis client,
-    asyncpg engine pool) inside the SAME event loop so the next task
-    in this worker process starts fresh. Without this, module-level
-    singletons leak loop-bound state across tasks → "got Future
-    attached to a different loop" on the 2nd+ task.
+    The finally block disposes module-level singletons (Redis client, asyncpg
+    engine pool) inside the same loop so the next Celery task starts fresh.
+    Without this, singletons leak loop-bound state -> "Future attached to a
+    different loop" on the second task.
     """
     try:
         query_text = focus if focus else DEFAULT_QUERY
@@ -75,12 +69,7 @@ async def _async_generate_specs(
 
 
 def _chunk_to_transparency_dict(chunk: RetrievedChunk) -> dict:
-    """Serialize a RetrievedChunk into the transparency JSONB shape.
-
-    Keys are camelCase to match the frontend's expected shape. Stores both
-    a short preview and full text so the X-Ray panel works without a
-    follow-up API call.
-    """
+    """Serialize a RetrievedChunk into the camelCase transparency JSONB shape."""
     text = chunk.chunk_text or ""
     preview = text[:280] + ("\u2026" if len(text) > 280 else "")
     return {
@@ -113,17 +102,13 @@ def generate_specs_task(
 
     with SyncSessionLocal() as session:
         try:
-            # Parse source_ids inside the try so any malformed UUID surfaces
-            # via the existing logger.exception below instead of crashing
-            # silently before the session is even open.
+            # Parse inside try so malformed UUIDs surface via logger.exception.
             parsed_source_ids: list[uuid.UUID] | None = (
                 [uuid.UUID(s) for s in source_ids]
                 if source_ids is not None
                 else None
             )
 
-            # Run all async I/O in a single event loop to avoid conflicts
-            # between Redis (embedding cache), asyncpg, and the Anthropic client.
             result, chunks, total_candidates = asyncio.run(
                 _async_generate_specs(pid, spec_type, focus, parsed_source_ids)
             )
@@ -138,7 +123,6 @@ def generate_specs_task(
                 logger.warning("Claude returned 0 specs for project %s", pid)
                 return {"spec_ids": [], "count": 0}
 
-            # 5. Determine starting kanban_order
             max_order = session.execute(
                 select(func.coalesce(func.max(Spec.kanban_order), -1)).where(
                     Spec.project_id == pid
@@ -146,12 +130,11 @@ def generate_specs_task(
             ).scalar()
             next_order = (max_order or -1) + 1
 
-            # 6. Persist specs + transparency
             created_specs: list[Spec] = []
             transparency_dicts = [_chunk_to_transparency_dict(c) for c in chunks]
 
             for idx, spec_dict in enumerate(result.specs):
-                # Map 1-indexed supporting_feedback_indices to chunk UUIDs
+                # supporting_feedback_indices are 1-based; map to chunk UUIDs.
                 source_chunk_ids = [
                     chunks[i - 1].chunk_id
                     for i in spec_dict.get("supporting_feedback_indices", [])
@@ -169,7 +152,7 @@ def generate_specs_task(
                     source_chunk_ids=source_chunk_ids,
                 )
                 session.add(spec)
-                session.flush()  # populate spec.id for the transparency FK
+                session.flush()  # populate spec.id before inserting transparency FK
 
                 transparency = SpecTransparency(
                     spec_id=spec.id,

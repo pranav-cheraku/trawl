@@ -15,8 +15,7 @@ class TransparencyChunk(BaseModel):
     chunk_id: uuid.UUID
     feedback_item_id: uuid.UUID
     chunk_text_preview: str
-    # Full text stored alongside the preview so the detail modal can render
-    # without a follow-up fetch. Optional for messages created before Day 16.
+    # Full text stored alongside the preview so the detail modal can render without a follow-up fetch.
     chunk_text: str | None = None
     feedback_item_content: str | None = None
     similarity_score: float
@@ -26,14 +25,9 @@ class TransparencyChunk(BaseModel):
 
 
 class TransparencyPayload(BaseModel):
-    """Full RAG transparency payload stored on assistant messages.
+    """Full RAG transparency payload stored on assistant messages."""
 
-    Mirrors the Message.transparency JSONB column. Nullable `modelUsed` covers
-    the branch where retrieval found no chunks and we never called Claude.
-    """
-
-    # protected_namespaces=() disables Pydantic's "model_" prefix warning
-    # so we can use model_used without renaming.
+    # protected_namespaces=() suppresses Pydantic's "model_" prefix warning.
     model_config = ConfigDict(
         alias_generator=to_camel,
         populate_by_name=True,
@@ -58,21 +52,19 @@ class SendMessageRequest(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
     content: str = Field(..., min_length=1, max_length=2000)
-    # Optional list of source UUIDs to scope retrieval. Sent as JSON
-    # `sourceIds` from the frontend; transformed by alias_generator. None or
-    # omitted means "all sources." An explicit empty list means "user muted
-    # every source" — retrieval will return no chunks.
+    # None = all sources, [] = user explicitly muted every source (returns no chunks).
     source_ids: list[uuid.UUID] | None = None
-    # Optional user-tuned retrieval parameters from the RAG X-Ray sliders.
-    # None / omitted means "use the server default" (TOP_K, SIMILARITY_THRESHOLD).
+    # None = use server defaults. Use `is not None` checks, not `or`, to avoid
+    # coercing threshold=0.0 to the default.
     top_k: int | None = Field(default=None, ge=1, le=30)
     threshold: float | None = Field(default=None, ge=0.0, le=1.0)
 
 
 class ConversationCreateRequest(BaseModel):
-    """Request body for creating a new conversation. Title is optional;
-    if omitted (or empty), the conversation is created untitled and will
-    be auto-named from the first user message."""
+    """Request body for creating a new conversation.
+
+    If title is omitted or empty, the conversation is auto-named from the first user message.
+    """
 
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 

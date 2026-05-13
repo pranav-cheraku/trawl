@@ -6,20 +6,13 @@ import { useFloatingPosition } from "@/lib/use-floating-position";
 import type { Source } from "@/types";
 
 interface SourceScopeMenuProps {
-  /** Pre-filtered to status === "ready" by the caller. */
   sources: Source[];
   mutedIds: string[];
   onToggle: (sourceId: string) => void;
-  /** Un-mute every source. Wired to useSourceScope.clear by callers. */
   onEnableAll: () => void;
-  /** Optional ARIA label for the trigger button. */
   ariaLabel?: string;
 }
 
-/**
- * Compute display names with duplicate suffixes. Mirrors the logic in
- * source-list.tsx so the same source renders identically across the app.
- */
 function computeDisplayNames(sources: Source[]): Map<string, string> {
   const sorted = [...sources].sort((a, b) =>
     a.createdAt.localeCompare(b.createdAt),
@@ -79,7 +72,6 @@ export function SourceScopeMenu({
   const isScopeEmpty = totalCount > 0 && activeCount === 0;
   const isAllActive = totalCount > 0 && activeCount === totalCount;
 
-  // Esc closes the popover.
   useEffect(() => {
     if (!isOpen) return;
     function handleKey(e: KeyboardEvent) {
@@ -89,10 +81,9 @@ export function SourceScopeMenu({
     return () => window.removeEventListener("keydown", handleKey);
   }, [isOpen]);
 
-  // Click outside closes the popover. Register via setTimeout(0) so the
-  // click that opens the popover doesn't immediately close it. The popover
-  // is rendered outside the trigger's DOM subtree (position: fixed) so we
-  // check both refs.
+  // Register via setTimeout(0) so the opening click doesn't immediately close
+  // the popover. The popover renders outside the trigger's DOM subtree
+  // (position: fixed), so both refs must be checked for outside-click detection.
   useEffect(() => {
     if (!isOpen) return;
     function handleMouseDown(e: MouseEvent) {
@@ -118,9 +109,8 @@ export function SourceScopeMenu({
     );
   }
 
-  // Trigger label content. All-active uses an "ALL" tag; partial and
-  // empty both render "N/M" so the trigger width stays stable as the
-  // user toggles. The empty state is communicated by the error-toned
+  // Partial and empty both render "N/M" so the trigger width stays stable
+  // as the user toggles. The empty state is communicated by the error-toned
   // pill background, not the label text.
   let triggerCount: React.ReactNode;
   if (isAllActive) {

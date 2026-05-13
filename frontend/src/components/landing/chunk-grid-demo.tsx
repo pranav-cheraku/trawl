@@ -1,4 +1,3 @@
-// frontend/src/components/landing/chunk-grid-demo.tsx
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -19,7 +18,6 @@ interface AnswerSegment {
   chunkId?: string;
 }
 
-/** Parse "...with auto-renew triggers without warning [3], and ..." into segments. */
 function parseAnswer(text: string, citations: { marker: number; chunkId: string }[]): AnswerSegment[] {
   const segments: AnswerSegment[] = [];
   const regex = /\[(\d+)\]/g;
@@ -63,7 +61,6 @@ export function ChunkGridDemo() {
     [],
   );
 
-  // Reset state when leaving viewport so re-entry replays the demo.
   useEffect(() => {
     if (!inView) {
       setTypedQuestion("");
@@ -72,7 +69,6 @@ export function ChunkGridDemo() {
     }
   }, [inView]);
 
-  // Type the question.
   useEffect(() => {
     if (!inView) return;
     if (prefersReducedMotion) {
@@ -91,7 +87,6 @@ export function ChunkGridDemo() {
     return () => clearTimeout(t);
   }, [inView, typedQuestion, prefersReducedMotion]);
 
-  // Type the answer once chunks are revealed.
   useEffect(() => {
     if (!chunksRevealed) return;
     if (prefersReducedMotion) {
@@ -107,7 +102,6 @@ export function ChunkGridDemo() {
     return () => clearTimeout(t);
   }, [chunksRevealed, typedAnswer, prefersReducedMotion]);
 
-  // Compute SVG path coords for the active hover guide-line.
   const guideLinePath = useMemo(() => {
     if (!hoveredChunkId) return null;
     const container = containerRef.current;
@@ -136,7 +130,6 @@ export function ChunkGridDemo() {
     >
       <div ref={ref} />
 
-      {/* Question input */}
       <div className="rounded-[4px] bg-surface-container-low px-3 py-2 font-mono text-xs">
         <span className="text-on-surface-variant">q:</span> {typedQuestion}
         {!prefersReducedMotion && typedQuestion.length < QUESTION.length && (
@@ -149,7 +142,6 @@ export function ChunkGridDemo() {
         )}
       </div>
 
-      {/* 4x3 chunk grid */}
       <div className="mt-4 grid grid-cols-4 gap-1.5">
         {chunks.map((chunk, idx) => {
           const isTop = chunk.similarity >= 0.7;
@@ -190,7 +182,6 @@ export function ChunkGridDemo() {
         })}
       </div>
 
-      {/* Answer text with citation badges */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={chunksRevealed ? { opacity: 1 } : { opacity: 0 }}
@@ -255,7 +246,6 @@ export function ChunkGridDemo() {
           )}
       </motion.div>
 
-      {/* Hover guide-line overlay */}
       {guideLinePath && (
         <svg
           aria-hidden

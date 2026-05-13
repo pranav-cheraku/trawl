@@ -1,10 +1,6 @@
-// frontend/src/lib/motion.ts
 import type { Transition } from "framer-motion";
 
 /**
- * Shared motion tokens. Every animated component pulls from these — coherence
- * across pages comes from one vocabulary, not duplicated values.
- *
  * Spring tunings:
  *   bouncy  — playful overshoot (drag lifts, modal entrance)
  *   snappy  — minimal overshoot (chip toggle, status pill)
@@ -31,11 +27,8 @@ export const springs = {
   } as const satisfies Transition,
 } as const;
 
-/** Material-style cubic-bezier curves. */
 export const easings = {
-  /** [0.4, 0, 0.2, 1] — default for fades and translations. */
   standard: [0.4, 0, 0.2, 1],
-  /** [0.2, 0, 0, 1] — entrance animations that should "settle". */
   emphasis: [0.2, 0, 0, 1],
 } as const;
 
@@ -46,7 +39,6 @@ export const durations = {
   slow: 0.48,
 } as const;
 
-/** Canonical stagger gaps in seconds. */
 export const staggers = {
   list: 0.06,
   cards: 0.08,

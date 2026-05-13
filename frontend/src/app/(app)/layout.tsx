@@ -23,7 +23,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Close the profile menu on outside click or Escape
   useEffect(() => {
     if (!isMenuOpen) return;
     function handleClick(e: MouseEvent) {
@@ -44,12 +43,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-surface">
-      {/* Top workspace bar */}
+      {/* Header */}
       <header className="bg-surface-container-lowest">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
-          {/* Left: Logo + breadcrumb nav */}
           <div className="flex items-center gap-6">
-            {/* Logo */}
             <Link href="/" className="flex items-center gap-2.5">
               <div className="flex h-7 w-7 items-center justify-center rounded-[4px] bg-on-surface">
                 <span className="font-mono text-sm font-bold text-surface-container-lowest">T</span>
@@ -59,10 +56,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               </span>
             </Link>
 
-            {/* Breadcrumb separator */}
             <span className="text-on-surface-variant/40">/</span>
-
-            {/* Nav links as breadcrumb items */}
             <nav className="flex items-center gap-1" aria-label="Main navigation">
               {navLinks.map((link) => {
                 const isActive =
@@ -86,21 +80,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </nav>
           </div>
 
-          {/* Right: User section */}
           <div className="flex items-center gap-3">
             {status === "loading" ? (
               <>
-                {/* Desktop skeleton */}
                 <div className="hidden items-center gap-2.5 sm:flex">
                   <div className="h-7 w-7 flex-shrink-0 animate-pulse rounded-full bg-surface-container" />
                   <div className="h-2.5 w-20 animate-pulse rounded-[2px] bg-surface-container" />
                 </div>
-                {/* Mobile skeleton */}
                 <div className="h-8 w-8 animate-pulse rounded-full bg-surface-container sm:hidden" />
               </>
             ) : status === "authenticated" && session?.user ? (
               <>
-                {/* Desktop: inline avatar + name + sign out */}
                 <div className="hidden items-center gap-3 sm:flex">
                   <div className="flex items-center gap-2.5">
                     <div
@@ -145,7 +135,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   </button>
                 </div>
 
-                {/* Mobile: avatar button → dropdown */}
                 <div className="relative sm:hidden" ref={menuRef}>
                   <button
                     type="button"
@@ -165,7 +154,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                       role="menu"
                       className="absolute right-0 top-full z-50 mt-2 w-60 rounded-[4px] bg-surface-container-lowest/95 shadow-[0_8px_24px_rgba(15,23,42,0.04)] backdrop-blur-[12px]"
                     >
-                      {/* Identity block */}
                       <div className="flex items-center gap-3 px-4 pt-4 pb-3">
                         <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-secondary text-sm font-medium text-white">
                           {session.user.name
@@ -184,7 +172,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                         </div>
                       </div>
 
-                      {/* Sign out */}
                       <div className="px-2 pb-2">
                         <button
                           type="button"
@@ -221,7 +208,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
       </header>
 
-      {/* Main content — no max-w here; each page owns its width */}
+      {/* Main */}
       <main className="bg-surface">{children}</main>
     </div>
   );

@@ -95,7 +95,6 @@ export default function GooglePlayForm({
 
   return (
     <div ref={containerRef} className="relative flex flex-col">
-      {/* Yield preset */}
       <div
         role="group"
         aria-label="Yield preset"
@@ -161,9 +160,9 @@ export default function GooglePlayForm({
         )}
       </div>
 
-      {/* Helper hint — Google Play occasionally features the user's intended
-          app in HTML the scraper can't parse, so a name-only search may
-          omit it. Pasting the full search URL bypasses that. */}
+      {/* Google Play occasionally renders the intended app in HTML the scraper
+          can't parse, so a name search may omit it. The full search URL
+          bypasses that. */}
       <p className="mt-1.5 text-[11px] leading-relaxed text-on-surface-variant/80">
         Don&apos;t see your app? Paste the Google Play search URL above{" "}
         <span className="font-mono text-[10px] text-on-surface-variant">

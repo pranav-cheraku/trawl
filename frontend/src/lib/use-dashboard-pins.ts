@@ -34,10 +34,9 @@ export interface DashboardPinsApi {
 }
 
 /**
- * Persistent pin set for the dashboard, keyed per-browser via localStorage.
- * SSR-safe (typeof window guards) and corruption-tolerant (malformed JSON → []).
- * Stale pinned IDs (project deleted while ID still in storage) are harmless;
- * isPinned returns false for missing projects via array intersection.
+ * Persists pinned project IDs in localStorage. Stale IDs (project deleted
+ * while ID still in storage) are harmless — isPinned returns false for any
+ * ID not present in the current project list.
  */
 export function useDashboardPins(): DashboardPinsApi {
   const [pinnedIds, setPinnedIds] = useState<string[]>(() => read());

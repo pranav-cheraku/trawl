@@ -14,19 +14,15 @@ type Props = {
 
 // 4-stop ramp. All four contrast against the bright neutral card background.
 const TIER_FILLS = [
-  "rgb(57, 136, 86)", // top — secondary_dim (deep sea green)
-  "rgb(76, 181, 114)", // upper-mid — secondary (sea green)
-  "rgb(168, 220, 185)", // lower-mid — light sea green
-  "rgb(163, 163, 163)", // bottom — outline_variant neutral
+  "rgb(57, 136, 86)", // top: secondary_dim (deep sea green)
+  "rgb(76, 181, 114)", // upper-mid: secondary (sea green)
+  "rgb(168, 220, 185)", // lower-mid: light sea green
+  "rgb(163, 163, 163)", // bottom: outline_variant neutral
 ] as const;
 
 const TIER_LABELS = ["Largest", "Major", "Minor", "Smallest"] as const;
 
-/**
- * Map a theme's display index (0 = biggest theme by frequency in this run) to
- * one of 4 tier fills via quartile bucketing. The caller passes themes already
- * sorted by frequency desc; biggest wedge gets the darkest color.
- */
+// Biggest wedge (rankIdx=0) gets the darkest tier; quartile bucketing.
 function fillByRank(rankIdx: number, total: number): string {
   if (total <= 1) return TIER_FILLS[0];
   const ratio = rankIdx / (total - 1); // 0 = top, 1 = bottom
