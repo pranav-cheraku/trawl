@@ -79,6 +79,14 @@ export default function ExplorePage() {
     [sources],
   );
 
+  // Active source IDs for the current scope. Computed once per render instead
+  // of calling sourceScope.activeIds(readySources) twice (in handleSend and
+  // in the chat-input "scope empty" gate below).
+  const activeSourceIds = useMemo(
+    () => sourceScope.activeIds(readySources),
+    [sourceScope, readySources],
+  );
+
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages.length, isPending, failedSend]);
@@ -242,7 +250,7 @@ export default function ExplorePage() {
           projectId,
           activeConversationId,
           content,
-          sourceScope.activeIds(readySources),
+          activeSourceIds,
           rag.settings.topK,
           rag.settings.threshold,
         );
@@ -294,7 +302,7 @@ export default function ExplorePage() {
         setIsPending(false);
       }
     },
-    [conversationId, isPending, projectId, sourceScope, readySources, rag.settings],
+    [conversationId, isPending, projectId, activeSourceIds, rag.settings],
   );
 
   const handleRetry = useCallback(() => {
@@ -575,7 +583,7 @@ export default function ExplorePage() {
 
           {/* Input anchored inside the chat column */}
           <div className="bg-surface-container-lowest p-3 shadow-[inset_0_1px_0_rgba(15,23,42,0.04)]">
-            {sourceScope.activeIds(readySources).length === 0 ? (
+            {activeSourceIds.length === 0 ? (
               <div
                 role="status"
                 className="rounded-[4px] bg-surface-container-low px-3 py-3 text-[12.5px] text-on-surface-variant"
@@ -619,9 +627,9 @@ export default function ExplorePage() {
             className="absolute inset-0 bg-on-surface/40 backdrop-blur-[2px]"
           />
           <div className="absolute inset-x-0 bottom-0 max-h-[75vh] rounded-t-[4px] bg-surface-container-low">
-            {/* Sheet chrome — drag handle + close. The "RAG X-Ray" label and
-                Settings chip live inside <XrayPanel>'s own header below,
-                so we don't repeat them here. */}
+            {/* Sheet chrome — drag handle + close. The "RAG X-Ray" label
+                lives inside <XrayPanel>'s own header below, so we don't
+                repeat it here. */}
             <div className="relative flex items-center justify-center px-4 pt-3 pb-1">
               <div className="h-1 w-10 rounded-full bg-surface-container-high" />
               <button
