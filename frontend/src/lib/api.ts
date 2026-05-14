@@ -4,9 +4,11 @@ import type {
   BuildReportChunk,
   BuildReportChunksResponse,
   BuildReportSummary,
+  CheckoutResponse,
   ChunkDetail,
   Conversation,
   ConversationDetail,
+  CreditBalance,
   FeedbackItem,
   GenerateSpecsResponse,
   GooglePlaySearchResult,
@@ -23,6 +25,13 @@ import type {
   TaskStatus,
   TokenResponse,
 } from "@/types";
+
+export class PaywallError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "PaywallError";
+  }
+}
 
 export class AlreadyRunningError extends Error {
   constructor(
@@ -59,21 +68,27 @@ async function getAuthToken(): Promise<string | null> {
   }
 }
 
+type ApiFetchOptions = RequestInit & { demo?: boolean };
+
 export async function apiFetch<T>(
   path: string,
-  options?: RequestInit
+  options: ApiFetchOptions = {}
 ): Promise<T> {
-  const token = await getAuthToken();
+  const { demo, headers: extraHeaders, ...rest } = options;
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    ...(options?.headers as Record<string, string>),
+    ...((extraHeaders as Record<string, string> | undefined) ?? {}),
   };
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
+
+  if (demo) {
+    headers["X-Demo-Token"] = process.env.NEXT_PUBLIC_DEMO_TOKEN ?? "";
+  } else {
+    const token = await getAuthToken();
+    if (token) headers["Authorization"] = `Bearer ${token}`;
   }
 
   const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...options,
+    ...rest,
     headers,
   });
 
@@ -84,6 +99,11 @@ export async function apiFetch<T>(
         window.location.href = "/";
       }
       throw new Error("Unauthorized");
+    }
+    if (response.status === 402) {
+      const body = await response.json().catch(() => ({})) as { detail?: string };
+      window.dispatchEvent(new CustomEvent("trawl:paywall", { detail: body }));
+      throw new PaywallError(body.detail ?? "Insufficient credits");
     }
     throw new Error(`API error: ${response.status}`);
   }
@@ -113,6 +133,11 @@ async function apiUpload<T>(path: string, body: FormData): Promise<T> {
         window.location.href = "/";
       }
       throw new Error("Unauthorized");
+    }
+    if (response.status === 402) {
+      const body = await response.json().catch(() => ({})) as { detail?: string };
+      window.dispatchEvent(new CustomEvent("trawl:paywall", { detail: body }));
+      throw new PaywallError(body.detail ?? "Insufficient credits");
     }
     throw new Error(`API error: ${response.status}`);
   }
@@ -472,6 +497,19 @@ export async function getBuildReportChunks(
     `/api/build-reports/${reportId}/chunks`,
   );
   return res.chunks;
+}
+
+export async function getCreditBalance(): Promise<CreditBalance> {
+  return apiFetch<CreditBalance>("/api/billing/me");
+}
+
+export async function createCheckoutSession(
+  priceId: string,
+): Promise<CheckoutResponse> {
+  return apiFetch<CheckoutResponse>("/api/billing/checkout", {
+    method: "POST",
+    body: JSON.stringify({ priceId }),
+  });
 }
 
 export async function promoteBuildSpec(

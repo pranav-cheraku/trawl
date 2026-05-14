@@ -280,3 +280,13 @@ export interface RunBuildNextResponse {
 export interface PromoteBuildSpecResponse {
   kanbanSpecId: string;
 }
+
+export interface CreditBalance {
+  creditsBalance: number;
+}
+
+export interface CheckoutResponse {
+  url: string;
+}
+
+export type CheckoutPriceId = "small" | "large";

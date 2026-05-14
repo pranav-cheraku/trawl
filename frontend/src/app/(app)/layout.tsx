@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { useEffect, useRef, useState } from "react";
 
+import { PaywallModal } from "@/components/billing/paywall-modal";
+
 const navLinks = [
   {
     label: "Dashboard",
@@ -210,6 +212,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
       {/* Main */}
       <main className="bg-surface">{children}</main>
+
+      <PaywallModal />
     </div>
   );
 }
