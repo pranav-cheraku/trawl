@@ -1,4 +1,4 @@
-frontend/src/app/demo/page.tsx"use client";
+"use client";
 
 import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
