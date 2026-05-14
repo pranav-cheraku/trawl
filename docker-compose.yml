@@ -59,7 +59,9 @@ services:
     volumes:
       - ./backend:/app
       - uploads:/tmp/trawl_uploads
-    command: celery -A app.celery_app worker --loglevel=info
+    # -B embeds Celery beat in the worker process (single-process scheduler for portfolio scale).
+    # If we ever run multiple worker replicas, beat needs to be split into its own service.
+    command: celery -A app.celery_app worker -B --loglevel=info
 
 volumes:
   pgdata:

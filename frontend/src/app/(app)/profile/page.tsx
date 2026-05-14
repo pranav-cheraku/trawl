@@ -1,12 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { signOut, useSession } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import { useState } from "react";
 
-import InlineConfirm from "@/components/ui/inline-confirm";
+import { DeleteAccountModal } from "@/components/profile/delete-account-modal";
 import EditableText from "@/components/kanban/editable-text";
-import { deleteAccount, updateUserName } from "@/lib/api";
+import { updateUserName } from "@/lib/api";
 import { useCredits } from "@/lib/use-credits";
 import { useUserMe } from "@/lib/use-user-me";
 
@@ -15,7 +15,6 @@ export default function ProfilePage() {
   const { data: session } = useSession();
   const { balance } = useCredits();
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   if (initialLoading) {
@@ -42,19 +41,6 @@ export default function ProfilePage() {
     } catch (exc) {
       setError(exc instanceof Error ? exc.message : "Could not save name");
       throw exc; // re-throw so EditableText reverts the draft
-    }
-  };
-
-  const doDelete = async () => {
-    setError(null);
-    setIsDeleting(true);
-    try {
-      await deleteAccount();
-      await signOut({ callbackUrl: "/" });
-    } catch (exc) {
-      setError(exc instanceof Error ? exc.message : "Could not delete account");
-      setIsDeleting(false);
-      setConfirmDelete(false);
     }
   };
 
@@ -133,28 +119,25 @@ export default function ProfilePage() {
         </h2>
         <p className="mt-3 text-sm text-on-surface-variant">
           Permanently delete your account and all data. This includes all
-          projects, feedback sources, specs, and conversations. This cannot be
-          undone.
+          projects, feedback sources, specs, and conversations. You can
+          restore everything by signing back in within 30 days.
         </p>
         <div className="mt-4">
-          {confirmDelete ? (
-            <InlineConfirm
-              message="Delete account permanently?"
-              onConfirm={doDelete}
-              onCancel={() => setConfirmDelete(false)}
-              isSubmitting={isDeleting}
-            />
-          ) : (
-            <button
-              type="button"
-              onClick={() => setConfirmDelete(true)}
-              className="rounded-[4px] bg-error px-3 py-1.5 text-sm text-white transition-opacity hover:opacity-90"
-            >
-              Delete account
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => setConfirmDelete(true)}
+            className="rounded-[4px] bg-error px-3 py-1.5 text-sm text-white transition-opacity hover:opacity-90"
+          >
+            Delete account
+          </button>
         </div>
       </section>
+
+      <DeleteAccountModal
+        open={confirmDelete}
+        email={user.email}
+        onClose={() => setConfirmDelete(false)}
+      />
     </div>
   );
 }

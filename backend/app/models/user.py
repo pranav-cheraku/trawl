@@ -27,6 +27,9 @@ class User(Base):
     credits_balance: Mapped[int] = mapped_column(
         sa.Integer, nullable=False, default=0, server_default=sa.text("0")
     )
+    deleted_at: Mapped[datetime | None] = mapped_column(
+        sa.DateTime, nullable=True, index=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         sa.DateTime, server_default=sa.func.now(), nullable=False
     )
