@@ -1,3 +1,7 @@
+"use client";
+
+import { useDemoMode } from "@/lib/demo-mode";
+
 type Props = {
   sourceCount: number;
   reviewCount: number;
@@ -13,6 +17,7 @@ export default function EmptyState({
   isRunning,
   onRun,
 }: Props) {
+  const isDemo = useDemoMode();
   return (
     <div className="rounded-[4px] bg-surface-container-lowest px-8 py-20 text-center">
       <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-[4px] bg-surface-container">
@@ -36,8 +41,9 @@ export default function EmptyState({
       </p>
       <button
         type="button"
-        onClick={onRun}
-        disabled={isScopeEmpty || isRunning}
+        onClick={() => { if (isDemo) return; onRun(); }}
+        disabled={isScopeEmpty || isRunning || isDemo}
+        title={isDemo ? "Generation disabled in demo mode" : undefined}
         className="mt-8 rounded-[4px] bg-on-surface px-6 py-2.5 font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-surface-container-lowest transition-colors hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-50"
       >
         Run analysis →

@@ -24,6 +24,9 @@ class User(Base):
     email: Mapped[str] = mapped_column(sa.String(255), unique=True, nullable=False)
     name: Mapped[str | None] = mapped_column(sa.String(255), nullable=True)
     avatar_url: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
+    credits_balance: Mapped[int] = mapped_column(
+        sa.Integer, nullable=False, default=0, server_default=sa.text("0")
+    )
     created_at: Mapped[datetime] = mapped_column(
         sa.DateTime, server_default=sa.func.now(), nullable=False
     )

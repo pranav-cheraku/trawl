@@ -14,9 +14,16 @@ _DEV_SECRET = "dev-secret-change-in-production"
 async def get_user_id_from_token(request: Request) -> uuid.UUID:
     """Validate JWT Bearer token and return the user UUID.
 
+    If ``DemoAccessMiddleware`` has set ``request.state.user_id_override``,
+    that value is returned immediately without inspecting the JWT.
+
     Falls back to DEV_USER_ID when JWT_SECRET is the default dev value and
     no Authorization header is present.
     """
+    override: uuid.UUID | None = getattr(request.state, "user_id_override", None)
+    if override is not None:
+        return override
+
     authorization: str | None = request.headers.get("Authorization")
 
     if not authorization:

@@ -1,6 +1,7 @@
 "use client";
 
 import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
+import { useDemoMode } from "@/lib/demo-mode";
 
 export interface ChatInputHandle {
   focus: () => void;
@@ -24,6 +25,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(function Ch
   draft,
   onDraftChange,
 }: ChatInputProps, ref) {
+  const isDemo = useDemoMode();
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   useImperativeHandle(ref, () => ({
@@ -41,7 +43,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(function Ch
 
   function submit() {
     const trimmed = draft.trim();
-    if (!trimmed || isPending) return;
+    if (!trimmed || isPending || isDemo) return;
     onSend(trimmed);
     onDraftChange("");
   }
@@ -53,7 +55,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(function Ch
     }
   }
 
-  const canSend = draft.trim().length > 0 && !isPending;
+  const canSend = draft.trim().length > 0 && !isPending && !isDemo;
 
   return (
     <div className="rounded-[4px] bg-surface-container-lowest p-3">
@@ -61,10 +63,10 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(function Ch
         <textarea
           ref={textareaRef}
           value={draft}
-          onChange={(e) => onDraftChange(e.target.value.slice(0, MAX_CHARS))}
+          onChange={(e) => { if (isDemo) return; onDraftChange(e.target.value.slice(0, MAX_CHARS)); }}
           onKeyDown={handleKeyDown}
-          placeholder={placeholder}
-          disabled={isPending}
+          placeholder={isDemo ? "Sign in to ask your own questions" : placeholder}
+          disabled={isPending || isDemo}
           rows={1}
           className="flex-1 resize-none bg-transparent px-2 py-2 text-[14px] leading-[20px] text-on-surface placeholder:text-on-surface-variant focus:outline-none disabled:opacity-60"
           style={{ maxHeight: `${20 * MAX_ROWS + 24}px` }}
@@ -74,6 +76,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(function Ch
           onClick={submit}
           disabled={!canSend}
           aria-label="Send message"
+          title={isDemo ? "Sign in to ask your own questions" : undefined}
           className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-[4px] bg-on-surface text-white transition-colors hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-on-surface"
         >
           {isPending ? (
