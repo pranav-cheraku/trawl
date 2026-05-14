@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { SpecType } from "@/types";
 import FocusPopover from "./focus-popover";
+import { useDemoMode } from "@/lib/demo-mode";
 
 interface SplitGenerateButtonProps {
   label: string;
@@ -23,7 +24,10 @@ export default function SplitGenerateButton({
   onGenerate,
   onFocusGenerate,
 }: SplitGenerateButtonProps) {
+  const isDemo = useDemoMode();
   const [popoverOpen, setPopoverOpen] = useState(false);
+
+  const isDisabled = disabled || isDemo;
 
   const primaryStyles =
     variant === "primary"
@@ -38,8 +42,9 @@ export default function SplitGenerateButton({
     <div className="relative inline-flex w-full sm:w-auto">
       <button
         type="button"
-        onClick={() => onGenerate(type)}
-        disabled={disabled}
+        onClick={() => { if (isDemo) return; onGenerate(type); }}
+        disabled={isDisabled}
+        title={isDemo ? "Generation disabled in demo mode" : undefined}
         className={`inline-flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-l-[4px] px-3 py-1.5 font-mono text-[10px] font-medium uppercase tracking-[0.18em] transition-colors disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none sm:justify-start ${primaryStyles}`}
       >
         <svg
@@ -59,8 +64,9 @@ export default function SplitGenerateButton({
         aria-label={`Open focused ${label} generator`}
         aria-haspopup="dialog"
         aria-expanded={popoverOpen}
-        onClick={() => setPopoverOpen((v) => !v)}
-        disabled={disabled}
+        onClick={() => { if (isDemo) return; setPopoverOpen((v) => !v); }}
+        disabled={isDisabled}
+        title={isDemo ? "Generation disabled in demo mode" : undefined}
         className={`inline-flex shrink-0 items-center rounded-r-[4px] px-2 py-1.5 font-mono text-[10px] font-medium uppercase tracking-[0.18em] transition-colors ring-1 ring-inset disabled:cursor-not-allowed disabled:opacity-50 ${caretStyles}`}
       >
         <svg

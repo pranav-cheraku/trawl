@@ -10,7 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.dependencies import get_current_user, get_db
+from app.dependencies import get_current_user, get_db, require_credits
 from app.models.conversation import Conversation, Message
 from app.models.feedback import FeedbackSource
 from app.models.project import Project
@@ -238,7 +238,7 @@ async def send_message(
     conversation_id: uuid.UUID,
     body: SendMessageRequest,
     db: AsyncSession = Depends(get_db),
-    user_id: uuid.UUID = Depends(get_current_user),
+    user_id: uuid.UUID = Depends(require_credits(1)),
 ) -> Message:
     """Embed query, retrieve chunks, generate answer, persist both messages, return assistant."""
     await _get_project_for_user(project_id, db, user_id)

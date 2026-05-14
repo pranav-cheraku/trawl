@@ -44,6 +44,7 @@ async def sync_user(
             email=body.email,
             name=body.name,
             avatar_url=body.avatar_url,
+            credits_balance=settings.SIGNUP_CREDITS,
         )
         db.add(user)
     else:

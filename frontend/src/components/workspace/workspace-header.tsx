@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 
+import { CreditBalancePill } from "@/components/billing/credit-balance-pill";
+
 export interface WorkspaceStat {
   value: string;
   key: string;
@@ -29,33 +31,34 @@ export default function WorkspaceHeader({
           {title}
         </h2>
       </div>
-      {(hasStats || right) && (
-        <div className="flex flex-wrap items-center gap-5">
-          {hasStats && (
-            <div className="flex items-center gap-4">
-              {stats?.map((s, i) => (
-                <div key={s.key} className="flex items-center gap-4">
-                  {i > 0 && (
-                    <span
-                      aria-hidden
-                      className="h-5 w-px bg-on-surface/[0.08]"
-                    />
-                  )}
-                  <div className="flex flex-col gap-0.5 text-right">
-                    <span className="font-mono text-[13px] font-medium leading-none text-on-surface">
-                      {s.value}
-                    </span>
-                    <span className="font-mono text-[9px] font-medium uppercase tracking-[0.15em] text-on-surface-variant/60">
-                      {s.key}
-                    </span>
-                  </div>
+      <div className="flex flex-wrap items-center gap-5">
+        {hasStats && (
+          <div className="flex items-center gap-4">
+            {stats?.map((s, i) => (
+              <div key={s.key} className="flex items-center gap-4">
+                {i > 0 && (
+                  <span
+                    aria-hidden
+                    className="h-5 w-px bg-on-surface/[0.08]"
+                  />
+                )}
+                <div className="flex flex-col gap-0.5 text-right">
+                  <span className="font-mono text-[13px] font-medium leading-none text-on-surface">
+                    {s.value}
+                  </span>
+                  <span className="font-mono text-[9px] font-medium uppercase tracking-[0.15em] text-on-surface-variant/60">
+                    {s.key}
+                  </span>
                 </div>
-              ))}
-            </div>
-          )}
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="flex items-center gap-3">
+          <CreditBalancePill />
           {right}
         </div>
-      )}
+      </div>
     </header>
   );
 }
