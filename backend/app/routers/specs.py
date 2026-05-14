@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.celery_app import celery_app
-from app.dependencies import get_current_user, get_db
+from app.dependencies import get_current_user, get_db, require_credits
 from app.models.feedback import FeedbackSource
 from app.models.project import Project
 from app.models.spec import Spec
@@ -96,7 +96,7 @@ async def generate_specs(
     project_id: uuid.UUID,
     body: GenerateSpecsRequest,
     db: AsyncSession = Depends(get_db),
-    user_id: uuid.UUID = Depends(get_current_user),
+    user_id: uuid.UUID = Depends(require_credits(5)),
 ) -> GenerateSpecsResponse:
     """Kick off an async Celery task that retrieves feedback, calls Claude,
     and persists generated specs. Returns a task_id for polling."""

@@ -9,7 +9,7 @@ from sqlalchemy import and_, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.dependencies import get_current_user, get_db
+from app.dependencies import get_current_user, get_db, require_credits
 from app.models.build_next import (
     BuildReport,
     BuildReportChunk,
@@ -70,7 +70,7 @@ async def _get_project_for_user(
 async def trigger_build_next(
     project_id: uuid.UUID,
     body: RunBuildNextRequest,
-    user_id: uuid.UUID = Depends(get_current_user),
+    user_id: uuid.UUID = Depends(require_credits(10)),
     db: AsyncSession = Depends(get_db),
 ) -> RunBuildNextResponse:
     """Kick off a Build Next run. 202 + {reportId, taskId}; 409 if a run is
