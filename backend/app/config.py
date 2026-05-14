@@ -19,6 +19,15 @@ class Settings(BaseSettings):
         "http://127.0.0.1:3000",
         "http://127.0.0.1:3001",
     ]
+    STRIPE_SECRET_KEY: str = ""
+    STRIPE_WEBHOOK_SECRET: str = ""
+    STRIPE_PRICE_SMALL: str = ""  # 100 credits / $5
+    STRIPE_PRICE_LARGE: str = ""  # 500 credits / $20
+    SIGNUP_CREDITS: int = 25
+    DEMO_USER_ID: str = "00000000-0000-0000-0000-000000000002"
+    DEMO_PROJECT_ID: str = "00000000-0000-0000-0000-0000000000d0"
+    DEMO_TOKEN: str = "dev-demo-token-change-in-production"
+    FRONTEND_URL: str = "http://localhost:3000"
 
 
 settings = Settings()

@@ -12,6 +12,7 @@ from app.models.conversation import Conversation, Message
 from app.models.feedback import FeedbackItem, FeedbackSource
 from app.models.project import Project
 from app.models.spec import Spec, SpecTransparency
+from app.models.stripe_event import StripeProcessedEvent
 from app.models.user import User
 
 __all__ = [
@@ -29,4 +30,5 @@ __all__ = [
     "BuildTheme",
     "BuildReportSpec",
     "BuildReportChunk",
+    "StripeProcessedEvent",
 ]
