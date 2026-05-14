@@ -290,3 +290,14 @@ export interface CheckoutResponse {
 }
 
 export type CheckoutPriceId = "small" | "large";
+
+export interface UserMe {
+  id: string;
+  email: string;
+  name: string | null;
+  avatarUrl: string | null;
+}
+
+export interface UpdateUserNameRequest {
+  name: string;
+}

@@ -1,7 +1,5 @@
 import type { ReactNode } from "react";
 
-import { CreditBalancePill } from "@/components/billing/credit-balance-pill";
-
 export interface WorkspaceStat {
   value: string;
   key: string;
@@ -54,10 +52,7 @@ export default function WorkspaceHeader({
             ))}
           </div>
         )}
-        <div className="flex items-center gap-3">
-          <CreditBalancePill />
-          {right}
-        </div>
+        {right}
       </div>
     </header>
   );

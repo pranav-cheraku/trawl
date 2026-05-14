@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import uuid
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
 
 
@@ -27,3 +27,11 @@ class UserResponse(BaseModel):
     email: str
     name: str | None
     avatar_url: str | None
+
+
+class UpdateUserName(BaseModel):
+    """Request body for PATCH /auth/me — display-name update."""
+
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    name: str = Field(min_length=1, max_length=255)

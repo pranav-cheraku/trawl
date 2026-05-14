@@ -24,6 +24,8 @@ import type {
   SpecType,
   TaskStatus,
   TokenResponse,
+  UpdateUserNameRequest,
+  UserMe,
 } from "@/types";
 
 export class PaywallError extends Error {
@@ -538,4 +540,23 @@ export async function promoteBuildSpec(
     throw new Error(detail.detail ?? `promoteBuildSpec failed: ${res.status}`);
   }
   return (await res.json()) as PromoteBuildSpecResponse;
+}
+
+export async function getUserMe(): Promise<UserMe> {
+  return apiFetch<UserMe>("/api/auth/me");
+}
+
+export async function updateUserName(name: string): Promise<UserMe> {
+  const body: UpdateUserNameRequest = { name };
+  const updated = await apiFetch<UserMe>("/api/auth/me", {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
+  // Notify any useUserMe() consumers so dropdown + profile page stay in sync.
+  window.dispatchEvent(new CustomEvent("trawl:user-updated", { detail: updated }));
+  return updated;
+}
+
+export async function deleteAccount(): Promise<void> {
+  await apiFetch<void>("/api/auth/me", { method: "DELETE" });
 }

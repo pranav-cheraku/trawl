@@ -7,7 +7,22 @@ import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.config import settings
+from app.database import engine as app_engine
 from app.models.user import User
+
+
+@pytest_asyncio.fixture(autouse=True)
+async def dispose_app_engine() -> AsyncIterator[None]:
+    """Dispose the shared app engine after every test.
+
+    Tests that use ASGITransport(app=app) exercise get_db, which draws
+    connections from the module-level async engine.  Under pytest-asyncio's
+    function-scoped event loop, each test gets a fresh loop.  Without this
+    fixture the asyncpg pool stays bound to the previous loop, causing
+    'Event loop is closed' errors in the next test that touches the engine.
+    """
+    yield
+    await app_engine.dispose()
 
 
 @pytest_asyncio.fixture
