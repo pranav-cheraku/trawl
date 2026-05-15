@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 
 import { createCheckoutSession } from "@/lib/api";
 import { useCredits } from "@/lib/use-credits";
@@ -21,7 +21,7 @@ const TIERS = [
   },
 ];
 
-export default function BillingPage() {
+function BillingPageContent() {
   const { balance, refresh } = useCredits();
   const search = useSearchParams();
   const flash = search.get("status");
@@ -112,5 +112,13 @@ export default function BillingPage() {
         (e.g. 4242 4242 4242 4242).
       </p>
     </div>
+  );
+}
+
+export default function BillingPage() {
+  return (
+    <Suspense fallback={null}>
+      <BillingPageContent />
+    </Suspense>
   );
 }
