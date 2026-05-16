@@ -24,11 +24,18 @@ export function useCredits() {
   }, [refresh]);
 
   useEffect(() => {
-    const onPaywall = () => {
+    const onRefresh = () => {
       void refresh();
     };
-    window.addEventListener("trawl:paywall", onPaywall);
-    return () => window.removeEventListener("trawl:paywall", onPaywall);
+    // `trawl:paywall` fires on a 402; `trawl:credits-updated` fires after a
+    // purchase/refresh. Both must re-fetch so every useCredits instance
+    // (header pill + billing page) stays in sync.
+    window.addEventListener("trawl:paywall", onRefresh);
+    window.addEventListener("trawl:credits-updated", onRefresh);
+    return () => {
+      window.removeEventListener("trawl:paywall", onRefresh);
+      window.removeEventListener("trawl:credits-updated", onRefresh);
+    };
   }, [refresh]);
 
   return { balance, initialLoading, refresh };

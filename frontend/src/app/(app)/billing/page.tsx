@@ -22,7 +22,7 @@ const TIERS = [
 ];
 
 function BillingPageContent() {
-  const { balance, refresh } = useCredits();
+  const { balance } = useCredits();
   const search = useSearchParams();
   const flash = search.get("status");
   const [pending, setPending] = useState<string | null>(null);
@@ -57,7 +57,12 @@ function BillingPageContent() {
       {flash === "success" && (
         <div className="mt-4 rounded-[4px] bg-secondary/10 px-4 py-2 text-sm text-secondary-dim">
           Payment successful. Your balance will update shortly.
-          <button onClick={refresh} className="ml-2 underline">
+          <button
+            onClick={() =>
+              window.dispatchEvent(new Event("trawl:credits-updated"))
+            }
+            className="ml-2 underline"
+          >
             Refresh
           </button>
         </div>
