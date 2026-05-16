@@ -1,14 +1,18 @@
 from __future__ import annotations
 
+import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Response, status
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
 
 from app.config import settings
 from app.database import engine
 from app.middleware.demo import DemoAccessMiddleware
 from app.routers import apps, auth, billing, build_next, conversations, projects, sources, specs
+
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
@@ -44,5 +48,28 @@ app.include_router(build_next.router, prefix="/api")
 
 @app.get("/health")
 async def health_check() -> dict[str, str]:
-    """Return a simple health status for liveness probes."""
+    """Return a simple health status for liveness probes.
+
+    Intentionally does NOT touch the database — Railway's container healthcheck
+    uses this, and a transient DB blip should not trigger a container restart.
+    """
     return {"status": "healthy"}
+
+
+@app.get("/health/db")
+async def health_check_db(response: Response) -> dict[str, str]:
+    """Run a trivial query so a scheduled keepalive prevents Supabase idle-pause.
+
+    The Supabase free tier pauses a project after a stretch of inactivity. The
+    `supabase-keepalive` GitHub Action curls this endpoint on a schedule; the
+    `SELECT 1` it issues counts as activity and keeps the project warm. Returns
+    503 if the database is unreachable so the keepalive job fails loudly.
+    """
+    try:
+        async with engine.connect() as conn:
+            await conn.execute(text("SELECT 1"))
+    except Exception:
+        logger.exception("Database health check failed")
+        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+        return {"status": "unhealthy", "database": "unreachable"}
+    return {"status": "healthy", "database": "reachable"}

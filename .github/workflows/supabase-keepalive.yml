@@ -1,0 +1,32 @@
+# Supabase keepalive: the Supabase free tier pauses a project after a stretch
+# of inactivity. This workflow curls the API's DB health endpoint daily; the
+# `SELECT 1` it triggers counts as activity and keeps the Postgres project warm
+# (and the Railway API container too). No DB credentials live here — the API
+# holds them, so the only thing this workflow needs is the public API URL.
+#
+# If the curl fails (DB unreachable / project already paused), the job goes red
+# in the Actions tab as an alert to restore the project from the Supabase UI.
+
+name: Supabase keepalive
+
+on:
+  schedule:
+    # Daily at 06:00 UTC. Far below Supabase's idle-pause threshold, so there
+    # is a wide safety margin even if a run is skipped or fails.
+    - cron: "0 6 * * *"
+  # Allows manual runs from the Actions tab (useful for testing).
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    name: Ping API DB health endpoint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Curl /health/db
+        # --retry-all-errors retries on HTTP errors too (e.g. a 502/503 while a
+        # cold Railway container is spinning up), not just connection failures.
+        run: |
+          curl --fail --show-error --silent --location \
+            --retry 5 --retry-all-errors --retry-delay 20 \
+            --max-time 60 \
+            "https://trawl-production-69d8.up.railway.app/health/db"
