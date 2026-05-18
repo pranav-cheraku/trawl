@@ -296,6 +296,7 @@ export interface UserMe {
   email: string;
   name: string | null;
   avatarUrl: string | null;
+  createdAt: string;
 }
 
 export interface UpdateUserNameRequest {

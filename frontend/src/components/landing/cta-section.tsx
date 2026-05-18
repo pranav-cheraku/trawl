@@ -64,6 +64,12 @@ export function CtaSection({ session }: CtaSectionProps) {
             </button>
           )}
         </motion.div>
+        {!session && (
+          <p className="mt-5 text-sm text-on-surface-variant">
+            Start with <span className="font-mono text-on-surface">25</span>{" "}
+            free credits. No card required.
+          </p>
+        )}
       </div>
     </section>
   );

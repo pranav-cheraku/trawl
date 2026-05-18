@@ -18,6 +18,7 @@ import DashboardToolbar, {
   type ToolbarChip,
 } from "@/components/dashboard/dashboard-toolbar";
 import ProjectListRow from "@/components/dashboard/project-list-row";
+import WelcomeBanner from "@/components/dashboard/welcome-banner";
 import { useDashboardView } from "@/lib/use-dashboard-view";
 
 function SkeletonCard() {
@@ -306,6 +307,9 @@ export default function DashboardPage() {
             </button>
           }
         />
+
+        {/* One-time welcome banner for brand-new accounts */}
+        <WelcomeBanner />
 
         {/* Toolbar */}
         <div className="mt-4">

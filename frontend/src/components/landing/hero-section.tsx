@@ -111,6 +111,21 @@ export default function HeroSection({ session }: HeroSectionProps) {
               </button>
             )}
           </motion.div>
+          {!session && (
+            <motion.p
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{
+                duration: durations.normal,
+                ease: easings.standard,
+                delay: 0.4,
+              }}
+              className="mt-3 text-[13px] text-on-surface-variant"
+            >
+              Start with <span className="font-mono text-on-surface">25</span>{" "}
+              free credits. No card required.
+            </motion.p>
+          )}
           <motion.p
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}

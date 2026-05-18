@@ -55,6 +55,11 @@ function BillingPageContent() {
         <span className="text-on-surface">{balance ?? "—"}</span>
       </div>
 
+      <p className="mt-3 text-xs text-on-surface-variant">
+        Every account starts with 25 free credits. Top up below when you run
+        low.
+      </p>
+
       {flash === "success" && (
         <div className="mt-4 rounded-[4px] bg-secondary/10 px-4 py-2 text-sm text-secondary-dim">
           Payment successful. Your balance will update shortly.

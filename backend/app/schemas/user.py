@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
@@ -27,6 +28,8 @@ class UserResponse(BaseModel):
     email: str
     name: str | None
     avatar_url: str | None
+    # Used by the dashboard to show a one-time welcome banner to new accounts.
+    created_at: datetime
 
 
 class UpdateUserName(BaseModel):
