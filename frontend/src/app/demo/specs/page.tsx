@@ -336,7 +336,6 @@ export default function DemoSpecsPage() {
       <>
         <div className="flex flex-col gap-4">
           <WorkspaceHeader
-            label="Workspace / Kanban"
             title="Specs"
             stats={hasSpecs ? statsForHeader : undefined}
             right={

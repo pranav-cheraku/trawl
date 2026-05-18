@@ -17,7 +17,7 @@ const DEMO_PROJECT_NAME = "Notion – App Reviews";
 
 function StatusDot({ status }: { status: string }) {
   if (status === "ready") {
-    return <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#10B981]" />;
+    return <span className="inline-block h-1.5 w-1.5 rounded-full bg-secondary" />;
   }
   if (status === "error") {
     return <span className="inline-block h-1.5 w-1.5 rounded-full bg-error" />;
@@ -86,7 +86,6 @@ export default function DemoSourcesPage() {
     <DemoProjectLayout projectName={DEMO_PROJECT_NAME}>
       <div className="flex flex-col gap-4">
         <WorkspaceHeader
-          label="Workspace / Sources"
           title="Feedback Sources"
           stats={stats}
         />

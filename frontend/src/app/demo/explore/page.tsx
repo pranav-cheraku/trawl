@@ -564,7 +564,7 @@ export default function DemoExplorePage() {
                   className="rounded-[4px] bg-surface-container-low px-3 py-3 text-[12.5px] text-on-surface-variant"
                 >
                   <span className="font-mono text-[10px] font-medium uppercase tracking-[0.18em] text-on-surface-variant/70">
-                    Scope empty —
+                    Scope empty:
                   </span>{" "}
                   activate at least one source above to ask a question.
                 </div>
