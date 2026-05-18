@@ -3,7 +3,7 @@ node_modules/
 backend/venv/
 backend/.venv/
 
-# Environment (secrets)
+# Environment
 .env
 .env.local
 .env.*.local
@@ -18,7 +18,7 @@ __pycache__/
 *.pyo
 *.egg-info/
 dist/
-build/
+backend/build/
 *.egg
 
 # Next.js
@@ -31,14 +31,16 @@ frontend/out/
 *.swp
 *.swo
 
-# Claude Code local config (not project-shared)
+# Claude Code local config
 .claude/settings.local.json
 .claude/
 CLAUDE.md
-docs/
+/docs/
 
 # Notes
-notes/
+/notes/
 
-# Playwright MCP session artifacts (browser snapshots + console logs)
+# Playwright MCP session artifacts
 .playwright-mcp/
+
+.superpowers/
