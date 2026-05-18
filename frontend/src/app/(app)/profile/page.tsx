@@ -133,6 +133,24 @@ export default function ProfilePage() {
         </div>
       </section>
 
+      <nav
+        className="mt-10 flex items-center gap-4 text-xs text-on-surface-variant"
+        aria-label="Legal"
+      >
+        <Link href="/privacy" className="transition-colors hover:text-on-surface">
+          Privacy
+        </Link>
+        <Link href="/terms" className="transition-colors hover:text-on-surface">
+          Terms
+        </Link>
+        <Link
+          href="/refund-policy"
+          className="transition-colors hover:text-on-surface"
+        >
+          Refund policy
+        </Link>
+      </nav>
+
       <DeleteAccountModal
         open={confirmDelete}
         email={user.email}

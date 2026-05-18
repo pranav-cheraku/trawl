@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 
@@ -105,16 +106,19 @@ function BillingPageContent() {
       </div>
 
       <p className="mt-8 text-xs text-on-surface-variant">
-        Payments processed via Stripe in test mode. Use any{" "}
-        <a
-          href="https://stripe.com/docs/testing#cards"
-          className="underline"
-          target="_blank"
-          rel="noreferrer"
-        >
-          Stripe test card
-        </a>{" "}
-        (e.g. 4242 4242 4242 4242).
+        Payments are securely processed by Stripe. See our{" "}
+        <Link href="/refund-policy" className="underline hover:text-on-surface">
+          refund policy
+        </Link>
+        ,{" "}
+        <Link href="/terms" className="underline hover:text-on-surface">
+          terms
+        </Link>
+        , and{" "}
+        <Link href="/privacy" className="underline hover:text-on-surface">
+          privacy policy
+        </Link>
+        .
       </p>
     </div>
   );

@@ -1,3 +1,11 @@
+import Link from "next/link";
+
+const legalLinks = [
+  { href: "/privacy", label: "Privacy" },
+  { href: "/terms", label: "Terms" },
+  { href: "/refund-policy", label: "Refunds" },
+];
+
 export default function Footer() {
   return (
     <footer className="bg-on-surface">
@@ -11,19 +19,32 @@ export default function Footer() {
           </p>
         </div>
 
-        <div className="flex items-center gap-4">
-          <span className="text-[12px] font-medium text-white/40">
-            Built by Pranav Cheraku
-          </span>
-          <span className="text-white/20">&middot;</span>
-          <a
-            href="https://www.linkedin.com/in/pranav-cheraku/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[12px] font-medium uppercase tracking-wider text-white/40 transition-colors hover:text-white/70"
-          >
-            LinkedIn
-          </a>
+        <div className="flex flex-col items-start gap-3 sm:items-end">
+          <nav className="flex items-center gap-4" aria-label="Legal">
+            {legalLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="text-[12px] font-medium uppercase tracking-wider text-white/40 transition-colors hover:text-white/70"
+              >
+                {link.label}
+              </Link>
+            ))}
+          </nav>
+          <div className="flex items-center gap-4">
+            <span className="text-[12px] font-medium text-white/40">
+              Built by Pranav Cheraku
+            </span>
+            <span className="text-white/20">&middot;</span>
+            <a
+              href="https://www.linkedin.com/in/pranav-cheraku/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[12px] font-medium uppercase tracking-wider text-white/40 transition-colors hover:text-white/70"
+            >
+              LinkedIn
+            </a>
+          </div>
         </div>
       </div>
     </footer>
