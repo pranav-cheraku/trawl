@@ -6,7 +6,9 @@ export interface WorkspaceStat {
 }
 
 export interface WorkspaceHeaderProps {
-  label: string;
+  /** Optional eyebrow label. Omit on project tabs, where the layout
+   *  breadcrumb + tab bar already establish context. */
+  label?: string;
   title: string;
   stats?: WorkspaceStat[];
   right?: ReactNode;
@@ -22,9 +24,11 @@ export default function WorkspaceHeader({
   return (
     <header className="flex flex-wrap items-end justify-between gap-3 rounded-[4px] bg-surface-container-lowest px-4 py-3">
       <div className="flex flex-col gap-1">
-        <span className="font-mono text-[10px] font-medium uppercase tracking-[0.25em] text-on-surface-variant/70">
-          {label}
-        </span>
+        {label && (
+          <span className="font-mono text-[10px] font-medium uppercase tracking-[0.25em] text-on-surface-variant/70">
+            {label}
+          </span>
+        )}
         <h2 className="text-[17px] font-semibold leading-tight text-on-surface">
           {title}
         </h2>

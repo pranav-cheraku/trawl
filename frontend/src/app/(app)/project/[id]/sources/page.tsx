@@ -57,7 +57,6 @@ export default function SourcesPage() {
   return (
     <div className="flex flex-col gap-4">
       <WorkspaceHeader
-        label="Workspace / Sources"
         title="Feedback Sources"
         stats={stats}
         right={

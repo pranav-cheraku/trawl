@@ -41,7 +41,7 @@ function StatusBadge({ status }: { status: string }) {
   let pulse = false;
   switch (status) {
     case "ready":
-      dotClass = "bg-[#10B981]";
+      dotClass = "bg-secondary";
       textClass = "text-on-surface";
       break;
     case "error":
