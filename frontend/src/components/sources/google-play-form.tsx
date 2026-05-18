@@ -1,4 +1,6 @@
 "use client";
+// Google Play connector form. Autocompletes app name via the backend's
+// Google Play search endpoint, then submits to start ingestion.
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { connectGooglePlay, searchGooglePlay } from "@/lib/api";

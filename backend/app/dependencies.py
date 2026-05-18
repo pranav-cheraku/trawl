@@ -1,3 +1,10 @@
+"""FastAPI shared dependencies for Trawl routers.
+
+Exports:
+- `get_current_user`: re-export of the JWT auth dep, for router convenience.
+- `require_credits(n)`: factory that returns a dep which atomically charges
+  n credits before the handler runs, raising HTTP 402 on insufficient balance.
+"""
 from __future__ import annotations
 
 import uuid

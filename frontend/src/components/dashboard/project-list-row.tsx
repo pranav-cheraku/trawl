@@ -1,4 +1,7 @@
 "use client";
+// Single row in the dashboard list view. Name, description, last-updated date,
+// pin toggle, and delete with InlineConfirm. The whole row is a Next.js Link;
+// action buttons stop propagation to avoid navigating while clicking them.
 
 import Link from "next/link";
 import { useState } from "react";

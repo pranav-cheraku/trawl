@@ -1,4 +1,8 @@
 "use client";
+// Read-only spec detail modal for the Build Next page. Identical layout to the
+// Kanban spec modal but with no editing, only the "+ Add to Kanban" promote action.
+// selectedSpec is a snapshot; the parent derives liveSpec at render to reflect
+// promotedSpecId updates without reopening the modal.
 
 import { useEffect, useRef } from "react";
 

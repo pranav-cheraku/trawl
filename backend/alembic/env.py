@@ -1,3 +1,11 @@
+"""Alembic migration environment for Trawl.
+
+Configured for async migrations using asyncpg. The database URL is sourced
+from app.config.settings so alembic.ini does not need to hold the secret.
+
+All ORM models are imported via `from app.models import Base` to ensure
+Base.metadata is fully populated before autogenerate compares against the DB.
+"""
 from __future__ import annotations
 
 import asyncio

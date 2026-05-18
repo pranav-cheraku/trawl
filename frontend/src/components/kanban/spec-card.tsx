@@ -1,5 +1,5 @@
 "use client";
-
+// Kanban card: displays a colored priority bar, type chip, title, and citation count.
 import type { Spec, SpecPriority } from "@/types";
 
 interface Props {

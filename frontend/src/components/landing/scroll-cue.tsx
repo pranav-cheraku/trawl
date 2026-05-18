@@ -1,4 +1,6 @@
 "use client";
+// Animated scroll-down chevron below the hero. Fades out once the user scrolls
+// past the hero section.
 
 import { useEffect, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";

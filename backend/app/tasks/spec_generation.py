@@ -1,3 +1,16 @@
+"""Celery task for spec generation: retrieve feedback chunks, call Claude, persist specs.
+
+The async work (embed + retrieve + generate) runs inside a single asyncio.run()
+call to avoid multiple event loops. The finally block in _async_generate_specs
+disposes module-level async singletons (Redis client, asyncpg engine pool)
+inside the same loop so the next Celery task starts fresh without loop-leaked
+state. Without this, the second task in a worker process raises "Future attached
+to a different loop".
+
+supporting_feedback_indices from the LLM are 1-based (matching the numbered
+context the model sees). They are mapped to chunk UUIDs with `chunks[i - 1]`
+and validated against the actual chunk list length.
+"""
 from __future__ import annotations
 
 import asyncio

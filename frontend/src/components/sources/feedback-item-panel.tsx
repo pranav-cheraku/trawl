@@ -1,4 +1,7 @@
 "use client";
+// Expandable panel showing feedback items for a single source. Items load
+// lazily with a "Load more" button; the panel is collapsed by default in the
+// source list to keep the page scannable.
 
 import { useCallback, useEffect, useState } from "react";
 import { listFeedbackItems } from "@/lib/api";

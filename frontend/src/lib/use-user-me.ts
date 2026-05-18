@@ -1,5 +1,6 @@
 "use client";
-
+// Fetches /api/auth/me and re-fetches on trawl:user-updated so the header
+// dropdown and profile page stay in sync after a name edit.
 import { useCallback, useEffect, useState } from "react";
 
 import { getUserMe } from "@/lib/api";

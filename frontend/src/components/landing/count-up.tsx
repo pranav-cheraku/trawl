@@ -1,4 +1,6 @@
 "use client";
+// Animates a number from 0 to `to` once the element enters the viewport.
+// Motion is skipped entirely when the user prefers reduced motion.
 
 import { useEffect, useRef, useState } from "react";
 import { useInView, useReducedMotion } from "framer-motion";

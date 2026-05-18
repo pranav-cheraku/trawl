@@ -1,5 +1,6 @@
 "use client";
-
+// Dashboard page: project grid/list with search, pinning, and recent/pinned
+// filter chips. ProjectCard and ProjectListRow are defined inline here.
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";

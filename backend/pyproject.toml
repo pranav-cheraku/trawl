@@ -1,6 +1,11 @@
+# asyncio_mode = "auto" means every async def test_* is treated as an asyncio
+# test without needing @pytest.mark.asyncio decorators. Do NOT add those
+# decorators -- they produce duplicate-coroutine warnings under auto mode.
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 
+# ignore_missing_imports is required because most third-party deps lack stubs.
+# The sqlalchemy plugin enables typed ORM mapped_column inference.
 [tool.mypy]
 python_version = "3.11"
 warn_return_any = true

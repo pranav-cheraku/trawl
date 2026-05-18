@@ -1,3 +1,8 @@
+"""FastAPI application entry point for Trawl.
+
+Mounts all routers under /api, configures CORS and the DemoAccessMiddleware,
+and defines the two health check endpoints used by Railway and Supabase.
+"""
 from __future__ import annotations
 
 import logging
@@ -50,7 +55,7 @@ app.include_router(build_next.router, prefix="/api")
 async def health_check() -> dict[str, str]:
     """Return a simple health status for liveness probes.
 
-    Intentionally does NOT touch the database — Railway's container healthcheck
+    Intentionally does NOT touch the database. Railway's container healthcheck
     uses this, and a transient DB blip should not trigger a container restart.
     """
     return {"status": "healthy"}

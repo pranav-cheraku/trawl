@@ -1,5 +1,6 @@
 "use client";
-
+// Demo Specs page: read-only Kanban board for the demo project.
+// DnD reorder calls are skipped (handleDragEnd guards on isDemo).
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence } from "framer-motion";
 import {
@@ -221,7 +222,7 @@ export default function DemoSpecsPage() {
     setActiveId(null);
   }, []);
 
-  // DnD is disabled in demo mode — no reorder calls go out
+  // DnD is disabled in demo mode, no reorder calls go out
   const handleDragEnd = useCallback(
     async (event: DragEndEvent) => {
       setActiveId(null);

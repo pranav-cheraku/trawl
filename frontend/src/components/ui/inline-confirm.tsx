@@ -1,4 +1,6 @@
 "use client";
+// Inline Yes/No confirmation for destructive actions. Use instead of a modal
+// for low-stakes deletes (single item, reversible via undo elsewhere).
 
 interface InlineConfirmProps {
   message: string;

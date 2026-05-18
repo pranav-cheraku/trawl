@@ -1,4 +1,6 @@
 "use client";
+// Manual paste connector form. Accepts free-form text (one item per line or
+// a single block). Backend caps content at 100k characters.
 
 import { useMemo, useState } from "react";
 import { connectManualPaste } from "@/lib/api";

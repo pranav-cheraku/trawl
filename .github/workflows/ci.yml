@@ -1,4 +1,6 @@
-# CI: runs on push to main and on pull requests targeting main.
+# CI: lint and type-check on push to main and on pull requests targeting main.
+# No deploy step here. Vercel (frontend) and Railway (backend) deploy via their own
+# GitHub integrations on push to main.
 # flake8 short-circuits the backend job, so a mypy failure can be hidden if flake8 fails first. Run both locally.
 
 name: CI

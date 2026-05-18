@@ -1,3 +1,10 @@
+"""Atomic credit balance operations for Trawl's freemium model.
+
+All balance mutations go through these two functions. Never do a
+SELECT-then-UPDATE: the window between the two allows concurrent requests to
+both pass the balance check and double-spend. The UPDATE ... WHERE
+credits_balance >= :amount RETURNING pattern is atomic at the database level.
+"""
 from __future__ import annotations
 
 import uuid

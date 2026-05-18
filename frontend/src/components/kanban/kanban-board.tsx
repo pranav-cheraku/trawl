@@ -1,5 +1,6 @@
 "use client";
-
+// Thin presenter for the Kanban board. Receives pre-bucketed specs per status
+// and renders four KanbanColumns. DnD context lives in the parent page.
 import type { Spec, SpecStatus } from "@/types";
 import KanbanColumn from "./kanban-column";
 

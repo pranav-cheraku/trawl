@@ -1,3 +1,4 @@
+"""Pydantic schemas for project CRUD endpoints."""
 from __future__ import annotations
 
 import uuid

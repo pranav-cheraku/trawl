@@ -1,5 +1,6 @@
 "use client";
-
+// Single Kanban column. useDroppable on the body with id "col:{status}" enables
+// drops onto empty columns, which SortableContext alone does not support.
 import type { ReactNode } from "react";
 import { useDroppable } from "@dnd-kit/core";
 import {

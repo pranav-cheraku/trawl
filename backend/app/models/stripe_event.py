@@ -1,3 +1,10 @@
+"""Stripe webhook idempotency table.
+
+Stripe delivers webhooks at-least-once. Before crediting a user, the webhook
+handler does INSERT ... ON CONFLICT DO NOTHING into this table. If the row
+already exists, the event was already processed and we return early.
+`event_id` is the Stripe event ID (e.g. "evt_...") used as the primary key.
+"""
 from __future__ import annotations
 
 from datetime import datetime

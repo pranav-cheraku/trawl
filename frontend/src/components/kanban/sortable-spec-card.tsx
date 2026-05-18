@@ -1,5 +1,7 @@
 "use client";
-
+// @dnd-kit sortable wrapper for SpecCard. Applies a drag lift transform (raise +
+// slight tilt) while keeping the inner card button clickable. Supports cascade
+// entrance animation for newly generated specs.
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { motion, useReducedMotion } from "framer-motion";
@@ -16,7 +18,9 @@ interface Props {
   cascadeFromIndex?: number;
 }
 
+// Tilt angle scales with vertical drag velocity. Clamped to ±TILT_DEGREES.
 const TILT_DEGREES = 1.5;
+// Vertical displacement at which the tilt reaches its maximum angle.
 const TILT_SCALE_MAX_PX = 80;
 
 export default function SortableSpecCard({

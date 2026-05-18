@@ -1,3 +1,5 @@
+// Root layout: loads Inter and JetBrains Mono font variables, wraps the app
+// with the NextAuth session provider.
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import AuthSessionProvider from "@/components/session-provider";

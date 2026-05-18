@@ -1,3 +1,4 @@
+// Landing page footer with legal links and social/copyright copy.
 import Link from "next/link";
 
 const footerLinks = [

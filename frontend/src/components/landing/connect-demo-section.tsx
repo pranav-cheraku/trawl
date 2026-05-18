@@ -1,4 +1,6 @@
 "use client";
+// Landing "Connect" section: animated illustration of the 5 feedback source
+// connectors. Scroll-triggered entrance animation.
 
 import { useRef } from "react";
 import { motion, useInView, useReducedMotion } from "framer-motion";

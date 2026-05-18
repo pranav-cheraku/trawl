@@ -1,3 +1,4 @@
+// Browser tab title for the Build Next tab.
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {

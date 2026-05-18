@@ -1,4 +1,6 @@
 "use client";
+// Generic Google sign-in trigger. Uses signIn("google") directly. Never link
+// to /api/auth/signin as that causes a redirect loop with pages.signIn: "/".
 
 import { signIn } from "next-auth/react";
 

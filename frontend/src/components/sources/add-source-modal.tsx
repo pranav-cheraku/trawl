@@ -1,4 +1,7 @@
 "use client";
+// Two-step modal: connector picker (grid of tiles) then the connector-specific
+// form. Connector tile list is driven by connector-registry.ts so adding a new
+// source type only requires a new registry entry.
 
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";

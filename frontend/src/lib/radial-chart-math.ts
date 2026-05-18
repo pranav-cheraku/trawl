@@ -1,3 +1,5 @@
+// Geometry helpers for the donut chart on the Build Next page. Computes SVG
+// arc paths for each theme segment, starting from 12 o'clock and going clockwise.
 export interface RadialSegmentInput {
   id: string;
   weight: number;

@@ -1,5 +1,12 @@
 "use client";
-
+// Renders a single chat message. User messages are plain text; assistant messages
+// go through a two-pass Markdown pipeline:
+//   1. Replace [Feedback #N] blocks with ⟦CITE_N⟧ sentinel markers (Mathematical
+//      White Square Brackets so they can't collide with prose or markdown syntax).
+//   2. Pass the modified string to ReactMarkdown with a custom remark plugin
+//      (remarkSplitCitations) that splits text nodes on those sentinels and emits
+//      "citation-slot" HAST nodes. The citation-slot component override renders
+//      CitationBadge(s) inline in the markdown output.
 import { motion, useReducedMotion } from "framer-motion";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";

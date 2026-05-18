@@ -1,3 +1,5 @@
+// Typed API client: wraps all backend calls with Bearer auth, a 5-minute token
+// cache, and shared error handling for 401 (redirect home) and 402 (paywall).
 import type {
   AppSearchResult,
   BuildReport,
@@ -48,6 +50,7 @@ export class AlreadyRunningError extends Error {
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
+// Token is cached for 5 minutes to avoid a /api/token round-trip on every request.
 let cachedToken: string | null = null;
 let tokenFetchedAt = 0;
 const TOKEN_CACHE_MS = 5 * 60 * 1000;
@@ -96,6 +99,7 @@ export async function apiFetch<T>(
 
   if (!response.ok) {
     if (response.status === 401) {
+      // Clear stale token so the next call fetches a fresh one after re-auth.
       cachedToken = null;
       if (typeof window !== "undefined") {
         window.location.href = "/";
@@ -103,6 +107,7 @@ export async function apiFetch<T>(
       throw new Error("Unauthorized");
     }
     if (response.status === 402) {
+      // 402 means out of credits. Fire the paywall event and let the modal handle it.
       const body = await response.json().catch(() => ({})) as { detail?: string };
       window.dispatchEvent(new CustomEvent("trawl:paywall", { detail: body }));
       throw new PaywallError(body.detail ?? "Insufficient credits");
@@ -110,11 +115,14 @@ export async function apiFetch<T>(
     throw new Error(`API error: ${response.status}`);
   }
   if (response.status === 204) {
+    // 204 No Content (e.g. DELETE). Returning undefined satisfies the generic T.
     return undefined as unknown as T;
   }
   return response.json() as Promise<T>;
 }
 
+// Content-Type must NOT be set here. The browser sets it to multipart/form-data
+// with the correct boundary when the header is absent.
 async function apiUpload<T>(path: string, body: FormData): Promise<T> {
   const token = await getAuthToken();
   const headers: Record<string, string> = {};
@@ -446,6 +454,8 @@ export async function getSpecSources(specId: string): Promise<SpecSources> {
   return apiFetch<SpecSources>(`/api/specs/${specId}/sources`);
 }
 
+// runBuildNext and promoteBuildSpec use raw fetch (not apiFetch) so they can
+// inspect the 409 status before it becomes a thrown Error.
 export async function runBuildNext(
   projectId: string,
   sourceIds?: string[],

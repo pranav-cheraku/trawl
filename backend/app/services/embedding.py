@@ -1,3 +1,9 @@
+"""embedding.py: Voyage AI embedding with Redis query cache and rate-limit retry.
+
+Provides two public entry points: embed_texts (batch document ingestion, no cache)
+and embed_query (single query, cached in Redis). Also exposes close_redis() so
+Celery tasks can dispose the async singleton before their asyncio.run() returns.
+"""
 from __future__ import annotations
 
 import asyncio

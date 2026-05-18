@@ -1,3 +1,4 @@
+// Browser tab title for the Profile page.
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {

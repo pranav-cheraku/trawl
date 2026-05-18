@@ -1,4 +1,7 @@
 "use client";
+// Global paywall modal mounted once in (app)/layout.tsx. Listens for the
+// trawl:paywall CustomEvent dispatched by apiFetch/apiUpload on HTTP 402.
+// Do not render per-page paywalls. Fire the event instead.
 
 import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";

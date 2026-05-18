@@ -1,3 +1,7 @@
+# Local development stack: Postgres (pgvector), Redis, FastAPI api, and Celery worker.
+# Uses the root .env (Docker service names as hostnames). For local-only dev without Docker,
+# use backend/.env (localhost hostnames) and run uvicorn + Celery directly.
+
 services:
 
   # pgvector/pgvector:pg16 ships the extension pre-installed; plain postgres:16 requires manual install.
@@ -58,9 +62,12 @@ services:
         condition: service_healthy
     volumes:
       - ./backend:/app
+      # Shared with api so uploaded CSV files written by api are visible to the worker.
       - uploads:/tmp/trawl_uploads
     # -B embeds Celery beat in the worker process (single-process scheduler for portfolio scale).
     # If we ever run multiple worker replicas, beat needs to be split into its own service.
+    # No --concurrency flag here: Docker Desktop is constrained and the default (host CPU / 2)
+    # is fine locally. On Railway, --concurrency=2 is mandatory to avoid OOM with ~48 host cores.
     command: celery -A app.celery_app worker -B --loglevel=info
 
 volumes:

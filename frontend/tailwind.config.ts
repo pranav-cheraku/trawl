@@ -1,3 +1,7 @@
+// Tailwind config for the Architect's Workspace design system.
+// Adds the custom color palette (neutral grays + sea-green signal + priority scale)
+// and dual-font setup (Inter for text, JetBrains Mono for all numbers).
+// After changing this file, restart the dev server and verify via CSS bundle grep.
 import type { Config } from "tailwindcss";
 
 const config: Config = {

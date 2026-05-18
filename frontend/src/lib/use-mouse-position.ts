@@ -1,5 +1,5 @@
 "use client";
-
+// Tracks pointer position in normalized [-1, 1] coordinates for parallax effects.
 import { useEffect, useState } from "react";
 
 // Returns pointer position in [-1, 1] on each axis, centered at 0,0.

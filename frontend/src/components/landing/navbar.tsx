@@ -1,3 +1,5 @@
+// Landing page navbar. Server Component that receives the current session prop
+// from the parent Server Component and shows "Go to app" vs "Sign in" accordingly.
 import Link from "next/link";
 import SignInButton from "@/components/sign-in-button";
 import type { Session } from "next-auth";

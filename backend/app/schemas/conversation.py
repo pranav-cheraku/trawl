@@ -1,3 +1,9 @@
+"""Pydantic schemas for conversation and messaging endpoints.
+
+SendMessageRequest accepts optional source_ids and retrieval tuning parameters.
+Use `is not None` checks (not `or`) for top_k/threshold so that threshold=0.0
+is not coerced to the server default.
+"""
 from __future__ import annotations
 
 import uuid

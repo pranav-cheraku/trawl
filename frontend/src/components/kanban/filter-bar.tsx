@@ -1,5 +1,6 @@
 "use client";
-
+// Filter bar for the Kanban board: type, status, and priority chips with re-click
+// to clear and a right slot for the export menu.
 import type { ReactNode } from "react";
 import type { SpecPriority, SpecStatus, SpecType } from "@/types";
 import FilterChip from "./filter-chip";

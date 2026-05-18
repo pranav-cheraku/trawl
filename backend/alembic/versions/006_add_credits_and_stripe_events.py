@@ -18,6 +18,8 @@ depends_on = None
 
 
 def upgrade() -> None:
+    """Add credits_balance to users (server_default=0 backfills existing rows) and
+    create stripe_processed_events for webhook idempotency deduplication."""
     op.add_column(
         "users",
         sa.Column(
@@ -40,5 +42,6 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    """Drop stripe_processed_events table and credits_balance column."""
     op.drop_table("stripe_processed_events")
     op.drop_column("users", "credits_balance")

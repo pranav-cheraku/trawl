@@ -1,3 +1,11 @@
+"""Project model for Trawl.
+
+A project is the top-level container for a product manager's workspace.
+It owns feedback sources, specs, conversations, and build reports.
+The cascade on `feedback_items` and `feedback_chunks` is intentional even
+though they are also reachable via FeedbackSource: direct FK on project_id
+allows efficient bulk queries without joining through the source.
+"""
 from __future__ import annotations
 
 import uuid

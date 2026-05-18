@@ -1,3 +1,7 @@
+# Runtime dependencies for the Trawl backend.
+# Pin exact versions to keep Railway and local dev in sync.
+# python-multipart pinned to 0.0.18+ for CVE-2024-53981 (multipart DoS).
+# stripe pinned to 15.1.0 (uses create_async + attribute access on Event).
 fastapi==0.111.0
 uvicorn[standard]==0.30.1
 sqlalchemy[asyncio]==2.0.31

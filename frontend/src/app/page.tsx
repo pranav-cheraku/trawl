@@ -1,3 +1,5 @@
+// Landing page: Server Component that passes the current auth session to the
+// Navbar and Hero so they can show the correct CTA (sign-in vs. go to dashboard).
 import Navbar from "@/components/landing/navbar";
 import HeroSection from "@/components/landing/hero-section";
 import { ConnectDemoSection } from "@/components/landing/connect-demo-section";

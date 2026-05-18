@@ -1,3 +1,19 @@
+"""Spec and SpecTransparency models for Trawl.
+
+Spec represents a generated product specification card on the Kanban board.
+`build_report_spec_id` links a promoted Build Next spec back to its origin;
+unique constraint enforces one-to-one: a BuildReportSpec can only be promoted
+once.
+
+The Spec <-> BuildReportSpec relationship intentionally has NO back_populates.
+Both sides are scalar M2O with their own FK column. SQLAlchemy raises
+ArgumentError under python -W error if both sides declare back_populates on
+a cycle, so we keep the relationships unidirectional with explicit
+`foreign_keys=[...]`.
+
+SpecTransparency stores the full RAG retrieval context so the X-Ray panel can
+render without a second API call.
+"""
 from __future__ import annotations
 
 import uuid

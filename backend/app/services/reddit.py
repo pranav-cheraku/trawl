@@ -1,3 +1,13 @@
+"""Reddit ingestion service for Trawl.
+
+Supports two modes: fetching hot posts + comments from a subreddit, or
+searching Reddit-wide by keyword. Both modes paginate via Reddit's `after=`
+cursor up to a configurable post limit.
+
+Reddit `score` is karma (upvotes minus downvotes), NOT a 1-5 rating. It is
+deliberately not mapped to the `rating` metadata key to avoid rendering it
+as stars in the UI.
+"""
 from __future__ import annotations
 
 import logging

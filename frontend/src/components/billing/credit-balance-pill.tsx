@@ -1,4 +1,6 @@
 "use client";
+// Credit balance chip in the app header. Backed by useCredits() which syncs
+// on trawl:paywall and trawl:credits-updated window events.
 
 import Link from "next/link";
 

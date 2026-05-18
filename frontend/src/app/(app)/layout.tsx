@@ -1,5 +1,7 @@
 "use client";
-
+// Authenticated app shell: top nav bar with logo, Dashboard link, credits pill,
+// and profile menu. PaywallModal is mounted here so it is available on all
+// in-app pages without duplicating it per route.
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";

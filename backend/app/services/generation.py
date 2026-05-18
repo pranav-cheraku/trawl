@@ -1,3 +1,9 @@
+"""generation.py: Claude-powered answer and spec generation for the RAG pipeline.
+
+All three generation modes (Q&A, feature specs, user stories) use forced tool_choice
+so the response is always structured JSON without manual parsing or retry. Every
+generated item traces back to source chunks via 1-indexed supporting_feedback_indices.
+"""
 from __future__ import annotations
 
 import logging
@@ -100,6 +106,8 @@ def _build_history_messages(
 
     Keeps only the trailing MAX_HISTORY_TURNS and drops unrecognized roles.
     """
+    # Trim to the trailing N turns before filtering roles so the window is stable
+    # regardless of how many system or tool messages are interspersed.
     trimmed = history[-MAX_HISTORY_TURNS:] if history else []
     turns: list[dict[str, str]] = []
     for msg in trimmed:
@@ -542,6 +550,8 @@ async def generate_user_stories(
     if not isinstance(story_groups, list):
         raise RuntimeError("generate_user_stories.story_groups is not a list")
 
+    # Flatten grouped output into individual spec dicts. The theme name is
+    # promoted to a top-level field so rows are compatible with the specs table.
     specs: list[dict[str, Any]] = []
     for group in story_groups:
         if not isinstance(group, dict):

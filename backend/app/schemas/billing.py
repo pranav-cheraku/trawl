@@ -1,3 +1,8 @@
+"""Pydantic schemas for billing and credits endpoints.
+
+_CamelModel is a convenience base with alias_generator=to_camel and
+from_attributes=True so all billing schemas share the same config.
+"""
 from __future__ import annotations
 
 from pydantic import BaseModel, ConfigDict
@@ -25,6 +30,6 @@ class CheckoutResponse(_CamelModel):
 
 
 class CreditBalance(_CamelModel):
-    """GET /billing/me — current credit balance for the user."""
+    """GET /billing/me: current credit balance for the user."""
 
     credits_balance: int

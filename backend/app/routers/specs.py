@@ -1,3 +1,13 @@
+"""Specs router: spec generation, Kanban CRUD, and task polling.
+
+Route ordering note: /specs/reorder MUST be defined before /specs/{spec_id}
+in this file. FastAPI matches routes in registration order, and without this
+ordering it would try to parse the literal "reorder" as a UUID.
+
+GET /tasks/{task_id} verifies project ownership before returning any result.
+With result_extended=True, Celery records the task args; the first arg is the
+project_id. If the caller does not own that project the endpoint returns 404.
+"""
 from __future__ import annotations
 
 import logging

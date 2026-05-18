@@ -1,3 +1,6 @@
+// All TypeScript interfaces for API responses and shared types.
+// Backend uses camelCase alias_generator, so these match the JSON shape directly.
+// Exception: Spec.content and TaskStatus.result stay snake_case (raw JSONB/Celery dicts).
 export interface Project {
   id: string;
   name: string;

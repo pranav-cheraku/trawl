@@ -1,4 +1,6 @@
 "use client";
+// Landing "Build" section: static illustration of the Kanban board output
+// from a Build Next run. Scroll-triggered entrance animation.
 
 import { useRef } from "react";
 import { motion, useInView, useReducedMotion } from "framer-motion";

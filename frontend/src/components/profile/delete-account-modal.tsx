@@ -1,4 +1,7 @@
 "use client";
+// Soft-delete confirmation modal. Requires the user to type their email to
+// confirm. DELETE /api/auth/me sets deleted_at (not a hard delete); the row
+// is hard-deleted by the Celery cleanup task after 30 days.
 
 import { AnimatePresence, motion } from "framer-motion";
 import { signOut } from "next-auth/react";

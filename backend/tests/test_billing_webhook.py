@@ -1,3 +1,10 @@
+"""Integration tests for the Stripe webhook handler.
+
+Uses a real HMAC signature built with the test webhook secret so the handler
+goes through the full Stripe SDK verification path. Tests commit rows to the
+dev DB and clean them up explicitly in finally blocks because the db fixture's
+rollback is a no-op after an explicit commit.
+"""
 from __future__ import annotations
 
 import hmac

@@ -1,5 +1,5 @@
 "use client";
-
+// Demo Sources page: read-only view of the demo project's feedback sources.
 import { useEffect, useMemo, useState } from "react";
 
 import WorkspaceHeader, {

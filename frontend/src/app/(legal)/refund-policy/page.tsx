@@ -1,3 +1,4 @@
+// Refund policy page. Content lives in src/content/legal/refund-policy.md.
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 

@@ -1,3 +1,4 @@
+"""Pydantic schemas for user auth and profile endpoints."""
 from __future__ import annotations
 
 import uuid
@@ -33,7 +34,7 @@ class UserResponse(BaseModel):
 
 
 class UpdateUserName(BaseModel):
-    """Request body for PATCH /auth/me — display-name update."""
+    """Request body for PATCH /auth/me: display-name update."""
 
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 

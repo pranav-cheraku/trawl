@@ -1,4 +1,6 @@
 "use client";
+// Modal for viewing the full text of a feedback chunk. Fetches the complete
+// chunk content on open since ChunkCard only shows an excerpt.
 
 import { useEffect, useRef, useState } from "react";
 

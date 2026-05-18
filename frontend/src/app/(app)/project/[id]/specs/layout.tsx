@@ -1,3 +1,4 @@
+// Browser tab title for the Specs tab.
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {

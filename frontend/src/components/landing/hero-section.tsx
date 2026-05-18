@@ -1,4 +1,6 @@
 "use client";
+// Landing hero section with the primary CTA. Renders "Start for free" (triggers
+// Google sign-in) for logged-out visitors and "Go to dashboard" for signed-in users.
 
 import Link from "next/link";
 import type { Session } from "next-auth";

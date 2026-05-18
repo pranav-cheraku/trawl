@@ -1,5 +1,5 @@
 "use client";
-
+// Persists the dashboard grid/list view preference in localStorage.
 import { useCallback, useMemo, useState } from "react";
 
 const STORAGE_KEY = "trawl:dashboard:view";

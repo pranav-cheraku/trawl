@@ -1,4 +1,7 @@
 "use client";
+// Auto-growing textarea with send button. Enter sends, Shift+Enter inserts a
+// newline. Capped at MAX_ROWS lines. Input and send button are disabled in
+// demo mode so the read-only demo path cannot trigger API calls.
 
 import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import { useDemoMode } from "@/lib/demo-mode";

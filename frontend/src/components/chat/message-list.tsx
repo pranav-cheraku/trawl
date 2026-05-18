@@ -1,4 +1,6 @@
 "use client";
+// Renders the ordered list of ChatMessages plus an animated pending bubble
+// while a response is in-flight.
 
 import { ChatMessage } from "@/components/chat/chat-message";
 import type { Message } from "@/types";

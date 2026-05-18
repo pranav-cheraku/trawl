@@ -1,5 +1,7 @@
 "use client";
-
+// Demo Explore page: mirrors the authenticated Explore tab but calls apiFetch
+// with { demo: true } to swap Bearer auth for X-Demo-Token. Write operations
+// are blocked by the isDemo guard (demo mode is read-only at the middleware level).
 import Link from "next/link";
 import {
   useCallback,

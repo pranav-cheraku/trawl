@@ -1,4 +1,6 @@
 "use client";
+// CSV file upload form. Uses apiUpload (not apiFetch) because it sends a
+// multipart/form-data body, so the Content-Type header must not be set manually.
 
 import { useCallback, useRef, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";

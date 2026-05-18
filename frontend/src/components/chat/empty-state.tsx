@@ -1,4 +1,6 @@
 "use client";
+// Empty state shown in the Explore tab before any messages exist. Provides
+// example query chips to lower the barrier to a first question.
 
 import { HowItWorksLink } from "@/components/ui/how-it-works-link";
 

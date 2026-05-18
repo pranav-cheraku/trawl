@@ -1,3 +1,13 @@
+"""User model for Trawl.
+
+credits_balance has both a Python `default=0` (for ORM object construction)
+and a `server_default` (for raw SQL INSERTs and migration backfill). Both are
+needed: the ORM default populates the attribute before flush, the server_default
+covers any rows inserted outside the ORM (e.g. migration scripts).
+
+deleted_at supports soft delete: non-null means the account is deactivated.
+The Celery beat task hard-deletes rows older than 30 days + 1 hour.
+"""
 from __future__ import annotations
 
 import uuid

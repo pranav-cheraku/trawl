@@ -1,5 +1,6 @@
 "use client";
-
+// Array-of-strings editor with numbered indices (01/02/03) and per-item delete.
+// New items are added via an EditableTextArea inline editor.
 import { useState } from "react";
 
 import EditableTextArea from "@/components/kanban/editable-textarea";

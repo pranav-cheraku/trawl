@@ -1,4 +1,6 @@
 "use client";
+// Animated grid of RAG chunk cards used in landing demo sections to illustrate
+// retrieval. Cards cycle through similarity scores on a timer.
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, useInView, useReducedMotion } from "framer-motion";

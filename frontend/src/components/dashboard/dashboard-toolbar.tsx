@@ -1,4 +1,7 @@
 "use client";
+// Toolbar row for the dashboard: search input, All/Recent/Pinned filter chips,
+// and a grid/list view toggle. Clicking the active chip deselects it (falls back
+// to "all"), matching the re-click-to-clear pattern from the Kanban filter bar.
 
 import FilterChip from "@/components/kanban/filter-chip";
 import type { DashboardView } from "@/lib/use-dashboard-view";

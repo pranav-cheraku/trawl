@@ -1,3 +1,10 @@
+"""Tests for the atomic credit decrement and increment service.
+
+test_decrement_is_atomic_no_double_spend verifies that two concurrent
+decrements that together exceed the balance result in exactly one success and
+one InsufficientCreditsError, proving the UPDATE ... WHERE balance >= :amount
+pattern prevents double-spend races.
+"""
 from __future__ import annotations
 
 import pytest
@@ -53,7 +60,7 @@ async def test_decrement_is_atomic_no_double_spend(db, test_user):
     assert len(successes) == 1
     assert len(failures) == 1
 
-    # Clean up the committed row — the db fixture's rollback is a no-op after
+    # Clean up the committed row. The db fixture's rollback is a no-op after
     # the explicit commit above, so we must delete explicitly to avoid leaving
     # orphan rows in the dev DB on every test run.
     async with factory() as cleanup:

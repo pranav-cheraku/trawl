@@ -1,3 +1,4 @@
+// Privacy policy page. Content lives in src/content/legal/privacy.md.
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 

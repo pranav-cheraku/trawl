@@ -1,4 +1,6 @@
 "use client";
+// Per-project RAG retrieval knobs (top_k, similarity threshold) persisted in
+// localStorage. Defaults match the backend chat defaults if no override is stored.
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 

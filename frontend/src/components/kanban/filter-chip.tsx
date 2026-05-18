@@ -1,5 +1,6 @@
 "use client";
-
+// Animated filter chip for the Kanban filter bar. Active state uses a
+// snappy spring; neutral variant is used for the "All" chip.
 import { motion, useReducedMotion } from "framer-motion";
 
 import { springs } from "@/lib/motion";

@@ -1,4 +1,8 @@
 "use client";
+// Compact avatar dropdown in the app header. User display name and avatar come
+// from useUserMe() (not useSession) so they reflect name edits without a
+// sign-out/sign-in cycle. Avatar image is still read from the session since
+// it can't change via profile edit.
 
 import Link from "next/link";
 import { signOut } from "next-auth/react";

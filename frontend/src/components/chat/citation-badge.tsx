@@ -1,4 +1,7 @@
 "use client";
+// Inline citation badge rendered inside chat message Markdown. Clicking
+// scrolls the X-Ray panel to the corresponding chunk. Emitted by the
+// custom remark plugin in chat-message.tsx via sentinel-marker tokenization.
 
 import { motion, useReducedMotion } from "framer-motion";
 

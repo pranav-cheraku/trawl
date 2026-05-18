@@ -1,10 +1,12 @@
+// Canonical motion vocabulary for Framer Motion. All components must use these
+// constants instead of inlining raw spring tunings or duration numbers.
 import type { Transition } from "framer-motion";
 
 /**
  * Spring tunings:
- *   bouncy  — playful overshoot (drag lifts, modal entrance)
- *   snappy  — minimal overshoot (chip toggle, status pill)
- *   gentle  — no overshoot (layout transitions)
+ *   bouncy: playful overshoot (drag lifts, modal entrance)
+ *   snappy: minimal overshoot (chip toggle, status pill)
+ *   gentle: no overshoot (layout transitions)
  */
 export const springs = {
   bouncy: {

@@ -1,5 +1,7 @@
 "use client";
-
+// Specs tab: Kanban board with drag-and-drop reordering, filters, and spec
+// generation. DnD is disabled while any filter is active. Spec detail modal
+// is rendered outside the board via AnimatePresence so it can animate freely.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { AnimatePresence } from "framer-motion";

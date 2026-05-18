@@ -1,4 +1,7 @@
 "use client";
+// Reddit connector form. Collects a subreddit name and optional keyword for
+// the scraper. Reddit post scores are NOT mapped to the rating field since they
+// are unbounded karma, not a 1-5 star scale.
 
 import { useState } from "react";
 import { connectReddit } from "@/lib/api";

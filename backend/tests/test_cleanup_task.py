@@ -1,3 +1,13 @@
+"""Tests for the cleanup_expired_deleted_users Celery task.
+
+Verifies three behaviors:
+- A user soft-deleted more than 30d ago is hard-deleted (with cascade to projects).
+- A user soft-deleted exactly 30d ago (within the 1h buffer) is NOT deleted.
+- An active user (deleted_at=None) is never touched.
+
+The task is called directly as a plain function (not via broker) so these
+tests run without a running Celery worker.
+"""
 from __future__ import annotations
 
 import uuid as uuid_mod

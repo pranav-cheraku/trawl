@@ -61,7 +61,7 @@ logger = logging.getLogger("seed_demo")
 DEMO_USER_ID = uuid.UUID(settings.DEMO_USER_ID)
 DEMO_PROJECT_ID = uuid.UUID(settings.DEMO_PROJECT_ID)
 
-# Notion as the demo target — long history of detailed App Store reviews.
+# Notion as the demo target. Long history of detailed App Store reviews.
 DEMO_APP_NAME = "Notion"
 DEMO_APP_STORE_ID = "1232780281"  # Notion's iTunes track_id
 DEMO_COUNTRIES = ["us", "gb", "ca", "au", "ie"]
@@ -76,7 +76,7 @@ KANBAN_STATUSES = ["backlog", "planned", "in_progress", "done"]
 async def _upsert_demo_user_and_reset_project() -> tuple[User, Project, FeedbackSource]:
     """Phase 0: upsert demo user, wipe old project, create fresh Project + FeedbackSource."""
     async with AsyncSessionLocal() as db:
-        # Demo user — upsert (kept across runs, credits_balance always reset to 0).
+        # Demo user upsert (kept across runs, credits_balance always reset to 0).
         result = await db.execute(select(User).where(User.id == DEMO_USER_ID))
         user = result.scalar_one_or_none()
         if user is None:

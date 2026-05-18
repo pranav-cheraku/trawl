@@ -1,3 +1,13 @@
+"""Sources router: feedback connector endpoints and item/chunk retrieval.
+
+Five connector endpoints (App Store, CSV, Google Play, Reddit, manual paste)
+each persist a FeedbackSource row and dispatch a Celery ingestion task. The
+source row must be committed before .delay() so the worker can read it.
+
+Also provides GET /play/search (Google Play app search proxy, auth-gated) and
+GET /projects/{id}/chunks/{chunk_id} (full chunk + parent item for the detail
+modal).
+"""
 from __future__ import annotations
 
 import logging

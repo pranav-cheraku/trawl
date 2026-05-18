@@ -1,5 +1,9 @@
 "use client";
-
+// RAG X-Ray panel: 3-arm discriminated union (chat | spec | build). Each variant
+// exposes the retrieved chunks that drove the response/spec/report. TypeScript
+// narrows the props per branch so callers get compile-time safety.
+// focusTick is incremented by the caller to re-scroll to the same chunk when
+// the user clicks a citation badge that is already the highlighted chunk.
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { ChunkCard } from "@/components/rag-xray/chunk-card";

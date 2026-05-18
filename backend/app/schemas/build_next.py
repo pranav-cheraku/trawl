@@ -1,3 +1,10 @@
+"""Pydantic schemas for the Build Next feature.
+
+_CamelModel consolidates alias_generator=to_camel + from_attributes=True so
+all schemas in this file share the same config. Nested dict fields (content,
+retrieval_metadata, build_order entries) keep their snake_case keys verbatim
+because alias_generator only transforms declared model fields.
+"""
 from __future__ import annotations
 
 import uuid

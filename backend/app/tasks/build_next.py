@@ -1,3 +1,19 @@
+"""Celery task for the Build Next pipeline.
+
+The pipeline runs inside a single asyncio.run() call (via _run_and_dispose)
+that also disposes module-level async singletons in its finally block,
+preventing "Future attached to a different loop" errors on subsequent tasks.
+
+Three-session pattern in _async_run_and_persist:
+  Session 1: mark the report as `running` and commit immediately so pollers
+             see the updated status without waiting for the full pipeline.
+  Session 2: run the Build Next pipeline (may take 30-90 seconds). If this
+             raises, _mark_failure opens a fourth session for the error update.
+  Session 3: persist themes, specs, chunks, and the final success update.
+
+A SIGKILL during session 2 leaves the report as `running` forever. The
+frontend's 10-minute stale heuristic treats such rows as failed on next mount.
+"""
 from __future__ import annotations
 
 import asyncio

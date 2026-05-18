@@ -1,4 +1,6 @@
 "use client";
+// Landing "Ask" section: static demo of the chat workspace with an animated
+// query and citation chips. Scroll-triggered entrance animation.
 
 import { useRef } from "react";
 import { motion, useInView, useReducedMotion } from "framer-motion";

@@ -1,4 +1,6 @@
 "use client";
+// Bottom CTA section on the landing page. Shows sign-in prompt for logged-out
+// visitors and a "Go to dashboard" link for signed-in users.
 
 import Link from "next/link";
 import { useRef } from "react";

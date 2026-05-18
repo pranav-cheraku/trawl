@@ -1,3 +1,12 @@
+"""Build Next router: run management, report retrieval, and spec promotion.
+
+The promote endpoint inserts a new Kanban Spec at kanban_order=0 (top of
+Backlog). Existing Backlog rows are shifted up first (kanban_order += 1)
+BEFORE the insert to avoid order collisions within the same transaction.
+
+A SELECT ... FOR UPDATE lock on the BuildReportSpec row prevents concurrent
+double-promotes of the same spec.
+"""
 from __future__ import annotations
 
 import logging

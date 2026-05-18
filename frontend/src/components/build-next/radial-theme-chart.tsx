@@ -1,4 +1,7 @@
 "use client";
+// Donut chart + ranked list for theme distribution. Wedge size encodes
+// frequencyPct; color encodes quartile rank (darkest = most frequent).
+// The bar list mirrors the donut so both surfaces agree on ordering.
 
 import { useMemo, useRef } from "react";
 import { motion, useInView, useReducedMotion } from "framer-motion";

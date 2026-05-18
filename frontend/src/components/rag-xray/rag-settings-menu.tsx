@@ -1,4 +1,7 @@
 "use client";
+// Frosted-glass popover trigger for the RAG retrieval settings panel.
+// Lives in the always-visible context strip (not inside the X-Ray panel) so
+// it remains accessible on mobile where the X-Ray panel is hidden by default.
 
 import { useEffect, useRef, useState } from "react";
 

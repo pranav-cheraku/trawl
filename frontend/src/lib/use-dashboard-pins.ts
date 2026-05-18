@@ -1,5 +1,6 @@
 "use client";
-
+// Persists pinned project IDs in localStorage. Independent of project list
+// state; stale IDs from deleted projects are silently ignored.
 import { useCallback, useMemo, useState } from "react";
 
 const STORAGE_KEY = "trawl:dashboard:pinned";
@@ -35,7 +36,7 @@ export interface DashboardPinsApi {
 
 /**
  * Persists pinned project IDs in localStorage. Stale IDs (project deleted
- * while ID still in storage) are harmless — isPinned returns false for any
+ * while ID still in storage) are harmless. isPinned returns false for any
  * ID not present in the current project list.
  */
 export function useDashboardPins(): DashboardPinsApi {

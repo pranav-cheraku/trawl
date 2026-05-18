@@ -1,5 +1,6 @@
 "use client";
-
+// Detects batch spec generation events for the cascade entrance animation.
+// Only triggers when 2+ specs arrive at once so drag/status changes don't animate.
 import { useEffect, useRef, useState } from "react";
 
 /**

@@ -1,3 +1,11 @@
+"""build_next.py: "What Should We Build Next?" multi-query RAG pipeline.
+
+Runs 5 hardcoded exploratory queries against the feedback corpus, deduplicates
+and clusters the results into themes, generates per-theme specs concurrently,
+globally ranks them by a severity+priority score, and produces a build-order
+rationale and executive summary. The final BuildNextResult is handed back to
+the Celery task for persistence.
+"""
 from __future__ import annotations
 
 import asyncio
@@ -307,6 +315,9 @@ async def _cluster_themes(
 
         frequency_pct = chunk_count / total_chunks if total_chunks > 0 else 0.0
         severity_hint = float(raw.get("severity_hint", 0.5))
+        # Equal blend of coverage (how many chunks) and urgency (Claude's read on
+        # frustration / churn risk) so a large but trivial theme doesn't
+        # automatically outrank a small but business-critical one.
         severity_score = (frequency_pct + severity_hint) / 2.0
 
         themes.append(
@@ -489,8 +500,9 @@ async def _generate_theme_specs(
                 theme.name,
             )
 
-        # Translate local 1..N indices to global retrieval_ranks.
-        # theme_chunks[i - 1].retrieval_rank holds the rank assigned by _embed_and_retrieve.
+        # Claude sees chunks numbered 1..N local to this theme. Translate those
+        # local indices back to the global retrieval_rank assigned by
+        # _embed_and_retrieve so citation resolution works in the X-Ray panel.
         local_indices = [
             i
             for i in raw.get("supporting_feedback_indices", [])
@@ -651,6 +663,9 @@ def _rank_specs_globally(
     Score = theme.severity_score * priority_weight. Mutates each spec's
     build_rank in-place. Themes with generation_failed=True are skipped.
     """
+    # Score = theme.severity_score * priority_weight. Multiplying (not adding)
+    # means a medium spec in a critical theme ranks above a high spec in a
+    # low-severity theme when the theme gap is large enough.
     flat: list[tuple[GeneratedSpec, ClusteredTheme, float]] = []
     for pair in pairs:
         if pair.generation_failed:

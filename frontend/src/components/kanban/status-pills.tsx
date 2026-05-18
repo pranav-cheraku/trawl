@@ -1,4 +1,6 @@
 "use client";
+// Status selector in the spec detail modal. Uses sea-green active fill (secondary)
+// to signal the currently active workflow stage.
 
 import type { SpecStatus } from "@/types";
 

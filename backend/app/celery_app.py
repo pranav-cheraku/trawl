@@ -1,3 +1,12 @@
+"""Celery application configuration for Trawl background tasks.
+
+Uses Redis as both the broker and result backend. Tasks are explicitly listed
+in `include` because autodiscover_tasks does not find nested package modules.
+
+`result_extended=True` records task args in the result backend so the
+/api/tasks/{task_id} endpoint can verify the caller owns the project that was
+passed as the first arg before returning any result payload.
+"""
 from __future__ import annotations
 
 from celery import Celery
@@ -31,7 +40,7 @@ celery_app.conf.update(
     ]
 )
 
-# Beat schedule — runs daily at 03:00 UTC.
+# Beat schedule. Runs daily at 03:00 UTC.
 # Worker MUST be started with `-B` to embed beat in the worker process.
 celery_app.conf.beat_schedule = {
     "cleanup-expired-deleted-users": {

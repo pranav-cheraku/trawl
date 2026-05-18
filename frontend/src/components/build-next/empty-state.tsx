@@ -1,4 +1,6 @@
 "use client";
+// Initial empty state before the first Build Next run. Run button is disabled
+// when the source scope is empty or in demo mode.
 
 import { useDemoMode } from "@/lib/demo-mode";
 import { HowItWorksLink } from "@/components/ui/how-it-works-link";

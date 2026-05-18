@@ -1,3 +1,15 @@
+"""FeedbackSource and FeedbackItem models for Trawl.
+
+FeedbackSource tracks one connector (App Store, Google Play, Reddit, CSV, or
+manual paste). FeedbackItem is one unit of raw text from that source.
+
+`item_metadata` is the Python attribute name for the DB column `metadata`
+to avoid colliding with SQLAlchemy's reserved `metadata` attribute on
+declarative bases. Pydantic schemas read it via `validation_alias="item_metadata"`.
+
+The partial unique index on (source_id, external_id) deduplicates reviews
+fetched from multiple country storefronts for the same app.
+"""
 from __future__ import annotations
 
 import uuid

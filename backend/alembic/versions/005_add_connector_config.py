@@ -21,6 +21,7 @@ depends_on = None
 
 
 def upgrade() -> None:
+    """Add connector_config JSONB column for Google Play, Reddit, and manual paste metadata."""
     op.add_column(
         "feedback_sources",
         sa.Column(
@@ -32,4 +33,5 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    """Remove connector_config from feedback_sources."""
     op.drop_column("feedback_sources", "connector_config")

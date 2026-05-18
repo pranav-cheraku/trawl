@@ -1,3 +1,5 @@
+// Pure export utilities: CSV (RFC 4180) and Markdown for the Kanban board.
+// No side effects. Functions are called from ExportMenu on user request.
 import type { Spec, SpecStatus } from "@/types";
 
 const STATUS_LABEL: Record<SpecStatus, string> = {

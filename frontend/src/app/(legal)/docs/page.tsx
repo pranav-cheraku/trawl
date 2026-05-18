@@ -1,3 +1,4 @@
+// Public help/docs page. Reads guide.md at build/request time and renders via LegalDocument.
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 

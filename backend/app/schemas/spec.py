@@ -1,3 +1,10 @@
+"""Pydantic schemas for spec generation, Kanban CRUD, and task polling.
+
+Note on dict field keys: alias_generator=to_camel only transforms declared
+model fields. Values inside `content: dict` and `result: dict` stay snake_case
+(e.g. `spec_ids`, `proposed_solution`, `supporting_feedback_indices`).
+The frontend types reflect this.
+"""
 from __future__ import annotations
 
 import uuid

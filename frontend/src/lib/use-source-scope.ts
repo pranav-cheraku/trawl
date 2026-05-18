@@ -1,4 +1,6 @@
 "use client";
+// Per-tab, per-project source scope hook. Stores MUTED source IDs (not active)
+// so newly added sources are automatically included without any user action.
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 

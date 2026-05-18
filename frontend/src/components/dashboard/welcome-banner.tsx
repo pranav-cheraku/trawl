@@ -1,4 +1,7 @@
 "use client";
+// One-time welcome banner for new accounts (under 7 days old). Dismissal is
+// stored per-user in localStorage so it never reappears. Starts hidden to
+// avoid a flash before the new-account age check resolves.
 
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";

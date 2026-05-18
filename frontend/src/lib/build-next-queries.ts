@@ -1,3 +1,4 @@
+// The 5 hardcoded queries used by the Build Next pipeline for X-Ray attribution.
 // Must stay byte-for-byte identical to the queries in backend/app/services/build_next.py.
 // Drift silently mis-attributes X-Ray badges.
 export const BUILD_NEXT_QUERIES: readonly string[] = [

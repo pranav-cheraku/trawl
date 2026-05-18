@@ -1,3 +1,8 @@
+"""Apps router: iTunes app search proxy.
+
+Requires auth so we don't expose a public endpoint that spends our rate
+limit allowance without any user context.
+"""
 from __future__ import annotations
 
 import uuid

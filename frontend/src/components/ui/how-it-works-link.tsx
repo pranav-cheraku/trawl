@@ -1,3 +1,5 @@
+// Quiet contextual link to /docs. Drop into empty states and help affordances
+// rather than hand-rolling a docs link each time.
 import Link from "next/link";
 
 interface HowItWorksLinkProps {

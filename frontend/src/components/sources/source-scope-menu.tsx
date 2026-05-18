@@ -1,4 +1,7 @@
 "use client";
+// Frosted-glass dropdown for muting/unmuting sources per tab and project.
+// Stores muted IDs (not included IDs) so new sources are auto-included.
+// Uses useFloatingPosition for mobile viewport safety.
 
 import { useEffect, useMemo, useRef, useState } from "react";
 

@@ -1,5 +1,5 @@
 "use client";
-
+// Empty state for the X-Ray panel when no message or spec is selected.
 export function XrayEmpty() {
   return (
     <div className="flex flex-col items-center px-6 py-12 text-center">

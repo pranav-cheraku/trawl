@@ -1,5 +1,7 @@
 "use client";
-
+// Account settings page: display name edit, credit balance, and danger zone.
+// useUserMe drives the UI rather than useSession because the NextAuth session
+// token doesn't refresh after a PATCH /auth/me name change.
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useState } from "react";

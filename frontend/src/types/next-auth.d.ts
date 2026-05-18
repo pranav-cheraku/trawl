@@ -1,3 +1,5 @@
+// Extends the NextAuth Session type to include the DB user id field
+// injected by the jwt callback in lib/auth.ts.
 import "next-auth";
 
 declare module "next-auth" {

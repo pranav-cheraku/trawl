@@ -1,3 +1,13 @@
+"""Conversations router: chat sessions and in-process RAG message handling.
+
+The send_message endpoint runs the full RAG pipeline synchronously within the
+FastAPI request (no Celery): embed query -> retrieve chunks -> generate answer
+-> persist messages. Costs 1 credit per send.
+
+Conversation titles are auto-set from the first user message if not provided.
+The user and assistant messages are given explicit timestamps so the user
+message always sorts strictly before the assistant message in history queries.
+"""
 from __future__ import annotations
 
 import logging

@@ -1,3 +1,5 @@
+// Canonical project-tab header. Use this in every tab page instead of rolling
+// a custom header. label is optional (project tabs omit it; Dashboard passes one).
 import type { ReactNode } from "react";
 
 export interface WorkspaceStat {

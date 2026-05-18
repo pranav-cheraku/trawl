@@ -1,3 +1,8 @@
+"""Projects router: create, list, get, and delete projects.
+
+All queries are scoped by user_id extracted from the JWT so users can never
+read or modify another user's projects.
+"""
 from __future__ import annotations
 
 import uuid

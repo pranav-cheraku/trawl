@@ -1,5 +1,7 @@
 "use client";
-
+// Credits purchase page. BillingPageContent reads useSearchParams() for the
+// ?status flash, which requires a Suspense boundary in the parent component
+// so Next.js can prerender the outer shell statically.
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
@@ -34,6 +36,7 @@ function BillingPageContent() {
     setError(null);
     try {
       const { url } = await createCheckoutSession(priceId);
+      // Stripe Checkout is a full-page redirect; success/cancel return to /billing?status=...
       window.location.href = url;
     } catch (exc) {
       setError(exc instanceof Error ? exc.message : "Checkout failed");

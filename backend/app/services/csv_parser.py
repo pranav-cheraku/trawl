@@ -1,3 +1,9 @@
+"""CSV feedback parser for Trawl.
+
+Reads an uploaded CSV file and maps one designated column to item content;
+all remaining columns are stored as item metadata JSONB.
+Handles UTF-8 BOM (common in Excel exports) via the `utf-8-sig` codec.
+"""
 from __future__ import annotations
 
 import csv

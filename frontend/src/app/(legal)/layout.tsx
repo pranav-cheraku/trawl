@@ -1,3 +1,4 @@
+// Minimal layout for legal/docs pages: Trawl logo link to home, no auth required.
 import Link from "next/link";
 import type { ReactNode } from "react";
 

@@ -1,4 +1,6 @@
 "use client";
+// Modal for creating a new project. On success, redirects to the new project's
+// sources tab so the user can immediately connect a feedback source.
 
 import { useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";

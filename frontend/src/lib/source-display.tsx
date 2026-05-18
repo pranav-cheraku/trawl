@@ -1,3 +1,5 @@
+// Display helpers for feedback sources: icons, type labels, dedupe keys, and
+// human-readable display names with (N) suffix for duplicate sources.
 import type { ReactNode } from "react";
 import type { Source, SourceType } from "@/types";
 

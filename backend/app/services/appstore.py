@@ -1,3 +1,9 @@
+"""App Store review ingestion via the iTunes RSS JSON feed and Search API.
+
+Handles pagination (up to 10 pages / ~500 reviews per storefront), multi-country
+parallel fetching, and deduplication by external_id (Apple review IDs are
+globally unique across storefronts).
+"""
 from __future__ import annotations
 
 import asyncio

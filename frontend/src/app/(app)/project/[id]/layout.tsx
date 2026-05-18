@@ -1,5 +1,7 @@
 "use client";
-
+// Project-level layout: breadcrumb, project name, and the four tab links
+// (Sources / Explore / Build Next / Specs). Project name is fetched client-side
+// and shows a skeleton until it resolves.
 import Link from "next/link";
 import { usePathname, useParams } from "next/navigation";
 import { useEffect, useState } from "react";

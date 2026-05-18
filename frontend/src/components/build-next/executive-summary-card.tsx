@@ -1,4 +1,7 @@
 "use client";
+// Top-of-page summary card with an animated word-by-word reveal and a KPI stats
+// column (queries, chunks, latency, tokens). Stats column is hidden when no
+// retrieval metadata is available (e.g. older runs that pre-date the field).
 
 import type { ReactNode } from "react";
 import { useMemo, useRef } from "react";

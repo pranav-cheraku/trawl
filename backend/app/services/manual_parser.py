@@ -1,3 +1,9 @@
+"""Manual-paste text parser for Trawl.
+
+Splits free-form pasted text into individual feedback items. Blank-line
+splitting is preferred (most formatted pastes use it); if the text has no
+blank lines, falls back to single-newline splitting.
+"""
 from __future__ import annotations
 
 import re

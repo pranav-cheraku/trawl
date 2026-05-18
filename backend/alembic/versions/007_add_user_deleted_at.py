@@ -18,6 +18,8 @@ depends_on = None
 
 
 def upgrade() -> None:
+    """Add deleted_at nullable timestamp to users for soft-delete support.
+    The index speeds up the Celery cleanup task's WHERE deleted_at < cutoff query."""
     op.add_column(
         "users",
         sa.Column("deleted_at", sa.DateTime(), nullable=True),
@@ -26,5 +28,6 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    """Drop deleted_at index and column from users."""
     op.drop_index("ix_users_deleted_at", table_name="users")
     op.drop_column("users", "deleted_at")

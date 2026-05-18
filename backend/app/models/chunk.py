@@ -1,3 +1,9 @@
+"""FeedbackChunk model for Trawl.
+
+Each chunk is a text segment of a FeedbackItem plus its Voyage AI vector
+embedding (1024 dimensions). The IVFFlat index on `embedding` using cosine
+distance supports fast approximate nearest-neighbor search via pgvector.
+"""
 from __future__ import annotations
 
 import uuid

@@ -1,8 +1,7 @@
-/**
- * The backend writes naive UTC timestamps (no Z suffix). new Date(naive)
- * interprets them as local time, which produces wrong values. This appends "Z"
- * when no timezone suffix is present.
- */
+// Time utilities. parseUtcIso is required because the backend writes naive UTC
+// timestamps without a Z suffix; new Date("2026-05-18T10:00:00") parses as
+// local time, which produces wrong values in non-UTC timezones.
+/** Parses a (possibly naive) UTC ISO string as UTC, not local time. */
 export function parseUtcIso(iso: string): Date {
   const hasTz = /[zZ]|[+-]\d{2}:?\d{2}$/.test(iso);
   return new Date(hasTz ? iso : iso + "Z");

@@ -21,7 +21,7 @@
 }
 
 @layer components {
-  /* RAG X-Ray retrieval-settings slider — architectural square thumb on a
+  /* RAG X-Ray retrieval-settings slider: architectural square thumb on a
      thin track. No drop shadow, 2px radius, palette-matched. */
   .rag-slider {
     -webkit-appearance: none;

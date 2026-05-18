@@ -1,4 +1,8 @@
 "use client";
+// Left-rail conversation list for the Explore tab (lg+ only). Supports inline
+// rename, delete with InlineConfirm, and a "New chat" inline creation flow.
+// The active item uses a framer-motion shared layoutId background so it
+// slides between rows rather than jumping.
 
 import { useEffect, useRef, useState } from "react";
 

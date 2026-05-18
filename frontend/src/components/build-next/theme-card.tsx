@@ -1,4 +1,7 @@
 "use client";
+// Container card for a single Build Next theme. Renders the theme header and
+// the list of ThemeSpecCards sorted by buildRank ascending. Shows ThemeSpecFailed
+// if spec generation failed for this theme specifically.
 
 import { useRef } from "react";
 import { motion, useInView, useReducedMotion } from "framer-motion";

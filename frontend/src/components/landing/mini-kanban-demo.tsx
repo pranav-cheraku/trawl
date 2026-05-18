@@ -1,4 +1,6 @@
 "use client";
+// Static mini Kanban board illustration used in landing demo sections.
+// No DnD, purely a visual preview for landing visitors.
 
 import { useRef } from "react";
 import { motion, useInView, useReducedMotion } from "framer-motion";

@@ -1,3 +1,9 @@
+"""chunking.py: feedback-aware text splitting for the RAG ingest pipeline.
+
+Converts raw feedback items into sized chunks before embedding. Short items stay
+whole; longer ones are split on paragraph then sentence boundaries, falling back
+to raw token counts only when structure is absent.
+"""
 from __future__ import annotations
 
 import logging
@@ -69,6 +75,8 @@ def _split_long_text(text: str) -> list[str]:
         else:
             if current_tokens:
                 chunks.append(" ".join(current_tokens))
+                # Carry the tail of the last chunk into the next one so a sentence
+                # or idea that spans a paragraph boundary isn't split cold.
                 overlap = current_tokens[-OVERLAP_TOKENS:] if len(current_tokens) > OVERLAP_TOKENS else []
                 current_tokens = overlap + para_tokens
             else:

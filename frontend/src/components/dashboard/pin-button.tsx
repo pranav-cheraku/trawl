@@ -1,4 +1,6 @@
 "use client";
+// Small bookmark icon that toggles the pinned state of a project card or list
+// row. stopPropagation prevents the parent Link navigation from firing.
 
 interface PinButtonProps {
   isPinned: boolean;

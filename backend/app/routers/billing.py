@@ -1,3 +1,19 @@
+"""Billing router: credit balance, Stripe Checkout, and webhook handler.
+
+Stripe delivers webhooks at-least-once. The webhook handler uses an atomic
+INSERT ... ON CONFLICT DO NOTHING into stripe_processed_events to deduplicate
+replayed events before crediting the user.
+
+The CREDITS_PER_PRICE dict is built lazily at request time (not at import
+time) so that monkeypatching settings in tests works correctly.
+
+The Stripe Checkout session sets consent_collection.terms_of_service="required"
+to show a mandatory ToS checkbox. The linked URL must be configured in the
+Stripe Dashboard for both test and live mode, or Session.create raises.
+
+Stripe is in LIVE mode in production. Local dev uses sk_test_* in backend/.env.
+Test vs live is purely env vars -- no code branch.
+"""
 from __future__ import annotations
 
 import logging
@@ -77,7 +93,7 @@ async def create_checkout(
         # consent_collection.terms_of_service renders a required "I agree to
         # the Terms of Service" checkbox on the Stripe-hosted Checkout page.
         # The linked URL is pulled from the Terms of Service URL configured in
-        # the Stripe Dashboard — it MUST be set in both test and live mode, or
+        # the Stripe Dashboard. It MUST be set in both test and live mode, or
         # Session.create raises a StripeError and checkout returns 502.
         session = await stripe.checkout.Session.create_async(
             mode="payment",
@@ -128,7 +144,7 @@ async def stripe_webhook(
 
     # Atomic dedup: INSERT ... ON CONFLICT returns the row only if newly inserted.
     # Concurrent duplicate deliveries: exactly one INSERT wins, others return zero rows.
-    # No exception handling needed — transient DB errors surface as 500, not silent
+    # No exception handling needed. Transient DB errors surface as 500, not silent
     # duplicate: True, so Stripe will retry on genuine failures.
     insert_result = await db.execute(
         text(

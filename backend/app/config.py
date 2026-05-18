@@ -1,3 +1,8 @@
+"""Application settings loaded from environment variables.
+
+Pydantic-settings reads from backend/.env (local) or the host environment
+(Railway/Vercel production). Defaults are safe for local Docker Compose dev.
+"""
 from __future__ import annotations
 
 from pydantic_settings import BaseSettings, SettingsConfigDict

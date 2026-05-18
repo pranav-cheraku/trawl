@@ -1,5 +1,5 @@
 "use client";
-
+// Demo entry: redirects /demo to /demo/explore if DEMO_PROJECT_ID is configured.
 import { redirect } from "next/navigation";
 
 export default function DemoEntry() {

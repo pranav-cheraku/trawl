@@ -1,3 +1,8 @@
+"""ORM models package for Trawl.
+
+Imports all models so that `Base.metadata` is fully populated when Alembic
+autogenerates migrations. Every model must be importable from here.
+"""
 from __future__ import annotations
 
 from app.models.base import Base

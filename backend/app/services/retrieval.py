@@ -1,3 +1,9 @@
+"""retrieval.py: pgvector cosine similarity search for the RAG pipeline.
+
+Executes a COUNT + SELECT pair against feedback_chunks using the <=> operator.
+Supports a three-state source_ids filter (None / [] / [ids]) and returns ranked
+RetrievedChunk objects alongside a total-candidates count for the RAG X-Ray panel.
+"""
 from __future__ import annotations
 
 import logging

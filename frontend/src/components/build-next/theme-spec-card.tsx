@@ -1,4 +1,7 @@
 "use client";
+// Compact spec row inside a ThemeCard. Priority is displayed as colored text
+// using the priority color scale (not generic pills; this is a label, not a
+// selector). "+ Kanban" toggles to "On Kanban" link once the spec is promoted.
 
 import { motion, useReducedMotion } from "framer-motion";
 

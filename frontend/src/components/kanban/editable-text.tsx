@@ -1,5 +1,6 @@
 "use client";
-
+// Single-line click-to-edit. Enter saves, Escape reverts. Re-throws errors from
+// onSave so the parent can surface them via a banner while the primitive reverts.
 import { useEffect, useRef, useState } from "react";
 
 interface EditableTextProps {

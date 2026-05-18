@@ -1,4 +1,7 @@
 "use client";
+// Popover for entering a focus phrase before generation (e.g. "onboarding friction").
+// The mousedown listener is deferred by one tick so the caret click that opens
+// this popover doesn't immediately re-trigger the close handler.
 
 import { useEffect, useRef, useState } from "react";
 import type { SpecType } from "@/types";

@@ -1,5 +1,6 @@
 "use client";
-
+// Priority selector in the spec detail modal. These are generic selector pills,
+// not labels, so they intentionally don't use the priority color scale.
 import type { SpecPriority } from "@/types";
 
 interface PriorityPillsProps {

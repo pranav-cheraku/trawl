@@ -1,5 +1,7 @@
 "use client";
-
+// Auto-resizing textarea. Cmd/Ctrl+Enter saves; plain Enter is a newline.
+// Save/Cancel buttons use onMouseDown + relatedTarget detection to avoid a
+// double-commit race between the button click and the blur-triggered save.
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 interface EditableTextAreaProps {

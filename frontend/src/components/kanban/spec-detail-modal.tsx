@@ -1,5 +1,8 @@
 "use client";
-
+// Full-screen spec detail modal. Animates open from the card's position (bouncy
+// spring) and closes with a fast tween to avoid sticky exit oscillation.
+// Content-dict fields (spec.content) are the generation snapshot and are never
+// mutated here; top-level columns (title, priority, status) are the editable fields.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 
@@ -43,6 +46,9 @@ export default function SpecDetailModal({
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const prefersReducedMotion = useReducedMotion();
 
+  // Compute a transform that makes the modal appear to expand from the card's
+  // position. Calculates the offset and scale to move the center and size of
+  // the modal to match the card's center and size as the "initial" frame.
   const fromTransform = useMemo(() => {
     if (!originRect || prefersReducedMotion) return null;
     if (typeof window === "undefined") return null;

@@ -1,3 +1,12 @@
+"""Pydantic schemas for feedback sources, connectors, and items.
+
+All request schemas use alias_generator=to_camel so the frontend sends
+camelCase JSON while the Python attributes stay snake_case.
+
+FeedbackItemResponse uses `validation_alias="item_metadata"` because the ORM
+attribute is `item_metadata` (the DB column is `metadata`, renamed to avoid
+colliding with SQLAlchemy's reserved attribute).
+"""
 from __future__ import annotations
 
 import uuid

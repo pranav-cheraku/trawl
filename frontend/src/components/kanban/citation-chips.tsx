@@ -1,5 +1,6 @@
 "use client";
-
+// Citation chips row shown in the spec detail modal. Clicking a chip scrolls
+// the X-Ray panel to that chunk. Indices are 1-based (matching supporting_feedback_indices).
 interface CitationChipsProps {
   indices: number[];
   onFocus: (idx: number) => void;

@@ -1,4 +1,6 @@
 "use client";
+// App Store connector form. Autocompletes app name via the iTunes search API,
+// then submits to the backend which ingests reviews via the iTunes RSS feed.
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { connectAppStore, searchApps } from "@/lib/api";

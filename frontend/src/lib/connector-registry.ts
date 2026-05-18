@@ -1,3 +1,5 @@
+// Single source of truth for connector tiles in AddSourceModal. Adding a new
+// connector type requires one new entry here plus a corresponding FormComponent.
 import type { ComponentType, ReactElement } from "react";
 import type { SourceType } from "@/types";
 import { getSourceTypeIcon } from "@/lib/source-display";

@@ -1,5 +1,6 @@
 "use client";
-
+// Credit balance hook. Every useCredits() instance is independent; fire a
+// trawl:credits-updated window event to sync all instances simultaneously.
 import { useCallback, useEffect, useState } from "react";
 
 import { getCreditBalance } from "@/lib/api";

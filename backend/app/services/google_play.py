@@ -1,4 +1,9 @@
-# Wraps the sync google-play-scraper package via asyncio.to_thread.
+"""Google Play review and app-search ingestion.
+
+Wraps the sync google-play-scraper package via asyncio.to_thread so it can
+be awaited from async FastAPI handlers and Celery tasks without blocking the
+event loop. Note that Google Play reviews have no title field.
+"""
 from __future__ import annotations
 
 import asyncio

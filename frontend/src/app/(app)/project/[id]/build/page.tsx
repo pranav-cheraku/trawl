@@ -1,5 +1,7 @@
 "use client";
-
+// Build Next tab: runs the 5-query pipeline and shows themes, specs, and the
+// X-Ray panel. Polls every 2 seconds while in-flight; stops at 5 minutes.
+// Running rows older than ZOMBIE_AGE_MS are treated as failed on the client.
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 
@@ -109,7 +111,9 @@ export default function BuildNextPage() {
         if (pollStartRef.current === null) return;
 
         const fresh = await refreshReport(id);
-        if (pollStartRef.current === null) return; // unmounted during await
+        // stopPolling() nulls pollStartRef during unmount; bail if that happened
+        // between the two awaits.
+        if (pollStartRef.current === null) return;
 
         const elapsed = Date.now() - pollStartRef.current;
         if (

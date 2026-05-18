@@ -1,3 +1,5 @@
+// Build Next failure state. Shows the failure reason from the Celery task and
+// a retry button. Re-run button is disabled when the source scope is empty.
 import { friendlyAgo } from "@/lib/time";
 
 type Props = {

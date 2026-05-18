@@ -1,4 +1,8 @@
 "use client";
+// Single retrieval chunk card in the X-Ray panel. Shows source name, similarity
+// score, and a text excerpt. Accepts a ref for programmatic scroll-into-view when
+// a citation chip is clicked. An optional queryLabel attributes the chunk to a
+// specific Build Next query.
 
 import { forwardRef } from "react";
 

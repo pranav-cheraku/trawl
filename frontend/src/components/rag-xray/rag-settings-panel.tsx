@@ -1,4 +1,6 @@
 "use client";
+// RAG retrieval knob controls: top_k slider (1-30) and similarity threshold
+// slider (0.0-1.0). Persisted per-project in localStorage via useRagSettings.
 
 import { useId } from "react";
 

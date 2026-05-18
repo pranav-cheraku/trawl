@@ -1,3 +1,5 @@
+// NextAuth v5 configuration. Produces a plain HS256 JWS (not JWE) so the
+// FastAPI backend can verify it with python-jose using the shared secret.
 import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
 import { SignJWT, jwtVerify } from "jose";

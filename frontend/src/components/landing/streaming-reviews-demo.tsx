@@ -1,4 +1,6 @@
 "use client";
+// Animated stream of review cards used in the landing "Connect" section to
+// illustrate live ingestion from feedback sources.
 
 import { useRef } from "react";
 import { motion, useInView, useReducedMotion } from "framer-motion";

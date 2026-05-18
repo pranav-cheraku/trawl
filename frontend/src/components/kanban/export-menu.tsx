@@ -1,4 +1,7 @@
 "use client";
+// Export dropdown for the Kanban board. Clipboard write can be blocked in
+// insecure contexts (e.g. iframes); a "Blocked" state shows for 2.5 s with
+// a hint to use CSV download instead.
 
 import { useEffect, useRef, useState } from "react";
 import type { Spec } from "@/types";

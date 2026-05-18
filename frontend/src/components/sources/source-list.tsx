@@ -1,4 +1,7 @@
 "use client";
+// Source list with dual layout: columnar table at md+ and stacked cards below
+// md. Both layouts share state. Includes per-source FeedbackItemPanel and
+// delete with InlineConfirm.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";

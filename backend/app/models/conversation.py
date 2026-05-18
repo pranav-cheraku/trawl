@@ -1,3 +1,9 @@
+"""Conversation and Message models for Trawl.
+
+A Conversation groups the message history for one chat session in a project.
+Messages carry an optional `transparency` JSONB blob (camelCase keys) with
+the RAG retrieval metadata used to generate the assistant's answer.
+"""
 from __future__ import annotations
 
 import uuid

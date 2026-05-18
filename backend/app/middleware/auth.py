@@ -1,3 +1,12 @@
+"""JWT authentication dependency for FastAPI request handlers.
+
+This is a FastAPI `Depends()` function, NOT Starlette ASGI middleware.
+Auth resolution order:
+  1. `request.state.user_id_override` set by DemoAccessMiddleware (demo path).
+  2. Bearer token in Authorization header (normal path).
+  3. Dev fallback to DEV_USER_ID when JWT_SECRET is the default value and
+     no header is present (local development without a real OAuth flow).
+"""
 from __future__ import annotations
 
 import uuid

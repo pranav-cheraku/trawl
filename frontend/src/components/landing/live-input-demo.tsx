@@ -1,4 +1,5 @@
 "use client";
+// Animated typewriter demo of the chat input for the landing page hero section.
 
 import { useEffect, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";

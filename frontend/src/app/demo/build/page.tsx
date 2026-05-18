@@ -1,5 +1,6 @@
 "use client";
-
+// Demo Build Next page: read-only mirror of the authenticated build tab.
+// Run and promote actions are disabled (handleRun/handlePromoteNoop are no-ops).
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import BuildSpecDetailModal from "@/components/build-next/build-spec-detail-modal";

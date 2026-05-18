@@ -1,3 +1,17 @@
+"""Build Next models: BuildReport, BuildTheme, BuildReportSpec, BuildReportChunk.
+
+BuildReport is the top-level artifact for one "What Should We Build Next?" run.
+BuildTheme is one cluster of feedback. BuildReportSpec is one generated spec
+inside a theme. BuildReportChunk persists the retrieved chunks for the X-Ray panel.
+
+Cascade rules:
+- BuildTheme.specs: `delete-orphan` (theme owns specs; theme_id is NOT NULL).
+- BuildReport.specs: `cascade="all, delete"` without `-orphan` (report-level
+  eager delete; specs are also owned by a theme, so orphan-delete would conflict).
+
+The `promoted_spec_id` FK uses ON DELETE SET NULL so deleting a Kanban spec
+does not orphan the BuildReportSpec row.
+"""
 from __future__ import annotations
 
 import uuid

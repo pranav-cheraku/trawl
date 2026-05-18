@@ -1,4 +1,5 @@
 "use client";
+// Individual clickable tile in the AddSourceModal connector picker grid.
 
 import type { ConnectorEntry } from "@/lib/connector-registry";
 

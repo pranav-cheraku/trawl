@@ -1,3 +1,4 @@
+// Terms of service page. Content lives in src/content/legal/terms.md.
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 

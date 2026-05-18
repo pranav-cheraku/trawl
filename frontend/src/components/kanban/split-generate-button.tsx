@@ -1,4 +1,6 @@
 "use client";
+// Main generate button paired with a caret that opens the FocusPopover for
+// topic-scoped generation. Both halves are disabled in demo mode via useDemoMode().
 
 import { useState } from "react";
 import type { SpecType } from "@/types";

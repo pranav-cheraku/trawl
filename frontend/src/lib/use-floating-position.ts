@@ -1,4 +1,7 @@
 "use client";
+// Computes a viewport-clamped fixed position for popovers >~120px wide.
+// CSS absolute positioning falls off mobile viewports; this hook recomputes
+// on window resize and capture-phase scroll so the popover stays on screen.
 
 import { useEffect, useState, type RefObject } from "react";
 

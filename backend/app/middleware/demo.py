@@ -1,3 +1,11 @@
+"""Starlette middleware that gates unauthenticated demo access.
+
+Requests carrying a valid X-Demo-Token header are allowed through GET-only.
+Non-GET requests with a valid token are rejected with 403 (demo is read-only).
+Requests without the token pass through unchanged and hit normal JWT auth.
+
+Added after CORS so it executes before CORS in Starlette's reverse-add order.
+"""
 from __future__ import annotations
 
 import hmac

@@ -1,5 +1,6 @@
 "use client";
-
+// Explore tab: tri-column chat workspace (conversation rail | chat | X-Ray).
+// Conversation is lazy-created on first send; session restores via sessionStorage.
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";

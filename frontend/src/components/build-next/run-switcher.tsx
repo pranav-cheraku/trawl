@@ -1,4 +1,7 @@
 "use client";
+// Dropdown for switching between historical Build Next runs. Selecting null
+// always points to the latest run so "Latest" stays live when a new run
+// completes. Uses useFloatingPosition so the popover stays on-screen on mobile.
 
 import { useEffect, useRef, useState } from "react";
 

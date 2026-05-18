@@ -1,3 +1,9 @@
+"""Tests for DemoAccessMiddleware behavior.
+
+Verifies that a valid X-Demo-Token bypasses JWT auth for GETs (the demo
+project may or may not be seeded, so 200 and 404 are both acceptable), and
+that non-GET requests with a valid token are rejected with 403.
+"""
 from __future__ import annotations
 
 from httpx import ASGITransport, AsyncClient

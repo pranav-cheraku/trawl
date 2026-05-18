@@ -1,4 +1,7 @@
 "use client";
+// Progress stepper shown while a Build Next run is in-flight. Stage thresholds
+// are time-based estimates; the active stage advances as elapsed time passes
+// each threshold. The page's 2-second polling loop triggers the real transition.
 
 import { useEffect, useState } from "react";
 

@@ -1,3 +1,16 @@
+"""Auth router: user sync, profile read/update, and soft delete.
+
+POST /auth/sync is protected by X-Auth-Secret (NOT JWT). It is called by the
+NextAuth jwt callback before the client JWT exists. The secret is compared
+with hmac.compare_digest to prevent timing attacks.
+
+DELETE /auth/me is a soft delete: sets deleted_at = now() rather than removing
+the row. Owned data is preserved until the Celery beat task hard-deletes the
+row after the 30-day grace period.
+
+GET and PATCH /auth/me filter `deleted_at IS NULL` so a stale JWT for a
+soft-deleted user gets 404 instead of returning data.
+"""
 from __future__ import annotations
 
 import hmac
@@ -64,7 +77,7 @@ async def sync_user(
         )
         db.add(user)
     else:
-        # Row exists — restore if soft-deleted, then update OAuth-provided fields
+        # Row exists. Restore if soft-deleted, then update OAuth-provided fields
         if user.deleted_at is not None:
             user.deleted_at = None
         if body.name is not None:

@@ -1,4 +1,6 @@
 "use client";
+// Initializes Lenis smooth scroll for the landing page only. Not used inside
+// the app. Momentum scroll feels wrong in data-dense workspaces.
 
 import { useEffect } from "react";
 import { useReducedMotion } from "framer-motion";

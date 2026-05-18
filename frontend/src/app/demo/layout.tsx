@@ -1,3 +1,5 @@
+// Demo layout: wraps the entire demo route group with DemoModeProvider and a
+// read-only banner. This route is outside the (app) group so no auth is required.
 import type { ReactNode } from "react";
 
 import { DemoModeProvider } from "@/lib/demo-mode";

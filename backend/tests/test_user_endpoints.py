@@ -1,3 +1,9 @@
+"""Integration tests for user profile and auth endpoints.
+
+Tests use app.dependency_overrides to inject the test user's ID without a
+real JWT. Each test commits to the dev DB (to make rows visible across
+connections used by the ASGI app) and cleans up explicitly in finally blocks.
+"""
 from __future__ import annotations
 
 from httpx import ASGITransport, AsyncClient
@@ -136,7 +142,7 @@ async def test_delete_user_returns_204_with_empty_body(db, test_user):
         assert resp.content == b""
     finally:
         app.dependency_overrides.pop(get_user_id_from_token, None)
-        # No cleanup needed — the user was deleted by the endpoint.
+        # No cleanup needed. The user was deleted by the endpoint.
 
 
 async def test_get_me_returns_404_for_soft_deleted_user(db, test_user):

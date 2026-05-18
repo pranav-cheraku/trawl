@@ -1,3 +1,17 @@
+"""Celery tasks for feedback ingestion: ingest -> chunk -> embed pipeline.
+
+All tasks are synchronous (use SyncSessionLocal / psycopg2) because Celery
+workers cannot run an async event loop by default. Async service calls
+(embed_texts, fetch_reviews_multi_country) are wrapped in asyncio.run().
+
+Pipeline for every connector type:
+  ingest_*_task  -- fetch raw items, write FeedbackItem rows, set status=chunking
+  chunk_source   -- split items into FeedbackChunk rows, set status=embedding
+  embed_source   -- call Voyage AI, write vectors, set status=ready
+
+Each stage chains to the next via .delay(), so they run in separate Celery
+tasks (retryable independently).
+"""
 from __future__ import annotations
 
 import asyncio

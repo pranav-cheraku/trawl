@@ -1,5 +1,6 @@
 "use client";
-
+// Sources tab page: header stats, SourceList, and the Add Source modal trigger.
+// refreshKey increments on source creation to tell SourceList to re-fetch.
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import AddSourceModal from "@/components/sources/add-source-modal";

@@ -1,3 +1,10 @@
+"""Database engine and session factories for Trawl.
+
+Two engines coexist:
+- `engine` + `AsyncSessionLocal`: async (asyncpg), used by FastAPI request handlers.
+- `sync_engine` + `SyncSessionLocal`: sync (psycopg2), used by Celery workers which
+  cannot run an async event loop themselves.
+"""
 from __future__ import annotations
 
 from collections.abc import AsyncGenerator
