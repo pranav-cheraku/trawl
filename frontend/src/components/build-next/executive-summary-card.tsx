@@ -95,7 +95,7 @@ export default function ExecutiveSummaryCard({
               }}
               className="mt-3 text-[12px] leading-relaxed text-error"
             >
-              · Partial failure — some themes had spec generation errors.
+              · Partial failure: some themes had spec generation errors.
             </motion.p>
           ) : null}
         </div>

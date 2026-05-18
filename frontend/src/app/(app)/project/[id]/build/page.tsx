@@ -268,7 +268,6 @@ export default function BuildNextPage() {
     <div className="flex flex-col gap-4 overflow-x-hidden">
       {/* Header */}
       <WorkspaceHeader
-        label="Workspace / Build Next"
         title="What Should We Build Next?"
         stats={stats.length > 0 ? stats : undefined}
         right={
