@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hmac
 import uuid
 
 from fastapi import Request
@@ -22,8 +23,9 @@ class DemoAccessMiddleware(BaseHTTPMiddleware):
         self, request: Request, call_next: RequestResponseEndpoint
     ):
         """Check X-Demo-Token and gate access accordingly."""
+        # compare_digest keeps the token check timing-independent.
         token = request.headers.get("X-Demo-Token")
-        if token and token == settings.DEMO_TOKEN:
+        if token and hmac.compare_digest(token, settings.DEMO_TOKEN):
             if request.method != "GET":
                 return JSONResponse(
                     status_code=403,

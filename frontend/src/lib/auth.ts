@@ -88,7 +88,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       const isLoggedIn = !!session?.user;
       const isProtected =
         nextUrl.pathname.startsWith("/dashboard") ||
-        nextUrl.pathname.startsWith("/project");
+        nextUrl.pathname.startsWith("/project") ||
+        nextUrl.pathname.startsWith("/billing") ||
+        nextUrl.pathname.startsWith("/profile");
       if (isProtected && !isLoggedIn) {
         return Response.redirect(new URL("/", nextUrl));
       }

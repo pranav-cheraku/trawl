@@ -17,6 +17,9 @@ celery_app.conf.update(
     accept_content=["json"],
     timezone="UTC",
     enable_utc=True,
+    # Store task args in the result backend so the task-status endpoint can
+    # check that the caller owns the project a task was dispatched for.
+    result_extended=True,
 )
 
 celery_app.conf.update(

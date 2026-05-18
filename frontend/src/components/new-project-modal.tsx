@@ -151,6 +151,7 @@ export default function NewProjectModal({
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="What feedback are you analyzing?"
                 rows={3}
+                maxLength={2000}
                 className="w-full resize-none rounded-[4px] border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-[14px] text-on-surface placeholder:font-mono placeholder:text-sm placeholder:text-on-surface-variant/50 focus:border-secondary focus:outline-none focus:ring-[2px] focus:ring-secondary/10"
                 disabled={isSubmitting}
               />

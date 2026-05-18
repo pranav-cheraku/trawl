@@ -1,6 +1,18 @@
+# Local virtualenvs
 venv/
+.venv/
+
+# Python caches
 __pycache__/
 *.py[cod]
+*.pyo
 *.egg-info/
+.mypy_cache/
+.pytest_cache/
+
+# Tests are not needed in the runtime image
+tests/
+
+# Secrets and local files
 .env
 .git/

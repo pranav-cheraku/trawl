@@ -47,11 +47,13 @@ async def search_google_play(
         return []
     try:
         return await google_play.search_apps(q.strip(), limit=8)
-    except Exception as e:
+    except Exception:
+        # Log the real error; return a generic message so internal details
+        # are not exposed to the client.
         logger.exception("Google Play search failed for %s", q)
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"Google Play search failed: {e}",
+            detail="Google Play search is temporarily unavailable.",
         )
 
 

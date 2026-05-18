@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hmac
 import uuid
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Response, status
@@ -40,7 +41,10 @@ async def sync_user(
     Protected by X-Auth-Secret, NOT JWT, because the NextAuth jwt callback calls
     this before the client JWT exists.
     """
-    if x_auth_secret != settings.JWT_SECRET:
+    # compare_digest avoids leaking the secret through comparison timing.
+    if x_auth_secret is None or not hmac.compare_digest(
+        x_auth_secret, settings.JWT_SECRET
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Invalid or missing X-Auth-Secret header",

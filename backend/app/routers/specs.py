@@ -131,10 +131,39 @@ async def generate_specs(
 )
 async def get_task_status(
     task_id: str,
+    db: AsyncSession = Depends(get_db),
     user_id: uuid.UUID = Depends(get_current_user),
 ) -> TaskStatusResponse:
-    """Return the current status of a Celery task (generation, etc.)."""
+    """Return the current status of a Celery task (generation, etc.).
+
+    The result payload is only returned to the user who owns the project the
+    task was dispatched for, so one user cannot poll another user's task.
+    """
     result = AsyncResult(task_id, app=celery_app)
+
+    # generate_specs_task's first positional arg is the project_id. With
+    # result_extended enabled, Celery records the task args in the result
+    # backend, so we can confirm the caller owns that project.
+    ownership_confirmed = False
+    task_args = result.args
+    if task_args:
+        try:
+            task_project_id: uuid.UUID | None = uuid.UUID(str(task_args[0]))
+        except (ValueError, IndexError):
+            task_project_id = None
+        if task_project_id is not None:
+            owns = await db.execute(
+                select(Project.id).where(
+                    Project.id == task_project_id,
+                    Project.user_id == user_id,
+                )
+            )
+            if owns.scalar_one_or_none() is None:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Task not found.",
+                )
+            ownership_confirmed = True
 
     state_map = {
         "PENDING": "pending",
@@ -145,12 +174,15 @@ async def get_task_status(
     }
     mapped_status = state_map.get(result.state, "pending")
 
+    # Only hand back result/error data once ownership is confirmed. A task
+    # whose args are not yet recorded has no result payload to leak anyway.
     task_result = None
     task_error = None
-    if result.state == "SUCCESS":
-        task_result = result.result
-    elif result.state == "FAILURE":
-        task_error = str(result.info) if result.info else "Unknown error"
+    if ownership_confirmed:
+        if result.state == "SUCCESS":
+            task_result = result.result
+        elif result.state == "FAILURE":
+            task_error = str(result.info) if result.info else "Unknown error"
 
     return TaskStatusResponse(
         task_id=task_id,

@@ -35,8 +35,9 @@ class AppStoreConnectRequest(BaseModel):
 class ManualPasteRequest(BaseModel):
     """Request body for creating a source from manually pasted text."""
 
-    title: str | None = None
-    content: str
+    title: str | None = Field(default=None, max_length=255)
+    # Capped so a single paste cannot run up an unbounded embedding bill.
+    content: str = Field(..., min_length=1, max_length=100_000)
 
     model_config = ConfigDict(
         alias_generator=to_camel,
@@ -63,8 +64,8 @@ class GooglePlaySearchResult(BaseModel):
 class GooglePlayConnectRequest(BaseModel):
     """Request body for connecting a Google Play source."""
 
-    package_name: str
-    app_name: str
+    package_name: str = Field(..., min_length=1, max_length=255)
+    app_name: str = Field(..., min_length=1, max_length=255)
     preset: Literal["quick", "standard"] = "standard"
 
     model_config = ConfigDict(
@@ -77,7 +78,7 @@ class RedditConnectRequest(BaseModel):
     """Request body for connecting a Reddit source (subreddit or keyword)."""
 
     mode: Literal["subreddit", "keyword"]
-    value: str
+    value: str = Field(..., min_length=1, max_length=255)
     preset: Literal["quick", "standard", "deep"] = "standard"
 
     model_config = ConfigDict(

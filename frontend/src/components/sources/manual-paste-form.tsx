@@ -72,6 +72,7 @@ export default function ManualPasteForm({
           onChange={(e) => setContent(e.target.value)}
           placeholder="Paste feedback. Items split on blank lines."
           rows={12}
+          maxLength={100000}
           aria-describedby="manual-paste-counter"
           className="w-full resize-y rounded-[4px] bg-surface-container-lowest px-3 py-2 font-mono text-[12px] text-on-surface outline outline-1 outline-outline-variant placeholder:text-on-surface-variant/60 focus:outline-secondary"
         />

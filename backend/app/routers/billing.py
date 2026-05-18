@@ -90,8 +90,12 @@ async def create_checkout(
             metadata={"user_id": str(user.id), "price_id": body.price_id},
         )
     except stripe.StripeError as exc:
+        # Log the underlying Stripe error; the client gets a generic message.
         logger.exception("Stripe checkout creation failed")
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=502,
+            detail="Could not start checkout. Please try again later.",
+        ) from exc
 
     if session.url is None:
         raise HTTPException(status_code=502, detail="Stripe did not return a URL")
