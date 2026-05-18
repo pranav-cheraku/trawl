@@ -53,8 +53,9 @@ export function ConnectDemoSection() {
             }}
             className="mt-6 max-w-xl text-base text-on-surface-variant sm:text-lg"
           >
-            Type an app name. Trawl pulls every review from the App Store,
-            dedupes, and indexes in seconds — no API key, no scraping setup.
+            Connect the App Store, Google Play, Reddit, or a CSV of your own.
+            Trawl pulls in every review and clears out the duplicates. No API
+            key, no scraper to set up.
           </motion.p>
         </div>
         <div>

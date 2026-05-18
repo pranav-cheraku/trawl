@@ -135,8 +135,11 @@ export default function ProfilePage() {
 
       <nav
         className="mt-10 flex items-center gap-4 text-xs text-on-surface-variant"
-        aria-label="Legal"
+        aria-label="Footer"
       >
+        <Link href="/docs" className="transition-colors hover:text-on-surface">
+          Docs
+        </Link>
         <Link href="/privacy" className="transition-colors hover:text-on-surface">
           Privacy
         </Link>

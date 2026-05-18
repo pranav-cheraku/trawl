@@ -1,6 +1,7 @@
 "use client";
 
 import { useDemoMode } from "@/lib/demo-mode";
+import { HowItWorksLink } from "@/components/ui/how-it-works-link";
 
 type Props = {
   sourceCount: number;
@@ -57,6 +58,9 @@ export default function EmptyState({
           ? "Activate at least one source above to run"
           : `· Uses ${reviewCount} reviews from ${sourceCount} sources`}
       </p>
+      <div className="mt-6">
+        <HowItWorksLink />
+      </div>
     </div>
   );
 }

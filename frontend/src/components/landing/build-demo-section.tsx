@@ -52,8 +52,9 @@ export function BuildDemoSection() {
             }}
             className="mt-6 max-w-xl text-base text-on-surface-variant sm:text-lg"
           >
-            Themed, prioritized, and ready to drag into your sprint —
-            with every spec backed by the reviews that surfaced it.
+            Specs come grouped by theme and prioritized, ready to drag
+            straight into your sprint. Each one links back to the reviews that
+            asked for it.
           </motion.p>
         </div>
 

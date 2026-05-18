@@ -105,6 +105,15 @@ export function ProfileMenu() {
             Profile
           </Link>
 
+          <Link
+            href="/docs"
+            onClick={() => setOpen(false)}
+            role="menuitem"
+            className="block px-4 py-2 text-[13px] text-on-surface-variant transition-colors hover:bg-surface-container-low hover:text-on-surface"
+          >
+            Docs
+          </Link>
+
           <button
             type="button"
             onClick={() => {

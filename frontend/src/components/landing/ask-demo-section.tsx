@@ -52,8 +52,8 @@ export function AskDemoSection() {
             }}
             className="mt-6 max-w-xl text-base text-on-surface-variant sm:text-lg"
           >
-            Every answer is grounded in real reviews — with citations you can
-            trace, scored by similarity, and ranked by relevance.
+            Every answer points back to the reviews behind it. Click any
+            citation to open the exact review and see how closely it matched.
           </motion.p>
         </div>
         <div>

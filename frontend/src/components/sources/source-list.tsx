@@ -12,6 +12,7 @@ import {
 } from "@/lib/source-display";
 import type { Source } from "@/types";
 import InlineConfirm from "@/components/ui/inline-confirm";
+import { HowItWorksLink } from "@/components/ui/how-it-works-link";
 import FeedbackItemPanel from "./feedback-item-panel";
 
 interface Props {
@@ -248,9 +249,12 @@ export default function SourceList({ projectId, refreshKey }: Props) {
       )}
 
       {sources.length === 0 ? (
-        <p className="mt-4 px-1 text-[13px] text-on-surface-variant">
-          No sources connected yet. Click &ldquo;Add Source&rdquo; to connect feedback.
-        </p>
+        <div className="mt-4 px-1">
+          <p className="text-[13px] text-on-surface-variant">
+            No sources connected yet. Click &ldquo;Add Source&rdquo; to connect feedback.
+          </p>
+          <HowItWorksLink className="mt-2" />
+        </div>
       ) : (
         <>
           {/* Table layout (md+) */}

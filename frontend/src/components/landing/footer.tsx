@@ -1,6 +1,7 @@
 import Link from "next/link";
 
-const legalLinks = [
+const footerLinks = [
+  { href: "/docs", label: "Docs" },
   { href: "/privacy", label: "Privacy" },
   { href: "/terms", label: "Terms" },
   { href: "/refund-policy", label: "Refunds" },
@@ -20,8 +21,8 @@ export default function Footer() {
         </div>
 
         <div className="flex flex-col items-start gap-3 sm:items-end">
-          <nav className="flex items-center gap-4" aria-label="Legal">
-            {legalLinks.map((link) => (
+          <nav className="flex items-center gap-4" aria-label="Footer">
+            {footerLinks.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}

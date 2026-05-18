@@ -1,5 +1,7 @@
 "use client";
 
+import { HowItWorksLink } from "@/components/ui/how-it-works-link";
+
 interface EmptyStateProps {
   onExampleClick: (query: string) => void;
 }
@@ -46,6 +48,7 @@ export function EmptyState({ onExampleClick }: EmptyStateProps) {
           </button>
         ))}
       </div>
+      <HowItWorksLink className="mt-6" />
     </div>
   );
 }

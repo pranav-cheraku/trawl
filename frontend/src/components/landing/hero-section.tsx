@@ -81,9 +81,9 @@ export default function HeroSection({ session }: HeroSectionProps) {
             }}
             className="mt-6 max-w-xl text-base text-on-surface-variant sm:text-lg"
           >
-            Type an app name. Trawl pulls every review, clusters them into
-            themes, and builds a prioritized product roadmap with citations
-            you can trace.
+            Type an app name and Trawl reads all of its reviews. You get back
+            a prioritized roadmap, and every item on it traces to a real
+            review.
           </motion.p>
           <motion.div
             initial={{ opacity: 0, y: 8 }}

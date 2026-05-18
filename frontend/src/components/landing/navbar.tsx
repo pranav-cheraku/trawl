@@ -17,8 +17,12 @@ export default function Navbar({ session }: { session: Session | null }) {
         </Link>
 
         <div className="flex items-center gap-6">
-          <span className="hidden text-[13px] text-on-surface-variant sm:inline">Docs</span>
-          <span className="hidden text-[13px] text-on-surface-variant sm:inline">API</span>
+          <Link
+            href="/docs"
+            className="hidden text-[13px] text-on-surface-variant transition-colors hover:text-on-surface sm:inline"
+          >
+            Docs
+          </Link>
           {session ? (
             <Link
               href="/dashboard"
