@@ -15,9 +15,7 @@ class Settings(BaseSettings):
     JWT_SECRET: str = "dev-secret-change-in-production"
     CORS_ORIGINS: list[str] = [
         "http://localhost:3000",
-        "http://localhost:3001",
         "http://127.0.0.1:3000",
-        "http://127.0.0.1:3001",
     ]
     STRIPE_SECRET_KEY: str = ""
     STRIPE_WEBHOOK_SECRET: str = ""
