@@ -85,7 +85,7 @@ export default function ProfilePage() {
             />
             <p className="mt-1 truncate font-mono text-xs text-on-surface-variant">
               {user.email}
-              <span className="ml-2 text-[11px] opacity-70">
+              <span className="ml-2 font-sans text-[11px] opacity-70">
                 From your Google account
               </span>
             </p>

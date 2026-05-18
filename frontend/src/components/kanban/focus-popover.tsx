@@ -68,7 +68,7 @@ export default function FocusPopover({
       className="absolute right-0 top-[calc(100%+6px)] z-20 w-[min(340px,calc(100vw-32px))] rounded-[4px] bg-surface-container-lowest/90 px-3.5 py-3 shadow-[0_8px_24px_rgba(15,23,42,0.04)] backdrop-blur-md ring-1 ring-outline-variant/20"
     >
       <div className="mb-1.5 font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-on-surface-variant">
-        Focus — {label}
+        Focus: {label}
       </div>
       <input
         ref={inputRef}

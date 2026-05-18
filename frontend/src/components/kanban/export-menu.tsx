@@ -125,7 +125,7 @@ export default function ExportMenu({ specs, projectName }: ExportMenuProps) {
           </button>
           {copyState === "blocked" ? (
             <div className="px-3 pb-2 text-[11px] leading-snug text-on-surface-variant">
-              Clipboard blocked by this browser context — use CSV download.
+              Clipboard blocked by this browser context. Use CSV download.
             </div>
           ) : null}
         </div>
