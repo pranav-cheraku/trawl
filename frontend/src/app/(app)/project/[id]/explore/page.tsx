@@ -489,9 +489,6 @@ export default function ExplorePage() {
             onReset={rag.reset}
           />
         </div>
-        <span className="hidden font-mono text-[9px] font-medium uppercase tracking-[0.2em] text-on-surface-variant/60 sm:inline">
-          Explore / Conversation
-        </span>
       </div>
 
       {/* Workspace columns */}
@@ -542,7 +539,9 @@ export default function ExplorePage() {
 
           <div className="flex-1 overflow-y-auto p-5">
             {messages.length === 0 && !isPending ? (
-              <EmptyState onExampleClick={handleExampleClick} />
+              <div className="flex h-full items-center justify-center">
+                <EmptyState onExampleClick={handleExampleClick} />
+              </div>
             ) : (
               <div className="flex flex-col gap-4">
                 <MessageList
