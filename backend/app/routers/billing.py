@@ -74,6 +74,11 @@ async def create_checkout(
     user = result.scalar_one()
 
     try:
+        # consent_collection.terms_of_service renders a required "I agree to
+        # the Terms of Service" checkbox on the Stripe-hosted Checkout page.
+        # The linked URL is pulled from the Terms of Service URL configured in
+        # the Stripe Dashboard — it MUST be set in both test and live mode, or
+        # Session.create raises a StripeError and checkout returns 502.
         session = await stripe.checkout.Session.create_async(
             mode="payment",
             line_items=[{"price": body.price_id, "quantity": 1}],
@@ -81,6 +86,7 @@ async def create_checkout(
             cancel_url=f"{settings.FRONTEND_URL}/billing?status=cancelled",
             customer_email=user.email,
             client_reference_id=str(user.id),
+            consent_collection={"terms_of_service": "required"},
             metadata={"user_id": str(user.id), "price_id": body.price_id},
         )
     except stripe.StripeError as exc:
