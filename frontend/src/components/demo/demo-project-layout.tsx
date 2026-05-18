@@ -81,7 +81,10 @@ export default function DemoProjectLayout({
   return (
     <div className="mx-auto max-w-screen-2xl px-6 py-5">
       {/* Breadcrumb */}
-      <div className="inline-flex items-center gap-1.5 font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-on-surface-variant">
+      <Link
+        href="/"
+        className="inline-flex items-center gap-1.5 font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-on-surface-variant transition-colors hover:text-on-surface"
+      >
         <svg
           className="h-2.5 w-2.5"
           fill="none"
@@ -93,7 +96,7 @@ export default function DemoProjectLayout({
           <path d="M13 7H1M6 2L1 7l5 5" />
         </svg>
         Demo
-      </div>
+      </Link>
 
       <div className="mt-2.5 flex items-baseline gap-3.5">
         <span className="font-mono text-[10px] font-medium uppercase tracking-[0.25em] text-on-surface-variant/70">
