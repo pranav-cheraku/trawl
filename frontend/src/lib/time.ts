@@ -19,3 +19,12 @@ export function friendlyAgo(iso: string): string {
   const days = Math.floor(hours / 24);
   return `${days}d ago`;
 }
+
+/** Absolute date like "Apr 7, 2026", parsed as UTC. */
+export function formatDate(iso: string): string {
+  return parseUtcIso(iso).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}

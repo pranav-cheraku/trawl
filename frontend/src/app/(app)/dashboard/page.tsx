@@ -11,7 +11,7 @@ import WorkspaceHeader, {
   type WorkspaceStat,
 } from "@/components/workspace/workspace-header";
 import { durations, easings, staggers } from "@/lib/motion";
-import { friendlyAgo, parseUtcIso } from "@/lib/time";
+import { formatDate, friendlyAgo, parseUtcIso } from "@/lib/time";
 import PinButton from "@/components/dashboard/pin-button";
 import { useDashboardPins } from "@/lib/use-dashboard-pins";
 import DashboardToolbar, {
@@ -19,14 +19,6 @@ import DashboardToolbar, {
 } from "@/components/dashboard/dashboard-toolbar";
 import ProjectListRow from "@/components/dashboard/project-list-row";
 import { useDashboardView } from "@/lib/use-dashboard-view";
-
-function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
 
 function SkeletonCard() {
   return (
@@ -39,7 +31,7 @@ function SkeletonCard() {
         <div className="h-3 w-full rounded-[2px] bg-surface-container" />
         <div className="h-3 w-4/5 rounded-[2px] bg-surface-container" />
       </div>
-      <div className="mt-6 pt-4">
+      <div className="mt-6">
         <div className="h-3 w-20 rounded-[2px] bg-surface-container" />
       </div>
     </div>
@@ -169,9 +161,9 @@ function ProjectCard({
           </p>
         )}
 
-        <div className="mt-5 flex items-center justify-between pt-4">
+        <div className="mt-5 flex items-center justify-between">
           <p className="font-mono text-[11px] uppercase tracking-wider text-on-surface-variant">
-            {formatDate(project.createdAt)}
+            {formatDate(project.updatedAt)}
           </p>
           <svg
             className="h-3.5 w-3.5 text-on-surface-variant transition-[transform,color] duration-200 group-hover:translate-x-0.5 group-hover:text-secondary"

@@ -6,14 +6,7 @@ import { deleteProject } from "@/lib/api";
 import type { Project } from "@/types";
 import InlineConfirm from "@/components/ui/inline-confirm";
 import PinButton from "@/components/dashboard/pin-button";
-
-function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
+import { formatDate } from "@/lib/time";
 
 interface ProjectListRowProps {
   project: Project;
