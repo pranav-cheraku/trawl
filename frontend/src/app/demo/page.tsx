@@ -1,5 +1,6 @@
 "use client";
-// Demo entry: redirects /demo to /demo/explore if DEMO_PROJECT_ID is configured.
+// Demo entry: redirects /demo to /demo/sources if DEMO_PROJECT_ID is configured.
+// Sources is the first tab and matches the real app's project entry point.
 import { redirect } from "next/navigation";
 
 export default function DemoEntry() {
@@ -13,5 +14,5 @@ export default function DemoEntry() {
     );
   }
 
-  redirect("/demo/explore");
+  redirect("/demo/sources");
 }
