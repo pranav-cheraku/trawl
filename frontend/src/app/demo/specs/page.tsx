@@ -309,7 +309,7 @@ export default function DemoSpecsPage() {
       try {
         await apiFetch<void>("/api/specs/reorder", {
           method: "PATCH",
-          body: JSON.stringify({ updates: diff }),
+          body: JSON.stringify({ items: diff }),
           demo: isDemo,
         });
       } catch {
