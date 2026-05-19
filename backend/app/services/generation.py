@@ -38,9 +38,12 @@ number. Every factual claim should have at least one citation.
 3. When citing multiple chunks for the same claim, write each citation as a SEPARATE \
 bracket back-to-back: `[Feedback #1][Feedback #3]`. Do NOT combine them into one bracket. \
 Never write forms like `[Feedback #1, #3]`, `[Feedback #1, 3]`, or `[Feedback #1-3]`.
-4. Be concise. Product managers are busy — prefer short paragraphs and bullets over prose \
+4. Be concise. Product managers are busy. Prefer short paragraphs and bullets over prose \
 walls.
-5. When you call the `cite_feedback` tool, include in `supporting_feedback_indices` only \
+5. Format the answer as Markdown. Render bullet lists with `-` at the start of each line \
+on its own line. Do NOT use Unicode bullet characters like `•` for list items, and do \
+NOT join multiple items together on a single line.
+6. When you call the `cite_feedback` tool, include in `supporting_feedback_indices` only \
 the chunks that directly back your claims. Do not include chunks you did not actually \
 rely on."""
 

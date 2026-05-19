@@ -49,6 +49,17 @@ const CITE_OPEN = "⟦CITE_";
 const CITE_CLOSE = "⟧";
 const CITE_REGEX = /⟦CITE_(\d+)⟧/g;
 
+// Model output occasionally uses the Unicode bullet "•" inline instead of
+// real markdown list syntax. Those render as literal text with soft-break
+// newlines collapsed to spaces. Rewrite each leading "•" to "- " so
+// react-markdown produces a proper <ul>.
+const BULLET_REGEX = /(^|[ \t\n])•[ \t]+/g;
+function normalizeBullets(text: string): string {
+  return text.replace(BULLET_REGEX, (_m, prefix) =>
+    prefix === "" || prefix === "\n" ? `${prefix}- ` : "\n- ",
+  );
+}
+
 interface TextNode extends Node {
   type: "text";
   value: string;
@@ -264,10 +275,12 @@ export function ChatMessage({
 
   // Replace citation blocks in the raw content with sentinel markers and
   // accumulate the per-marker index list in a side table. The remark plugin
-  // re-splits text nodes on those sentinels at render time.
+  // re-splits text nodes on those sentinels at render time. Bullet
+  // normalization runs first so any "• cite" sequences are restructured into
+  // list items before the sentinel substitution.
   const citations: number[][] = [];
   CITATION_BLOCK_REGEX.lastIndex = 0;
-  const markdownContent = message.content.replace(
+  const markdownContent = normalizeBullets(message.content).replace(
     CITATION_BLOCK_REGEX,
     (block) => {
       const indices = extractIndices(block);
